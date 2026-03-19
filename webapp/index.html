@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MemStroy</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap');
+
+:root {
+  --bg:#0a0a0a; --bg2:#111; --bg3:#1a1a1a; --border:#222;
+  --text:#fff; --text2:#888; --text3:#444;
+  --star:#f0c040; --dev:#4aff8a;
+  --rare:#4a9eff; --epic:#b84aff; --legendary:#f0c040;
+  --success:#4aff8a; --danger:#ff4a4a;
+  --tab-h:64px; --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;height:100vh;overflow:hidden;position:fixed;width:100%}
+
+.page{position:absolute;inset:0;bottom:calc(var(--tab-h) + var(--safe-b));overflow-y:auto;overflow-x:hidden;display:none;-webkit-overflow-scrolling:touch}
+.page.active{display:block}
+.page::-webkit-scrollbar{display:none}
+
+.page-header{padding:20px 20px 0;display:flex;align-items:center;justify-content:space-between}
+.page-title{font-size:22px;font-weight:800;letter-spacing:-0.5px}
+
+.badge{display:flex;align-items:center;gap:5px;border-radius:20px;padding:6px 12px;font-size:13px;font-weight:700;font-family:'Space Mono',monospace}
+.badge-star{background:#1a1500;border:1px solid #332800;color:var(--star)}
+.badge-dev{background:#0d1a0d;border:1px solid #1a3a1a;color:var(--dev)}
+
+.tabs{position:fixed;bottom:0;left:0;right:0;height:calc(var(--tab-h) + var(--safe-b));padding-bottom:var(--safe-b);background:var(--bg2);border-top:1px solid var(--border);display:flex;align-items:center;z-index:100}
+.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;height:100%;background:none;border:none;cursor:pointer;color:var(--text3);font-family:'Syne',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.5px;transition:color 0.2s;position:relative}
+.tab-btn.active{color:#ff2d78} .tab-btn.active span{color:#ff2d78}
+.tab-btn img{transition:transform 0.2s,filter 0.2s,opacity 0.2s;opacity:0.6;filter:grayscale(1) brightness(3);width:26px;height:26px;object-fit:contain}
+.tab-btn.active img{transform:scale(1.1);opacity:1;filter:sepia(1) saturate(10) hue-rotate(290deg) brightness(1.3)}
+.tab-btn::after{display:none}
+.tab-btn.active::after{transform:scaleX(1)}
+
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;border:none;border-radius:12px;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;letter-spacing:0.3px;position:relative;overflow:hidden;transition:transform 0.12s}
+.btn:active{transform:scale(0.96)}
+@keyframes ripple{0%{transform:scale(0);opacity:0.4}100%{transform:scale(4);opacity:0}}
+.ripple-effect{position:absolute;border-radius:50%;width:40px;height:40px;background:rgba(255,255,255,0.3);animation:ripple 0.4s ease-out;pointer-events:none;transform:scale(0)}
+.btn::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,0.12);opacity:0;transition:opacity 0.1s}
+.btn:active::after{opacity:1}
+.btn-primary{background:var(--text);color:var(--bg);padding:14px 20px;font-size:15px;width:100%}
+.btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border);padding:12px 18px;font-size:14px}
+.btn-danger{background:rgba(255,74,74,0.1);color:var(--danger);border:1px solid rgba(255,74,74,0.2);padding:10px 16px;font-size:13px}
+.btn-wide{width:100%}
+
+.cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.card-item{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:transform 0.12s,border-color 0.12s}
+.card-item:active{transform:scale(0.95);border-color:var(--text3)}
+.card-img{aspect-ratio:3/4;background:var(--bg3);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:28px}
+.card-img img{width:100%;height:100%;object-fit:cover;display:block}
+.card-info{padding:6px 8px}
+.card-name{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-meta{font-size:10px;color:var(--text2);font-family:'Space Mono',monospace;margin-top:1px}
+
+.rbadge{position:absolute;top:6px;right:6px;padding:2px 6px;border-radius:5px;font-size:9px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;font-family:'Space Mono',monospace}
+.rb-base{background:#1a1a1a;color:var(--text2);border:1px solid var(--border)}
+.rb-rare{background:#0d1f3c;color:var(--rare);border:1px solid #1a3a6a}
+.rb-epic{background:#1f0d3c;color:var(--epic);border:1px solid #3a1a6a}
+.rb-legendary{background:#2a2000;color:var(--legendary);border:1px solid #4a3a00}
+
+.market-item{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:10px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:transform 0.12s}
+.market-item:active{transform:scale(0.98)}
+.market-thumb{width:40px;height:52px;border-radius:6px;background:var(--bg3);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:18px}
+.market-thumb img{width:100%;height:100%;object-fit:cover}
+.market-info{flex:1;min-width:0}
+.market-name{font-size:13px;font-weight:700}
+.market-seller{font-size:11px;color:var(--text2);margin-top:1px}
+.market-price{font-size:15px;font-weight:800;color:var(--star);font-family:'Space Mono',monospace;flex-shrink:0}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);z-index:200;display:none;align-items:flex-end}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:24px 24px 0 0;width:100%;max-height:90vh;overflow-y:auto;padding-bottom:calc(20px + var(--safe-b));animation:slideUp 0.3s cubic-bezier(0.32,0.72,0,1)}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 16px}
+.modal-title{font-size:18px;font-weight:800;padding:0 20px 14px;border-bottom:1px solid var(--border)}
+.modal-body{padding:16px;display:flex;flex-direction:column;gap:12px}
+.modal-card-preview{aspect-ratio:3/4;max-width:180px;margin:0 auto;width:100%;border-radius:14px;overflow:hidden;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:56px;position:relative}
+.modal-card-preview img{width:100%;height:100%;object-fit:cover}
+
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stat-box{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center}
+.stat-box .val{font-size:20px;font-weight:800;font-family:'Space Mono',monospace}
+.stat-box .lbl{font-size:10px;color:var(--text2);margin-top:2px;text-transform:uppercase;letter-spacing:0.5px}
+
+.section-label{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:8px}
+.empty-state{text-align:center;padding:48px 20px;color:var(--text3)}
+.empty-state .ei{font-size:40px;margin-bottom:10px;opacity:0.3}
+.empty-state p{font-size:14px}
+.empty-state small{font-size:12px;display:block;margin-top:4px}
+
+.ref-box{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px}
+.ref-box h3{font-size:15px;font-weight:700;margin-bottom:6px}
+.ref-box p{font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.5}
+.ref-row{display:flex;gap:8px;align-items:center}
+.ref-code{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:'Space Mono',monospace;font-size:11px;color:var(--star);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.menu-item{background:var(--bg2);border:1px solid transparent;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:background 0.15s}
+.menu-item:active{background:var(--bg3);border-color:var(--border)}
+.menu-icon{font-size:18px;width:26px;text-align:center}
+.menu-text{flex:1}
+.menu-label{font-size:14px;font-weight:600}
+.menu-sub{font-size:11px;color:var(--text2);margin-top:1px}
+.menu-arrow{color:var(--text3);font-size:16px}
+
+.price-input-row{display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:4px 4px 4px 14px}
+.price-input-row input{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:'Space Mono',monospace;font-size:16px;font-weight:700}
+.price-input-row .cur{color:var(--star);font-size:13px;font-weight:700;padding:8px 12px;background:rgba(240,192,64,0.1);border-radius:7px}
+
+.transfer-input{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-family:'Space Mono',monospace;font-size:13px;width:100%;outline:none}
+.transfer-input::placeholder{color:var(--text3)}
+
+.friend-item{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px}
+.friend-av{width:38px;height:38px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;font-weight:700}
+.friend-name{font-size:13px;font-weight:700}
+.friend-meta{font-size:11px;color:var(--text2);margin-top:1px}
+.friend-cards{margin-left:auto;font-size:12px;color:var(--text2);font-family:'Space Mono',monospace}
+
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-80px);background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:13px;font-weight:600;z-index:999;transition:transform 0.25s cubic-bezier(0.32,0.72,0,1);white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.ok{border-color:var(--success);color:var(--success)}
+.toast.err{border-color:var(--danger);color:var(--danger)}
+
+.spinner{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--text);border-radius:50%;animation:spin 0.6s linear infinite;margin:48px auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-page{display:flex;align-items:center;justify-content:center;height:100%}
+.content{padding:16px;display:flex;flex-direction:column;gap:14px}
+.filters{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.filters::-webkit-scrollbar{display:none}
+.filter-btn{flex-shrink:0;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:11px;font-weight:700;color:var(--text2);cursor:pointer;font-family:'Syne',sans-serif;transition:all 0.15s;white-space:nowrap}
+.filter-btn:active{transform:scale(0.95)}
+.filter-btn.active{background:#ff2d78;border-color:#ff2d78;color:#fff}
+</style>
+</head>
+<body>
+
+<!-- BUY -->
+<div id="page-buy" class="page active">
+  <div class="page-header">
+    <span class="page-title">Shop</span>
+    <div style="display:flex;gap:6px">
+      <div class="badge badge-dev"><span>🧪</span><span id="dev-val">—</span></div>
+      <div class="badge badge-star" style="cursor:pointer" onclick="openSplitLink()"><span>⭐</span><span id="star-val">—</span></div>
+    </div>
+  </div>
+  <div class="content" id="buy-content"><div class="loading-page"><div class="spinner"></div></div></div>
+</div>
+
+<!-- TRADE -->
+<div id="page-sell" class="page">
+  <div class="page-header">
+    <span class="page-title">Trade</span>
+    <div class="badge badge-star" style="cursor:pointer" onclick="openSplitLink()"><span>⭐</span><span id="star-val-trade">—</span></div>
+  </div>
+  <div class="content" id="trade-content"><div class="loading-page"><div class="spinner"></div></div></div>
+</div>
+
+<!-- PROFILE -->
+<div id="page-profile" class="page">
+  <div class="content" id="profile-content"><div class="loading-page"><div class="spinner"></div></div></div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab-btn active" data-page="buy" onclick="switchTab('buy')">
+    <img src="/static/cards/buy.png" style="width:24px;height:24px;object-fit:contain"><span>Shop</span>
+  </button>
+  <button class="tab-btn" data-page="sell" onclick="switchTab('sell')">
+    <img src="/static/cards/trade.png" style="width:24px;height:24px;object-fit:contain"><span>Trade</span>
+  </button>
+  <button class="tab-btn" data-page="profile" onclick="switchTab('profile')">
+    <img src="/static/cards/profile.png" style="width:24px;height:24px;object-fit:contain"><span>Profile</span>
+  </button>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-title"></div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const tg = window.Telegram?.WebApp;
+if (tg) { tg.expand(); tg.setHeaderColor('#0a0a0a'); tg.setBackgroundColor('#0a0a0a'); }
+const tgUser = tg?.initDataUnsafe?.user || {id:12345678,username:'test',first_name:'Test'};
+let userData = null;
+let selectedCard = null;
+
+async function api(path, method='GET', body=null) {
+  const opts = {method, headers:{'Content-Type':'application/json'}};
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(path, opts);
+  if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.detail||'Error'); }
+  return res.json();
+}
+
+function toast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 2500);
+}
+
+function haptic() {
+  tg?.HapticFeedback?.impactOccurred('light');
+  try { navigator.vibrate && navigator.vibrate(10); } catch(e) {}
+}
+
+function rClass(r) { return 'rb-'+(r||'base'); }
+function rLabel(r) { return {base:'Base',rare:'Rare',epic:'Epic',legendary:'Legendary'}[r]||r; }
+function rEmoji(r) { return {base:'🃏',rare:'💎',epic:'⚡',legendary:'🌟'}[r]||'🃏'; }
+
+function imgHtml(url, rarity, size='28px') {
+  if (url) return `<img src="${url}" onerror="this.outerHTML='<span style=\\'font-size:${size}\\'>${rEmoji(rarity)}</span>'">`;
+  return `<span style="font-size:${size}">${rEmoji(rarity)}</span>`;
+}
+
+function updateBalances() {
+  if (!userData) return;
+  document.getElementById('dev-val').textContent = userData.dev_tokens ?? 0;
+  document.getElementById('star-val').textContent = userData.stars_balance ?? 0;
+  const sv = document.getElementById('star-val-trade');
+  if (sv) sv.textContent = userData.stars_balance ?? 0;
+}
+
+function switchTab(tab) {
+  haptic();
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-'+(tab==='sell'?'sell':tab)).classList.add('active');
+  document.querySelector(`[data-page="${tab}"]`).classList.add('active');
+  if (tab==='buy') loadBuy();
+  if (tab==='sell') loadTrade();
+  if (tab==='profile') loadProfile();
+}
+
+function openModal(title, html) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) closeModal();
+});
+
+async function init() {
+  try {
+    await api('/api/register','POST',{
+      telegram_id: tgUser.id, username: tgUser.username||'',
+      first_name: tgUser.first_name||'', last_name: tgUser.last_name||'',
+      ref_code: new URLSearchParams(location.search).get('ref')
+    });
+    userData = await api(`/api/user/${tgUser.id}`);
+    updateBalances();
+    loadBuy();
+  } catch(e) { toast('Connection error','err'); }
+}
+
+// ── BUY ──
+async function loadBuy() {
+  if (!userData) return;
+  const el = document.getElementById('buy-content');
+  try {
+    const cols = await api('/api/collections');
+    const col = cols[0];
+    if (!col) { el.innerHTML = '<p style="padding:20px;color:var(--text2)">No collections</p>'; return; }
+    const detail = await api(`/api/collection/${col.id}`);
+    const base = detail.cards.find(c => c.rarity==='base');
+    const useDev = (userData.dev_tokens??0) >= col.base_price;
+    const btnLabel = 'Buy';
+    _buyPrice = col.base_price;
+    _buyUseDev = useDev;
+    _buyQty = 1;
+
+    el.innerHTML = `
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:20px;text-align:center">
+        <div style="font-size:24px;font-weight:800;margin-bottom:16px">${col.name}</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px">
+          <div style="background:var(--bg3);border-radius:10px;padding:10px">
+            <div style="font-size:18px;font-weight:800">${col.remaining}</div>
+            <div style="font-size:10px;color:var(--text2);margin-top:2px">LEFT</div>
+          </div>
+          <div style="background:var(--bg3);border-radius:10px;padding:10px">
+            <div style="font-size:18px;font-weight:800;color:var(--star)">${col.base_price}⭐</div>
+            <div style="font-size:10px;color:var(--text2);margin-top:2px">PRICE</div>
+          </div>
+          <div style="background:var(--bg3);border-radius:10px;padding:10px">
+            <div style="font-size:18px;font-weight:800">${col.total_supply}</div>
+            <div style="font-size:10px;color:var(--text2);margin-top:2px">SUPPLY</div>
+          </div>
+        </div>
+        <div style="max-width:200px;margin:0 auto 20px;aspect-ratio:3/4;border-radius:14px;overflow:hidden;border:1px solid var(--border);background:var(--bg3);display:flex;align-items:center;justify-content:center">
+          ${base?.image_url ? `<img src="${base.image_url}" style="width:100%;height:100%;object-fit:cover">` : `<span style="font-size:56px">🃏</span>`}
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <button class="btn btn-secondary" style="width:44px;height:44px;font-size:20px;flex-shrink:0;padding:0" onclick="changeQty(-1)">−</button>
+          <div style="flex:1;text-align:center">
+            <span id="qty-val" style="font-size:22px;font-weight:800">1</span>
+            <span style="font-size:13px;color:var(--text2)"> cards</span>
+          </div>
+          <button class="btn btn-secondary" style="width:44px;height:44px;font-size:20px;flex-shrink:0;padding:0" onclick="changeQty(1)">+</button>
+        </div>
+        <div id="total-price" style="font-size:13px;color:var(--text2);margin-bottom:12px;text-align:center">Total: <strong id="total-val" style="color:${useDev?'var(--dev)':'var(--star)'}">${col.base_price} ${useDev?'DEV':'⭐'}</strong></div>
+        <button class="btn btn-primary" id="buy-btn" onclick="buyCard(${col.id},${col.base_price},${useDev})">Buy</button>
+        <p style="margin-top:10px;font-size:11px;color:var(--text2)">Upgrade after purchase to reveal your skin ✨</p>
+      </div>`;
+  } catch(e) { el.innerHTML = `<div class="empty-state"><div class="ei">⚠️</div><p>${e.message}</p></div>`; }
+}
+
+let _buyQty = 1;
+let _buyColId = null;
+let _buyPrice = null;
+let _buyUseDev = false;
+
+function changeQty(delta) {
+  _buyQty = Math.max(1, Math.min(500, _buyQty + delta));
+  const qv = document.getElementById('qty-val');
+  const tp = document.getElementById('total-price');
+  const bb = document.getElementById('buy-btn');
+  if (qv) qv.textContent = _buyQty;
+  const tv = document.getElementById('total-val');
+  if (tv && _buyPrice) {
+    const total = _buyQty * _buyPrice;
+    tv.textContent = `${total} ${_buyUseDev?'DEV':'⭐'}`;
+  }
+  if (bb && _buyPrice) {
+    const total = _buyQty * _buyPrice;
+    bb.textContent = _buyUseDev ? `🧪 Buy ${_buyQty} — ${total} DEV` : `Buy ${_buyQty} — ${total} ⭐`;
+  }
+}
+
+async function buyCard(colId, price, useDev) {
+  haptic();
+  _buyColId = colId; _buyPrice = price; _buyUseDev = useDev ?? ((userData.dev_tokens??0) >= price);
+  const qty = _buyQty || 1;
+  const total = qty * price;
+  if (_buyUseDev && (userData.dev_tokens??0) < total) { toast('Not enough DEV','err'); return; }
+  if (!_buyUseDev && userData.stars_balance < total) { toast('Not enough balance','err'); return; }
+  try {
+    for (let i = 0; i < qty; i++) {
+      await api('/api/buy_card_internal','POST',{telegram_id:tgUser.id,collection_id:colId,dev:_buyUseDev});
+    }
+    userData = await api(`/api/user/${tgUser.id}`);
+    updateBalances();
+    _buyQty = 1;
+    toast(_buyUseDev?`🧪 ${qty} card(s) added!`:`🃏 ${qty} card(s) added!`,'ok');
+    loadBuy();
+  } catch(e) { toast(e.message,'err'); }
+}
+
+// ── TRADE ──
+let allListings = [];
+let tradeFilter = 'all';
+let tradeSortBy = 'newest';
+
+async function loadTrade() {
+  if (!userData) return;
+  const el = document.getElementById('trade-content');
+  try {
+    userData = await api(`/api/user/${tgUser.id}`);
+    updateBalances();
+    allListings = await api('/api/market');
+
+    el.innerHTML = `
+      <div class="filters" id="rarity-filters">
+        <button class="filter-btn active" onclick="setTradeFilter('all',this)">All</button>
+        <button class="filter-btn" onclick="setTradeFilter('base',this)">Base</button>
+        <button class="filter-btn" onclick="setTradeFilter('rare',this)">💎 Rare</button>
+        <button class="filter-btn" onclick="setTradeFilter('epic',this)">⚡ Epic</button>
+        <button class="filter-btn" onclick="setTradeFilter('legendary',this)">🌟 Legend</button>
+      </div>
+      <div class="filters">
+        <button class="filter-btn active" id="sort-newest" onclick="toggleNewestSort(this)">Last ↕</button>
+        <button class="filter-btn" id="sort-price" onclick="togglePriceSort(this)">Price ↕</button>
+        <button class="filter-btn" id="sort-serial" onclick="toggleSerialSort(this)"># Serial ↕</button>
+      </div>
+      <div id="listings-list"></div>`;
+
+    renderListings();
+  } catch(e) { el.innerHTML = `<div class="empty-state"><div class="ei">⚠️</div><p>${e.message}</p></div>`; }
+}
+
+function toggleNewestSort(btn) {
+  if (tradeSortBy === 'newest') {
+    tradeSortBy = 'oldest';
+    btn.textContent = 'First ↕';
+  } else {
+    tradeSortBy = 'newest';
+    btn.textContent = 'Last ↕';
+  }
+  document.querySelectorAll('.filters .filter-btn').forEach(b => { if(b!==btn) b.classList.remove('active'); });
+  btn.classList.add('active');
+  renderListings();
+}
+
+function toggleSerialSort(btn) {
+  if (tradeSortBy === 'serial_asc') {
+    tradeSortBy = 'serial_desc';
+    btn.textContent = '# Serial ↓';
+  } else {
+    tradeSortBy = 'serial_asc';
+    btn.textContent = '# Serial ↑';
+  }
+  document.querySelectorAll('.filters .filter-btn').forEach(b => { if(b!==btn) b.classList.remove('active'); });
+  btn.classList.add('active');
+  renderListings();
+}
+
+function togglePriceSort(btn) {
+  if (tradeSortBy === 'price_asc') {
+    tradeSortBy = 'price_desc';
+    btn.textContent = 'Price ↓';
+  } else {
+    tradeSortBy = 'price_asc';
+    btn.textContent = 'Price ↑';
+  }
+  document.querySelectorAll('.filters .filter-btn').forEach(b => {
+    if (b !== btn) b.classList.remove('active');
+  });
+  btn.classList.add('active');
+  renderListings();
+}
+
+function setTradeFilter(val, btn) {
+  tradeFilter = val;
+  document.querySelectorAll('#rarity-filters .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderListings();
+}
+
+function setTradeSort(val, btn) {
+  tradeSortBy = val;
+  btn.closest('.filters').querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderListings();
+}
+
+function renderListings() {
+  let list = [...allListings];
+  if (tradeFilter !== 'all') list = list.filter(l => l.rarity === tradeFilter);
+  if (tradeSortBy === 'price_asc') list.sort((a,b) => a.price_stars - b.price_stars);
+  else if (tradeSortBy === 'price_desc') list.sort((a,b) => b.price_stars - a.price_stars);
+  else if (tradeSortBy === 'serial_asc') list.sort((a,b) => a.serial_number - b.serial_number);
+  else if (tradeSortBy === 'serial_desc') list.sort((a,b) => b.serial_number - a.serial_number);
+  else if (tradeSortBy === 'oldest') list.sort((a,b) => a.id - b.id);
+  else list.sort((a,b) => b.id - a.id);
+
+  const el = document.getElementById('listings-list');
+  if (!el) return;
+  if (list.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="ei">🏪</div><p>No listings</p></div>`;
+    return;
+  }
+  let html = `<div style="display:flex;flex-direction:column;gap:8px">`;
+  for (const l of list) {
+    const isOwn = l.seller_id === userData.id;
+    html += `
+      <div class="market-item" onclick='openMarketModal(${JSON.stringify(l)},${isOwn})'>
+        <div class="market-thumb">${imgHtml(l.image_url,l.rarity,'18px')}</div>
+        <div class="market-info">
+          <div class="market-name">${l.name}</div>
+          <div class="market-seller">${l.username?'@'+l.username:l.first_name} · #${l.serial_number}</div>
+        </div>
+        <div class="market-price">⭐${l.price_stars}</div>
+      </div>`;
+  }
+  html += `</div>`;
+  el.innerHTML = html;
+}
+
+function openMarketModal(listing, isOwn) {
+  openModal(listing.name, `
+    <div class="modal-card-preview">${imgHtml(listing.image_url,listing.rarity,'56px')}<span class="rbadge ${rClass(listing.rarity)}">${rLabel(listing.rarity)}</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="stat-box"><div class="val">#${listing.serial_number}</div><div class="lbl">Serial</div></div>
+      <div class="stat-box"><div class="val" style="color:var(--star)">${listing.price_stars}⭐</div><div class="lbl">Price</div></div>
+    </div>
+    <div style="font-size:12px;color:var(--text2)">Seller: @${listing.username||listing.first_name}</div>
+    ${isOwn
+      ? `<button class="btn btn-danger btn-wide" onclick="unlistCard(${listing.id})">Remove listing</button>`
+      : `<button class="btn btn-primary" onclick="buyListing(${listing.id},${listing.price_stars})">Buy for ${listing.price_stars} ⭐</button>`
+    }
+    <button class="btn btn-secondary btn-wide" onclick="closeModal()">Close</button>
+  `);
+}
+
+async function buyListing(id, price) {
+  haptic();
+  if (userData.stars_balance < price) { toast('Not enough stars','err'); return; }
+  try {
+    await api('/api/market/buy','POST',{telegram_id:tgUser.id,listing_id:id});
+    closeModal();
+    userData = await api(`/api/user/${tgUser.id}`);
+    updateBalances();
+    toast('🃏 Purchased!','ok');
+    loadTrade();
+  } catch(e) { toast(e.message,'err'); }
+}
+
+async function unlistCard(id) {
+  haptic();
+  try {
+    await api('/api/market/unlist','POST',{telegram_id:tgUser.id,listing_id:id});
+    closeModal();
+    toast('Removed','ok');
+    loadTrade();
+  } catch(e) { toast(e.message,'err'); }
+}
+
+// ── PROFILE ──
+async function loadProfile() {
+  const el = document.getElementById('profile-content');
+  try {
+    userData = await api(`/api/user/${tgUser.id}`);
+    updateBalances();
+    const cards = (userData.cards || []).sort((a,b) => a.serial_number - b.serial_number);
+    const devBal = userData.dev_tokens ?? 0;
+
+    let cardsHtml = '';
+    if (cards.length === 0) {
+      cardsHtml = `<div class="empty-state" style="padding:24px 0"><div class="ei">🃏</div><p>No cards yet</p><small>Buy your first card</small></div>`;
+    } else {
+      const showAll = window._showAllCards || false;
+      const visibleCards = showAll ? cards : cards.slice(0, 6);
+      cardsHtml = `
+        <div class="filters">
+          <button class="filter-btn active" onclick="filterProfileCards('all',this)">All</button>
+          <button class="filter-btn" onclick="filterProfileCards('base',this)">Base</button>
+          <button class="filter-btn" onclick="filterProfileCards('rare',this)">💎 Rare</button>
+          <button class="filter-btn" onclick="filterProfileCards('epic',this)">⚡ Epic</button>
+          <button class="filter-btn" onclick="filterProfileCards('legendary',this)">🌟 Legend</button>
+        </div>
+        <div id="profile-cards-grid" class="cards-grid">`;
+      for (const card of visibleCards) {
+        cardsHtml += `
+          <div class="card-item" data-rarity="${card.rarity}" onclick='openCardModal(${JSON.stringify(card)})'>
+            <div class="card-img">
+              ${imgHtml(card.image_url, card.rarity, '28px')}
+              <span class="rbadge ${rClass(card.rarity)}">${rLabel(card.rarity)}</span>
+              ${card.rarity !== 'base' ? `<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.75);padding:3px;text-align:center;font-size:9px;font-weight:700;color:${card.rarity==='legendary'?'var(--legendary)':card.rarity==='epic'?'var(--epic)':'var(--rare)'}">${card.rarity.toUpperCase()}</div>` : ''}
+            </div>
+            <div class="card-info">
+              <div class="card-name">${card.name}</div>
+              <div class="card-meta">#${card.serial_number}</div>
+            </div>
+          </div>`;
+      }
+      cardsHtml += `</div>`;
+      if (!showAll && cards.length > 6) {
+        cardsHtml += `<button class="btn btn-secondary btn-wide" onclick="window._showAllCards=true;loadProfile()">Show all ${cards.length} cards</button>`;
+      } else if (showAll && cards.length > 6) {
+        cardsHtml += `<button class="btn btn-secondary btn-wide" onclick="window._showAllCards=false;loadProfile()">Show less</button>`;
+      }
+    }
+
+    el.innerHTML = `
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:18px;display:flex;align-items:center;gap:14px">
+        <div style="width:52px;height:52px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;flex-shrink:0">${(tgUser.first_name?.[0]||'?').toUpperCase()}</div>
+        <div style="flex:1">
+          <div style="font-size:18px;font-weight:800">${tgUser.first_name||'User'} ${tgUser.last_name||''}</div>
+          <div style="font-size:12px;color:var(--text2);font-family:'Space Mono',monospace">${tgUser.username?'@'+tgUser.username:'ID '+tgUser.id}</div>
+        </div>
+
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-box" style="cursor:pointer" onclick="openSplitLink()"><div class="val" style="color:var(--star)">${userData.stars_balance}</div><div class="lbl">⭐ Stars</div></div>
+        <div class="stat-box"><div class="val" style="color:var(--dev)">${devBal}</div><div class="lbl">🧪 DEV</div></div>
+        <div class="stat-box"><div class="val">${cards.length}</div><div class="lbl">Cards</div></div>
+        <div class="stat-box"><div class="val" id="friends-count">—</div><div class="lbl">Friends</div></div>
+        
+      </div>
+
+      <div class="section-label">My Cards</div>
+      ${cardsHtml}
+
+      <div class="section-label" style="margin-top:4px">Friends</div>
+      <div id="friends-block"><div class="spinner" style="margin:16px auto"></div></div>
+
+      <div class="ref-box">
+        <h3>🎁 Refer & Earn</h3>
+        <p>Invite friends — you earn <strong style="color:var(--star)">30% of all their spending</strong> automatically on your balance! 🔥</p>
+        <div class="ref-row">
+          <div class="ref-code">t.me/memstroybot?start=${userData.telegram_id}</div>
+          <button class="btn btn-secondary" style="white-space:nowrap;flex-shrink:0" onclick="copyRef(${userData.telegram_id})">Copy</button>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div class="menu-item" onclick="openSplitLink()">
+          <span class="menu-icon">⭐</span>
+          <div class="menu-text"><div class="menu-label">Buy Cheap Stars</div></div>
+          <span class="menu-arrow">›</span>
+        </div>
+        <div class="menu-item" onclick="connectTon()">
+          <span class="menu-icon">💎</span>
+          <div class="menu-text"><div class="menu-label" id="ton-label">Connect TON Wallet</div><div id="ton-sub" style="display:none"></div></div>
+          <span class="menu-arrow" id="ton-arrow">›</span>
+        </div>
+      </div>
+      <div style="height:16px"></div>
+    `;
+
+    loadFriends();
+  } catch(e) { el.innerHTML = `<div class="empty-state"><div class="ei">⚠️</div><p>${e.message}</p></div>`; }
+}
+
+async function loadFriends() {
+  try {
+    const data = await api(`/api/friends/${tgUser.id}`);
+    const friends = data.friends || [];
+    const fc = document.getElementById('friends-count');
+    if (fc) fc.textContent = friends.length;
+    const el = document.getElementById('friends-block');
+    if (!el) return;
+    if (friends.length === 0) {
+      el.innerHTML = `<div style="font-size:13px;color:var(--text3);padding:4px 0">No friends yet — share your link!</div>`;
+      return;
+    }
+    let html = `<div style="display:flex;flex-direction:column;gap:6px">`;
+    for (const f of friends) {
+      const name = f.first_name || f.username || 'User';
+      html += `<div class="friend-item">
+        <div class="friend-av">${name[0].toUpperCase()}</div>
+        <div><div class="friend-name">${name}</div><div class="friend-meta">${f.username?'@'+f.username:'ID '+f.telegram_id}</div></div>
+        <div class="friend-cards">🃏 ${f.cards_count}</div>
+      </div>`;
+    }
+    html += `</div>`;
+    el.innerHTML = html;
+  } catch(e) {}
+}
+
+function openCardModal(card) {
+  selectedCard = card;
+  const upgraded = card.is_upgraded === 1;
+  const devBal = userData.dev_tokens ?? 0;
+  const hasDev = devBal >= 25;
+  const hasStars = userData.stars_balance >= 25;
+  const canUpgrade = !upgraded && (hasDev || hasStars);
+  const useDevUpgrade = !upgraded && hasDev;
+
+  openModal(card.name, `
+    <div class="modal-card-preview">
+      ${imgHtml(card.image_url, card.rarity, '56px')}
+      <span class="rbadge ${rClass(card.rarity)}">${rLabel(card.rarity)}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="stat-box"><div class="val">#${card.serial_number}</div><div class="lbl">Serial</div></div>
+      <div class="stat-box"><div class="val" style="font-size:14px;color:${card.rarity==='legendary'?'var(--legendary)':card.rarity==='epic'?'var(--epic)':card.rarity==='rare'?'var(--rare)':'var(--text2)'}">
+      ${card.rarity==='legendary'?'~9%':card.rarity==='epic'?'~30%':card.rarity==='rare'?'~61%':'—'}</div>
+      <div class="lbl">Drop chance</div></div>
+    </div>
+    ${!upgraded ? `
+      <div style="background:var(--bg3);border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Upgrade cost</div>
+        <div style="font-size:24px;font-weight:800;color:${useDevUpgrade?'var(--dev)':'var(--star)'}">25 ${useDevUpgrade?'DEV':'⭐'}</div>
+        <div style="font-size:10px;color:var(--text2);margin-top:4px">Random skin: Rare · Epic · Legendary</div>
+      </div>
+      <div style="font-size:11px;color:var(--text2);text-align:center">
+        Balance: <strong style="color:var(--dev)">${devBal} DEV</strong> · <strong style="color:var(--star)">${userData.stars_balance} ⭐</strong>
+      </div>
+      ${canUpgrade
+        ? `<button class="btn btn-primary" onclick="upgradeCard(${card.id})">✨ Upgrade — 25 ${useDevUpgrade?'DEV':'⭐'}</button>`
+        : `<button class="btn btn-secondary btn-wide" style="opacity:0.4" disabled>Not enough balance</button>`
+      }
+    ` : `
+      
+      <button class="btn btn-secondary btn-wide" onclick="openListModal()">Sell</button>
+      <button class="btn btn-secondary btn-wide" onclick="openTransferModal(${card.id})">Transfer</button>
+    `}
+    <button class="btn btn-secondary btn-wide" onclick="closeModal()">Close</button>
+  `);
+}
+
+async function upgradeCard(cardId) {
+  haptic();
+  const useDev = (userData.dev_tokens??0) >= 25;
+  try {
+    const res = await api('/api/upgrade_card_internal','POST',{telegram_id:tgUser.id,user_card_id:cardId,dev:useDev});
+    closeModal();
+    userData = await api(`/api/user/${tgUser.id}`);
+    updateBalances();
+    const names = {rare:'💎 Rare',epic:'⚡ Epic',legendary:'🌟 Legendary'};
+    toast(`✨ Got ${names[res.card?.rarity]||'new skin'}!`,'ok');
+    loadProfile();
+  } catch(e) { toast(e.message,'err'); }
+}
+
+function openListModal() {
+  const card = selectedCard;
+  openModal('List for Sale', `
+    <div class="modal-card-preview">${imgHtml(card.image_url,card.rarity,'56px')}</div>
+    <div class="price-input-row">
+      <input type="number" id="sell-price" placeholder="Price in stars" min="1">
+      <span class="cur">⭐</span>
+    </div>
+    <button class="btn btn-primary" onclick="listCard(${card.id})">List for Sale</button>
+    <button class="btn btn-secondary btn-wide" onclick="closeModal()">Cancel</button>
+  `);
+}
+
+async function listCard(cardId) {
+  haptic();
+  const price = parseInt(document.getElementById('sell-price')?.value);
+  if (!price||price<1) { toast('Enter price','err'); return; }
+  try {
+    await api('/api/market/list','POST',{telegram_id:tgUser.id,user_card_id:cardId,price_stars:price});
+    closeModal();
+    toast('Listed! 🏪','ok');
+    loadProfile();
+  } catch(e) { toast(e.message,'err'); }
+}
+
+function openTransferModal(cardId) {
+  openModal('Transfer Card', `
+    <div style="font-size:13px;color:var(--text2);line-height:1.5">Enter <strong style="color:var(--text)">Telegram ID</strong> of recipient (numbers only).<br>Cost: <strong style="color:var(--star)">1 ⭐</strong></div>
+    <input class="transfer-input" id="transfer-to" placeholder="Telegram ID (numbers only)" type="text" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+    <button class="btn btn-primary" onclick="doTransfer(${cardId})">Send Card</button>
+    <button class="btn btn-secondary btn-wide" onclick="closeModal()">Cancel</button>
+  `);
+}
+
+async function doTransfer(cardId) {
+  haptic();
+  const toId = parseInt(document.getElementById('transfer-to')?.value);
+  if (!toId) { toast('Enter Telegram ID','err'); return; }
+  try {
+    await api('/api/transfer','POST',{from_telegram_id:tgUser.id,to_telegram_id:toId,user_card_id:cardId});
+    closeModal();
+    toast('Card sent! ✈️','ok');
+    userData = await api(`/api/user/${tgUser.id}`);
+    updateBalances();
+    loadProfile();
+  } catch(e) {
+    if (e.message.includes('not found') || e.message.includes('404')) {
+      // User not in bot - offer to invite
+      document.getElementById('modal-body').innerHTML = `
+        <div style="text-align:center;padding:8px 0">
+          <div style="font-size:36px;margin-bottom:12px">🤔</div>
+          <div style="font-size:15px;font-weight:700;margin-bottom:8px">User not in MemStroy</div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.5">This person hasn't joined yet.<br>Invite them — you'll earn <strong style="color:var(--star)">30%</strong> of their future spending!</div>
+          <button class="btn btn-primary" onclick="inviteForTransfer(${toId})">📤 Invite & Send Later</button>
+          <button class="btn btn-secondary btn-wide" style="margin-top:8px" onclick="closeModal()">Cancel</button>
+        </div>`;
+    } else {
+      toast(e.message,'err');
+    }
+  }
+}
+
+function inviteForTransfer(toId) {
+  haptic();
+  const link = `https://t.me/memstroybot?start=${tgUser.id}`;
+  const text = `Hey! Join MemStroy and I'll send you a card 🃏`;
+  if (tg) tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`);
+  else navigator.clipboard.writeText(link).then(()=>toast('Link copied!','ok'));
+  closeModal();
+}
+
+function openSplitLink() {
+  const url = 'https://split.tg/?ref=UQDngkmwbJxausCBgrbXcS_LmQYtGLG0-qfsaCYijyczQVap';
+  if (tg) tg.openLink(url); else window.open(url,'_blank');
+}
+
+function copyRef(tgId) {
+  const link = `https://t.me/memstroybot?start=${tgId}`;
+  navigator.clipboard.writeText(link).then(()=>toast('Link copied!','ok')).catch(()=>toast(link));
+}
+
+// TON
+let tonUI = null;
+async function initTon() {
+  try {
+    tonUI = new TON_CONNECT_UI.TonConnectUI({manifestUrl: location.origin+'/webapp/tonconnect-manifest.json', buttonRootId:null});
+    tonUI.onStatusChange(w => {
+      const label = document.getElementById('ton-label');
+      const sub = document.getElementById('ton-sub');
+      const arrow = document.getElementById('ton-arrow');
+      if (!label) return;
+      if (w) {
+        const short = w.account.address.slice(0,6)+'...'+w.account.address.slice(-4);
+        label.textContent='TON Connected'; sub.textContent=short; sub.style.color='var(--success)'; arrow.textContent='✓';
+        fetch('/api/save_ton_wallet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({telegram_id:tgUser.id,ton_address:w.account.address})}).catch(()=>{});
+      } else {
+        label.textContent='Connect TON Wallet'; sub.textContent='Tonkeeper, MyTonWallet...'; sub.style.color=''; arrow.textContent='›';
+      }
+    });
+  } catch(e) {}
+}
+async function connectTon() {
+  haptic();
+  if (!tonUI) await initTon();
+  if (tonUI?.wallet) { if(confirm('Disconnect wallet?')) { await tonUI.disconnect(); toast('Disconnected'); } }
+  else tonUI?.openModal();
+}
+
+function filterProfileCards(rarity, btn) {
+  btn.closest('.filters').querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('#profile-cards-grid .card-item').forEach(el => {
+    el.style.display = (rarity === 'all' || el.dataset.rarity === rarity) ? '' : 'none';
+  });
+}
+
+// Ripple on all buttons
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.btn');
+  if (!btn) return;
+  const r = document.createElement('span');
+  r.className = 'ripple-effect';
+  const rect = btn.getBoundingClientRect();
+  r.style.left = (e.clientX - rect.left - 20) + 'px';
+  r.style.top = (e.clientY - rect.top - 20) + 'px';
+  btn.appendChild(r);
+  setTimeout(() => r.remove(), 400);
+});
+
+initTon();
+init();
+</script>
+</body>
+</html>
