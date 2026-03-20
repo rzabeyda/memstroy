@@ -39,37 +39,37 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             description TEXT DEFAULT '',
-            total_supply INTEGER DEFAULT 1000,
-            remaining INTEGER DEFAULT 1000,
-            base_price INTEGER DEFAULT 25,
+            total_supply INTEGER DEFAULT 10000,
+            remaining INTEGER DEFAULT 10000,
+            base_price INTEGER DEFAULT 100,
+            upgrade_price INTEGER DEFAULT 50,
             is_active INTEGER DEFAULT 1,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
 
-    # Card definitions (base + upgrade skins per collection)
+    # Card definitions
     cur.execute("""
         CREATE TABLE IF NOT EXISTS card_definitions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             collection_id INTEGER REFERENCES collections(id),
-            rarity TEXT DEFAULT 'base',  -- base, rare, epic, legendary
             name TEXT NOT NULL,
             image_url TEXT NOT NULL,
             description TEXT DEFAULT '',
-            drop_weight INTEGER DEFAULT 100  -- higher = more common
+            drop_weight INTEGER DEFAULT 100
         )
     """)
 
-    # User cards (actual owned NFTs)
+    # User cards
     cur.execute("""
         CREATE TABLE IF NOT EXISTS user_cards (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER REFERENCES users(id),
             card_def_id INTEGER REFERENCES card_definitions(id),
             collection_id INTEGER REFERENCES collections(id),
-            serial_number INTEGER NOT NULL,  -- unique number in collection
+            serial_number INTEGER NOT NULL,
             is_upgraded INTEGER DEFAULT 0,
-            is_listed INTEGER DEFAULT 0,  -- listed on market
+            is_listed INTEGER DEFAULT 0,
             list_price INTEGER DEFAULT 0,
             transferred_count INTEGER DEFAULT 0,
             acquired_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -96,7 +96,7 @@ def init_db():
             from_user_id INTEGER REFERENCES users(id),
             to_user_id INTEGER REFERENCES users(id),
             user_card_id INTEGER REFERENCES user_cards(id),
-            type TEXT NOT NULL,  -- buy, upgrade, transfer, sell, ref_bonus
+            type TEXT NOT NULL,
             stars_amount INTEGER DEFAULT 0,
             payload TEXT DEFAULT '',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -114,35 +114,81 @@ def init_db():
         )
     """)
 
-    # Seed first collection if empty
+    # Seed Ponki collection if empty
     cur.execute("SELECT COUNT(*) FROM collections")
     if cur.fetchone()[0] == 0:
         cur.execute("""
-            INSERT INTO collections (name, description, total_supply, remaining, base_price)
-            VALUES ('MemStroy', 'The first MemStroy collection.', 1000, 1000, 25)
+            INSERT INTO collections (name, description, total_supply, remaining, base_price, upgrade_price)
+            VALUES ('Ponki', 'The first Ponki collection. 50 unique models.', 10000, 10000, 100, 0)
         """)
         collection_id = cur.lastrowid
 
-        # Base card (everyone gets this first)
-        cur.execute("""
-            INSERT INTO card_definitions (collection_id, rarity, name, image_url, description, drop_weight)
-            VALUES (?, 'base', 'MemStroy Card', '/static/cards/1.jpg', 'The original MemStroy card.', 0)
-        """, (collection_id,))
-
-        # Upgrade results (random skin after upgrade)
-        skins = [
-            ('rare', 'MemStroy Red', '/static/cards/2.jpg', 'Rare edition.', 50),
-            ('rare', 'MemStroy Blue', '/static/cards/3.jpg', 'Rare edition.', 50),
-            ('epic', 'MemStroy Green', '/static/cards/4.jpg', 'Epic edition.', 25),
-            ('epic', 'MemStroy Purple', '/static/cards/5.jpg', 'Epic edition.', 25),
-            ('legendary', 'MemStroy Gold', '/static/cards/6.jpg', 'Legendary edition.', 10),
-            ('legendary', 'MemStroy Holo', '/static/cards/7.jpg', 'Legendary edition.', 5),
+        # All 50 Ponki models
+        # drop_weight = percent * 10 (e.g. 0.5% = 5, 1% = 10, 3% = 30)
+        cards = [
+            # 0.5%
+            ('Plush Frog',      '/static/ponki/ponki_pepe.png',     5),
+            ('Insta Girl',      '/static/ponki/ponki_lui.png',      5),
+            ('Lambo',           '/static/ponki/ponki_lambo.png',    5),
+            # 1%
+            ('BTC',             '/static/ponki/ponki_btc.png',      10),
+            ('Gelik',           '/static/ponki/ponki_mers.png',     10),
+            ('Elsa',            '/static/ponki/ponki_elsa.png',     10),
+            ('Storm',           '/static/ponki/ponki_storm.png',    10),
+            ('Tron',            '/static/ponki/ponki_tron.png',     10),
+            ('Rich',            '/static/ponki/ponki_money.png',    10),
+            ('Masha',           '/static/ponki/ponki_masha.png',    10),
+            ('Utya',            '/static/ponki/ponki_utya.png',     10),
+            # 1.5%
+            ('Monro',           '/static/ponki/ponki_monro.png',    15),
+            ('Gaga',            '/static/ponki/ponki_gaga.png',     15),
+            ('Cat',             '/static/ponki/ponki_cat.png',      15),
+            ('Bumer',           '/static/ponki/ponki_bmw.png',      15),
+            ('Joker',           '/static/ponki/ponki_joker.png',    15),
+            # 2%
+            ('Squid',           '/static/ponki/ponki_igra.png',     20),
+            ('Poker',           '/static/ponki/ponki_poker.png',    20),
+            ('Matrix',          '/static/ponki/ponki_matrix.png',   20),
+            ('Spa',             '/static/ponki/ponki_spa.png',      20),
+            ('Roses',           '/static/ponki/ponki_rose.png',     20),
+            ('Four',            '/static/ponki/ponki_4.png',        20),
+            ('Alisa',           '/static/ponki/ponki_alisa.png',    20),
+            ('Dober',           '/static/ponki/ponke_dob.png',      20),
+            ('Harley',          '/static/ponki/ponki_har.png',      20),
+            ('Fitonyashka',     '/static/ponki/ponki_gym.png',      20),
+            ('Mermaid',         '/static/ponki/ponki_merm.png',     20),
+            ('Tomber',          '/static/ponki/ponki_tomb.png',     20),
+            ('Catwoman',        '/static/ponki/ponki_catwoman.png', 20),
+            ('School Girl',     '/static/ponki/ponki_school.png',   20),
+            ('Business Woman',  '/static/ponki/ponki_biz.png',      20),
+            # 2.5%
+            ('Archer',          '/static/ponki/ponki_kat.png',      25),
+            ('Dark',            '/static/ponki/ponki_male.png',     25),
+            ('Halloween',       '/static/ponki/ponki_hell.png',     25),
+            ('Wednesday',       '/static/ponki/ponki_wen.png',      25),
+            ('Red Cap',         '/static/ponki/ponki_redcap.png',   25),
+            ('Fighter',         '/static/ponki/ponki_ufc.png',      25),
+            ('Delta',           '/static/ponki/ponki_war.png',      25),
+            ('Rap',             '/static/ponki/ponki_rap.png',      25),
+            ('Delivery',        '/static/ponki/ponki_div.png',      25),
+            ('Nurse',           '/static/ponki/ponki_medic.png',    25),
+            # 3%
+            ('Love',            '/static/ponki/ponki_love.png',     30),
+            ('Dress',           '/static/ponki/ponki_dress.png',    30),
+            ('Retro',           '/static/ponki/ponki_80.png',       30),
+            ('Singer',          '/static/ponki/ponki_sing.png',     30),
+            ('Hero',            '/static/ponki/ponki_wond.png',     30),
+            ('Beauty',          '/static/ponki/ponki_samka.png',    30),
+            ('Red',             '/static/ponki/ponki_red.png',      30),
+            ('Cleo',            '/static/ponki/ponki_cleo.png',     30),
+            ('Street',          '/static/ponki/ponki_adidas.png',   30),
         ]
-        for rarity, name, img, desc, weight in skins:
+
+        for name, image_url, weight in cards:
             cur.execute("""
-                INSERT INTO card_definitions (collection_id, rarity, name, image_url, description, drop_weight)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (collection_id, rarity, name, img, desc, weight))
+                INSERT INTO card_definitions (collection_id, name, image_url, drop_weight)
+                VALUES (?, ?, ?, ?)
+            """, (collection_id, name, image_url, weight))
 
     conn.commit()
     conn.close()

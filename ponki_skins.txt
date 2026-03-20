@@ -1,0 +1,50 @@
+ponki_pepe.png | Plush Frog | 0.5%
+ponki_lui.png | Insta Girl | 0.5%
+ponki_lambo.png | Lambo | 0.5%
+ponki_btc.png | BTC | 1%
+ponki_mers.png | Gelik | 1%
+ponki_elsa.png | Elsa | 1%
+ponki_storm.png | Storm | 1%
+ponki_tron.png | Tron | 1%
+ponki_money.png | Rich | 1%
+ponki_masha.png | Masha | 1%
+ponki_utya.png | Utya | 1%
+ponki_monro.png | Monro | 1.5%
+ponki_gaga.png | Gaga | 1.5%
+ponki_cat.png | Cat | 1.5%
+ponki_bmw.png | Bumer | 1.5%
+ponki_joker.png | Joker | 1.5%
+ponki_igra.png | Squid | 2%
+ponki_poker.png | Poker | 2%
+ponki_matrix.png | Matrix | 2%
+ponki_spa.png | Spa | 2%
+ponki_rose.png | Roses | 2%
+ponki_4.png | Four | 2%
+ponki_alisa.png | Alisa | 2%
+ponke_dob.png | Dober | 2%
+ponki_har.png | Harley | 2%
+ponki_gym.png | Fitonyashka | 2%
+ponki_merm.png | Mermaid | 2%
+ponki_tomb.png | Tomber | 2%
+ponki_catwoman.png | Catwoman | 2%
+ponki_school.png | School Girl | 2%
+ponki_biz.png | Business Woman | 2%
+ponki_kat.png | Archer | 2.5%
+ponki_male.png | Dark | 2.5%
+ponki_hell.png | Halloween | 2.5%
+ponki_wen.png | Wednesday | 2.5%
+ponki_redcap.png | Red Cap | 2.5%
+ponki_ufc.png | Fighter | 2.5%
+ponki_war.png | Delta | 2.5%
+ponki_rap.png | Rap | 2.5%
+ponki_div.png | Delivery | 2.5%
+ponki_medic.png | Nurse | 2.5%
+ponki_love.png | Love | 3%
+ponki_dress.png | Dress | 3%
+ponki_80.png | Retro | 3%
+ponki_sing.png | Singer | 3%
+ponki_wond.png | Hero | 3%
+ponki_samka.png | Beauty | 3%
+ponki_red.png | Red | 3%
+ponki_cleo.png | Cleo | 3%
+ponki_adidas.png | Street | 3%
