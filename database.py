@@ -114,6 +114,53 @@ def init_db():
         )
     """)
 
+    # TON deposits
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS ton_deposits (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER REFERENCES users(id),
+            tx_hash TEXT UNIQUE NOT NULL,
+            amount_nano INTEGER NOT NULL,
+            confirmed INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # TON withdrawals
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS ton_withdrawals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER REFERENCES users(id),
+            to_address TEXT NOT NULL,
+            amount_nano INTEGER NOT NULL,
+            tx_hash TEXT DEFAULT '',
+            status TEXT DEFAULT 'pending',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # Add ton_balance column to users if not exists
+    try:
+        cur.execute("ALTER TABLE users ADD COLUMN ton_balance INTEGER DEFAULT 0")
+    except:
+        pass
+
+    # Add cashback_balance column
+    try:
+        cur.execute("ALTER TABLE users ADD COLUMN cashback_balance INTEGER DEFAULT 0")
+    except:
+        pass
+
+    # Add stars_spent and ton_spent columns for leaderboard
+    try:
+        cur.execute("ALTER TABLE users ADD COLUMN stars_spent INTEGER DEFAULT 0")
+    except:
+        pass
+    try:
+        cur.execute("ALTER TABLE users ADD COLUMN ton_spent INTEGER DEFAULT 0")
+    except:
+        pass
+
     # Seed Ponki collection if empty
     cur.execute("SELECT COUNT(*) FROM collections")
     if cur.fetchone()[0] == 0:
@@ -133,32 +180,32 @@ def init_db():
             # 1%
             ('BTC',             '/static/ponki/ponki_btc.png',      10),
             ('Gelik',           '/static/ponki/ponki_mers.png',     10),
-            ('Elsa',            '/static/ponki/ponki_elsa.png',     10),
+            ('Frosty',          '/static/ponki/ponki_elsa.png',     10),
             ('Storm',           '/static/ponki/ponki_storm.png',    10),
-            ('Tron',            '/static/ponki/ponki_tron.png',     10),
+            ('Throne',          '/static/ponki/ponki_tron.png',     10),
             ('Rich',            '/static/ponki/ponki_money.png',    10),
-            ('Masha',           '/static/ponki/ponki_masha.png',    10),
+            ('MM',              '/static/ponki/ponki_masha.png',    10),
             ('Utya',            '/static/ponki/ponki_utya.png',     10),
             # 1.5%
-            ('Monro',           '/static/ponki/ponki_monro.png',    15),
-            ('Gaga',            '/static/ponki/ponki_gaga.png',     15),
+            ('Vintage Blonde',  '/static/ponki/ponki_monro.png',    15),
+            ('Pop Star',        '/static/ponki/ponki_gaga.png',     15),
             ('Cat',             '/static/ponki/ponki_cat.png',      15),
             ('Bumer',           '/static/ponki/ponki_bmw.png',      15),
             ('Joker',           '/static/ponki/ponki_joker.png',    15),
             # 2%
             ('Squid',           '/static/ponki/ponki_igra.png',     20),
             ('Poker',           '/static/ponki/ponki_poker.png',    20),
-            ('Matrix',          '/static/ponki/ponki_matrix.png',   20),
+            ('Coder',           '/static/ponki/ponki_matrix.png',   20),
             ('Spa',             '/static/ponki/ponki_spa.png',      20),
             ('Roses',           '/static/ponki/ponki_rose.png',     20),
             ('Four',            '/static/ponki/ponki_4.png',        20),
             ('Alisa',           '/static/ponki/ponki_alisa.png',    20),
             ('Dober',           '/static/ponki/ponke_dob.png',      20),
-            ('Harley',          '/static/ponki/ponki_har.png',      20),
+            ('Chaos Girl',      '/static/ponki/ponki_har.png',      20),
             ('Fitonyashka',     '/static/ponki/ponki_gym.png',      20),
             ('Mermaid',         '/static/ponki/ponki_merm.png',     20),
             ('Tomber',          '/static/ponki/ponki_tomb.png',     20),
-            ('Catwoman',        '/static/ponki/ponki_catwoman.png', 20),
+            ('Cat Lady',        '/static/ponki/ponki_catwoman.png', 20),
             ('School Girl',     '/static/ponki/ponki_school.png',   20),
             ('Business Woman',  '/static/ponki/ponki_biz.png',      20),
             # 2.5%

@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Ponki</title>
+<link rel="icon" type="image/png" href="/static/ponki/ponki.png">
+<link rel="apple-touch-icon" href="/static/ponki/ponki.png">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
 <style>
@@ -52,15 +54,15 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;height
 .slide-in-left{animation:slideInLeft 0.25s cubic-bezier(0.32,0.72,0,1)}
 .cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 @keyframes cardTap{0%{transform:scale(1) rotate(0)}25%{transform:scale(0.92) rotate(-2deg)}65%{transform:scale(0.96) rotate(1.5deg)}100%{transform:scale(1) rotate(0)}}
-.card-item{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:border-color 0.12s}
-.card-item:active{border-color:#ff2d78;animation:cardTap 0.4s ease-out forwards}
+.card-item{background:var(--bg2);border:1px solid rgba(255,255,255,0.07);border-radius:12px;overflow:hidden;cursor:pointer;transition:border-color 0.12s,box-shadow 0.12s;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04)}
+.card-item:active{border-color:#ff2d78;box-shadow:0 0 14px rgba(255,45,120,0.2);animation:cardTap 0.4s ease-out forwards}
 .card-img{aspect-ratio:1/1;background:var(--bg3);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
 .card-img img{width:100%;height:100%;object-fit:cover;display:block}
 .card-info{padding:6px 8px}
 .card-name{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card-meta{font-size:10px;color:var(--text2);font-family:'Space Mono',monospace;margin-top:1px}
 .pct-badge{position:absolute;top:5px;right:5px;background:rgba(0,0,0,0.75);border:1px solid rgba(255,255,255,0.1);border-radius:5px;padding:2px 6px;font-size:9px;font-weight:700;font-family:'Space Mono',monospace;color:var(--star)}
-.price-badge{position:absolute;bottom:5px;right:5px;background:rgba(0,0,0,0.85);border:1px solid rgba(240,192,64,0.4);border-radius:6px;padding:4px 8px;font-size:13px;font-weight:800;font-family:'Space Mono',monospace;color:var(--star)}
+.price-badge{position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.7);border:1px solid rgba(74,255,138,0.25);border-radius:5px;padding:2px 5px;font-size:10px;font-weight:700;font-family:'Space Mono',monospace;color:var(--dev);opacity:0.85}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);z-index:200;display:none;align-items:flex-end}
 .modal-overlay.open{display:flex}
 .modal{background:var(--bg2);border:1px solid var(--border);border-radius:24px 24px 0 0;width:100%;max-height:90vh;overflow-y:auto;padding-bottom:calc(20px + var(--safe-b));animation:slideUp 0.3s cubic-bezier(0.32,0.72,0,1)}
@@ -71,7 +73,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;height
 .modal-card-preview{aspect-ratio:1/1;max-width:200px;margin:0 auto;width:100%;border-radius:14px;overflow:hidden;background:var(--bg3)}
 .modal-card-preview img{width:100%;height:100%;object-fit:cover}
 .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.stat-box{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:10px 6px;text-align:center}
+.stat-box{background:var(--bg2);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:10px 6px;text-align:center;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04)}
 .stat-box .val{font-size:18px;font-weight:800;font-family:'Space Mono',monospace}
 .stat-box .lbl{font-size:9px;color:var(--text2);margin-top:2px;text-transform:uppercase;letter-spacing:0.5px}
 .section-label{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:8px}
@@ -116,10 +118,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;height
 <div id="page-buy" class="page active">
   <div class="page-header">
     <span class="page-title" id="t-shop">Shop</span>
-    <div style="display:flex;gap:6px">
-      <div class="badge badge-dev"><span>🧪</span><span id="dev-val">—</span></div>
-      <div class="badge badge-star" onclick="openSplitLink()"><span>⭐</span><span id="star-val">—</span></div>
-    </div>
+    <div class="badge badge-star" onclick="openSplitLink()" style="cursor:pointer"><span>⭐</span><span id="buy-stars-btn">Купить звёзды</span></div>
   </div>
   <div class="content" id="buy-content"><div class="loading-page"><div class="spinner"></div></div></div>
 </div>
@@ -127,7 +126,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;height
 <div id="page-sell" class="page">
   <div class="page-header">
     <span class="page-title" id="t-trade">Trade</span>
-    <div class="badge badge-star" onclick="openSplitLink()"><span>⭐</span><span id="star-val-trade">—</span></div>
+    <div class="badge" style="background:#0a1a2a;border:1px solid rgba(74,176,255,0.3);color:#4ab0ff;gap:5px;display:flex;align-items:center;border-radius:20px;padding:6px 12px;font-size:13px;font-weight:700;font-family:'Space Mono',monospace;cursor:pointer" onclick="openTonModal()"><img src="/static/icons/ton.png" style="width:16px;height:16px;object-fit:contain" onerror="this.outerHTML='💎'"><span id="ton-val-trade">0</span></div>
   </div>
   <div class="content" id="trade-content"><div class="loading-page"><div class="spinner"></div></div></div>
 </div>
@@ -163,13 +162,13 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;height
 <script>
 const tg = window.Telegram?.WebApp;
 if (tg) { tg.expand(); tg.setHeaderColor('#0a0a0a'); tg.setBackgroundColor('#0a0a0a'); }
-const tgUser = tg?.initDataUnsafe?.user || {id:12345678,username:'test',first_name:'Test'};
+const tgUser = tg?.initDataUnsafe?.user || {id:12345678,username:'dev',first_name:'Dev'};
 let userData = null, selectedCard = null;
 
 const userLang = ((tg?.initDataUnsafe?.user?.language_code || navigator.language || 'en')+'').toLowerCase().startsWith('ru') ? 'ru' : 'en';
 const T = {
-  en:{shop:'Shop',trade:'Trade',profile:'Profile',left:'LEFT',price:'PRICE',supply:'SUPPLY',buy:'Buy',cardCount:(n)=>n===1?'card':`cards`,upgrade:'UPGRADE',sell:'Sell',transfer:'Transfer',serial:'Serial',drop:'Drop %',status:'Status',supplyLbl:'Supply',listSale:'List for Sale',cancel:'Cancel',close:'Close',send:'Send',remove:'Remove listing',noListings:'No listings yet',collection:'Collection',model:'Model',refEarn:'Refer & Earn',refText:'Invite friends — you earn',refOf:'of all their spending!',buyCheapStars:'Buy Cheap Stars',connectTon:'Connect TON Wallet',myCards:'My Cards',friends:'Friends',noCards:'No cards yet',noFriends:'No friends yet',showAll:'Show all',showLess:'Show less',clear:'Clear',apply:'Apply',notInPonki:'User not in Ponki',notJoined:"This person hasn't joined yet.",invite:'Invite',purchased:'Purchased!',listed:'Listed!',removed:'Removed',cardSent:'Card sent!',linkCopied:'Link copied!',notEnoughDev:'Not enough DEV',notEnoughStars:'Not enough stars',enterPrice:'Enter price',enterTgId:'Enter Telegram ID',commission:'Commission: 5%',rarity:'Rarity',descShop:'50 unique models · upgrade free',historyTitle:'History'},
-  ru:{shop:'Магазин',trade:'Торговля',profile:'Профиль',left:'ОСТАЛОСЬ',price:'ЦЕНА',supply:'ТИРАЖ',buy:'Купить',cardCount:(n)=>{if(n%10===1&&n%100!==11)return'карта';if([2,3,4].includes(n%10)&&![12,13,14].includes(n%100))return'карты';return'карт';},upgrade:'УЛУЧШИТЬ',sell:'Продать',transfer:'Передать',serial:'Номер',drop:'Редкость',status:'Статус',supplyLbl:'Тираж',listSale:'Выставить',cancel:'Отмена',close:'Закрыть',send:'Отправить',remove:'Снять',noListings:'Нет объявлений',collection:'Коллекция',model:'Модель',refEarn:'Приглашай и зарабатывай',refText:'Приглашай друзей — получай',refOf:'от их трат автоматически!',buyCheapStars:'Купить звёзды дешевле',connectTon:'Подключить TON кошелёк',myCards:'Мои карточки',friends:'Друзья',noCards:'Карточек пока нет',noFriends:'Нет друзей — поделись ссылкой!',showAll:'Показать все',showLess:'Скрыть',clear:'Сбросить',apply:'Применить',notInPonki:'Пользователь не в Ponki',notJoined:'Этот человек ещё не вступил.',invite:'Пригласить',purchased:'Куплено!',listed:'Выставлено!',removed:'Снято',cardSent:'Карточка отправлена!',linkCopied:'Ссылка скопирована!',notEnoughDev:'Недостаточно DEV',notEnoughStars:'Недостаточно звёзд',enterPrice:'Введите цену',enterTgId:'Введите Telegram ID',commission:'Комиссия: 5%',rarity:'Редкость',descShop:'50 уникальных моделей · улучшение бесплатно',historyTitle:'История'}
+  en:{shop:'Shop',trade:'Trade',profile:'Profile',whales:'Whales',left:'LEFT',price:'PRICE',supply:'SUPPLY',buy:'Buy',cardCount:(n)=>n===1?'card':`cards`,upgrade:'UPGRADE',sell:'Sell',transfer:'Transfer',serial:'Serial',drop:'Drop %',status:'Status',supplyLbl:'Supply',listSale:'List for Sale',cancel:'Cancel',close:'Close',send:'Send',remove:'Remove listing',noListings:'No listings yet',collection:'Collection',model:'Model',refEarn:'Refer & Earn',refText:'Invite friends — you earn',refOf:'of all their spending!',buyCheapStars:'Buy Stars',connectTon:'Connect TON Wallet',myCards:'My Cards',friends:'Friends',noCards:'No cards yet',noFriends:'No friends yet',showAll:'Show all',showLess:'Show less',clear:'Clear',apply:'Apply',notInPonki:'User not in Ponki',notJoined:"This person hasn't joined yet.",invite:'Invite',purchased:'Purchased!',listed:'Listed!',removed:'Removed',cardSent:'Card sent!',linkCopied:'Link copied!',notEnoughDev:'Not enough DEV',notEnoughStars:'Not enough stars',enterPrice:'Enter price',enterTgId:'Enter Telegram ID',commission:'Commission: 5%',rarity:'Rarity',descShop:'50 unique models · upgrade free',historyTitle:'History'},
+  ru:{shop:'Магазин',trade:'Торговля',profile:'Профиль',whales:'Киты',left:'ОСТАЛОСЬ',price:'ЦЕНА',supply:'ТИРАЖ',buy:'Купить',cardCount:(n)=>{if(n%10===1&&n%100!==11)return'карта';if([2,3,4].includes(n%10)&&![12,13,14].includes(n%100))return'карты';return'карт';},upgrade:'УЛУЧШИТЬ',sell:'Продать',transfer:'Передать',serial:'Номер',drop:'Редкость',status:'Статус',supplyLbl:'Тираж',listSale:'Выставить',cancel:'Отмена',close:'Закрыть',send:'Отправить',remove:'Снять',noListings:'Нет объявлений',collection:'Коллекция',model:'Модель',refEarn:'Приглашай и зарабатывай',refText:'Приглашай друзей — получай',refOf:'от их трат автоматически!',buyCheapStars:'Купить звёзды',connectTon:'Подключить TON кошелёк',myCards:'Мои карточки',friends:'Друзья',noCards:'Карточек пока нет',noFriends:'Нет друзей — поделись ссылкой!',showAll:'Показать все',showLess:'Скрыть',clear:'Сбросить',apply:'Применить',notInPonki:'Пользователь не в Ponki',notJoined:'Этот человек ещё не вступил.',invite:'Пригласить',purchased:'Куплено!',listed:'Выставлено!',removed:'Снято',cardSent:'Карточка отправлена!',linkCopied:'Ссылка скопирована!',notEnoughDev:'Недостаточно DEV',notEnoughStars:'Недостаточно звёзд',enterPrice:'Введите цену',enterTgId:'Введите Telegram ID',commission:'Комиссия: 5%',rarity:'Редкость',descShop:'50 уникальных моделей · улучшение бесплатно',historyTitle:'История'}
 };
 const t = T[userLang];
 
@@ -187,7 +186,10 @@ function applyLang() {
   document.getElementById('t-trade').textContent = t.trade;
   document.getElementById('tab-shop').textContent = t.shop;
   document.getElementById('tab-trade').textContent = t.trade;
+  document.getElementById('tab-whales') && (document.getElementById('tab-whales').textContent = t.whales);
   document.getElementById('tab-profile').textContent = t.profile;
+  const bsb = document.getElementById('buy-stars-btn');
+  if(bsb) bsb.textContent = t.buyCheapStars;
 }
 
 async function api(path, method='GET', body=null) {
@@ -213,12 +215,32 @@ function dropPct(w) {
   return {5:'0.5%',10:'1%',15:'1.5%',20:'2%',25:'2.5%',30:'3%'}[w]||w+'w';
 }
 
+function fmtTon(val) {
+  // val stored as integer cents (0.1 TON = 10, 1 TON = 100)
+  const n = val / 100;
+  if (Number.isInteger(n)) return n.toString();
+  // Show full precision, no trailing zeros
+  return parseFloat(n.toPrecision(10)).toString();
+}
+
+function fmtNano(nano) {
+  // nano = nanotons, show full precision no trailing zeros
+  const n = nano / 1_000_000_000;
+  if (n === 0) return '0';
+  return parseFloat(n.toPrecision(10)).toString();
+}
+
 function updateBalances() {
   if (!userData) return;
-  document.getElementById('dev-val').textContent = userData.dev_tokens??0;
-  document.getElementById('star-val').textContent = userData.stars_balance??0;
-  const sv = document.getElementById('star-val-trade');
-  if (sv) sv.textContent = userData.stars_balance??0;
+  const tonNano = 1_000_000_000;
+  const tonBal = userData.ton_balance || 0;
+  const tonFmt = tonBal > 0 ? (tonBal / tonNano).toFixed(2) : '0';
+  const tv = document.getElementById('ton-val-trade');
+  if (tv) tv.textContent = tonFmt;
+  // Cashback
+  const cb = userData.cashback_balance || 0;
+  const cbEl = document.getElementById('cashback-val');
+  if (cbEl) cbEl.textContent = cb === 0 ? '0' : fmtNano(cb);
 }
 
 function switchTab(tab) {
@@ -229,7 +251,7 @@ function switchTab(tab) {
   document.querySelector(`[data-page="${tab}"]`).classList.add('active');
   if (tab==='buy') loadBuy();
   if (tab==='sell') loadTrade();
-  if (tab==='profile') loadProfile();
+  if (tab==='profile') { profileView='cards'; loadProfile(); }
 }
 
 function openModal(title, html) {
@@ -242,10 +264,27 @@ document.getElementById('modal').addEventListener('click', e=>{
   if (e.target===document.getElementById('modal')) closeModal();
 });
 
+// Swipe cards in modal
+let _swipeStartX=0;
+document.getElementById('modal').addEventListener('touchstart', e=>{
+  _swipeStartX = e.touches[0].clientX;
+}, {passive:true});
+document.getElementById('modal').addEventListener('touchend', e=>{
+  const dx = e.changedTouches[0].clientX - _swipeStartX;
+  if(Math.abs(dx) < 50) return;
+  const cards = window._profileCards||[];
+  const cur = selectedCard;
+  if(!cur||!cards.length) return;
+  const idx = cards.findIndex(c=>c.id===cur.id);
+  if(dx < 0 && idx < cards.length-1) swipeCard(idx, 1);
+  else if(dx > 0 && idx > 0) swipeCard(idx, -1);
+}, {passive:true});
+
 async function init() {
   applyLang();
   try {
-    await api('/api/register','POST',{telegram_id:tgUser.id,username:tgUser.username||'',first_name:tgUser.first_name||'',last_name:tgUser.last_name||'',ref_code:new URLSearchParams(location.search).get('ref')});
+    const startParam = tg?.initDataUnsafe?.start_param || new URLSearchParams(location.search).get('ref') || null;
+    await api('/api/register','POST',{telegram_id:tgUser.id,username:tgUser.username||'',first_name:tgUser.first_name||'',last_name:tgUser.last_name||'',ref_code:startParam});
     userData = await api(`/api/user/${tgUser.id}`);
     updateBalances(); loadBuy();
   } catch(e) { toast('Connection error','err'); }
@@ -259,49 +298,63 @@ async function loadBuy() {
     const cols = await api('/api/collections');
     const col = cols[0];
     if (!col) { el.innerHTML='<p style="padding:20px;color:var(--text2)">No collections</p>'; return; }
-    const useDev = (userData.dev_tokens??0) >= col.base_price;
-    _buyPrice=col.base_price; _buyUseDev=useDev; _buyQty=1;
+    _buyPrice=1;
+    // Keep qty selection across tab switches
+    const qty=_buyQty||1;
     const desc = userLang==='ru' ? t.descShop : t.descShop;
     el.innerHTML = `
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:20px;text-align:center">
+      <div style="background:var(--bg2);border:1px solid rgba(255,45,120,0.55);border-radius:18px;padding:20px;text-align:center;box-shadow:0 0 28px rgba(255,45,120,0.18),0 0 60px rgba(255,45,120,0.07),inset 0 0 1px rgba(255,255,255,0.04)">
         <div style="font-size:26px;font-weight:800;margin-bottom:4px">${col.name}</div>
         <div style="font-size:13px;color:var(--text2);margin-bottom:16px">${desc}</div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px">
-          <div style="background:var(--bg3);border-radius:10px;padding:10px 4px"><div style="font-size:16px;font-weight:800">${fmtNum(col.remaining)}</div><div style="font-size:9px;color:var(--text2);margin-top:2px">${t.left}</div></div>
-          <div style="background:var(--bg3);border-radius:10px;padding:10px 4px"><div style="font-size:16px;font-weight:800;color:var(--star)">${col.base_price}⭐</div><div style="font-size:9px;color:var(--text2);margin-top:2px">${t.price}</div></div>
-          <div style="background:var(--bg3);border-radius:10px;padding:10px 4px"><div style="font-size:16px;font-weight:800">${fmtNum(col.total_supply)}</div><div style="font-size:9px;color:var(--text2);margin-top:2px">${t.supply}</div></div>
+          <div style="background:var(--bg3);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 4px"><div style="font-size:16px;font-weight:800">${fmtNum(col.remaining)}</div><div style="font-size:9px;color:var(--text2);margin-top:2px">${t.left}</div></div>
+          <div style="background:var(--bg3);border:1px solid rgba(240,192,64,0.35);border-radius:10px;padding:10px 4px;box-shadow:0 0 10px rgba(240,192,64,0.08)"><div style="font-size:16px;font-weight:800;color:var(--star)">1⭐</div><div style="font-size:9px;color:var(--text2);margin-top:2px">${t.price}</div></div>
+          <div style="background:var(--bg3);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 4px"><div style="font-size:16px;font-weight:800">${fmtNum(col.total_supply)}</div><div style="font-size:9px;color:var(--text2);margin-top:2px">${t.supply}</div></div>
         </div>
         <div class="ponki-hero-wrap" style="max-width:220px;margin:0 auto 20px;aspect-ratio:1/1;overflow:hidden;border:1px solid rgba(255,45,120,0.3);background:var(--bg3)">
           <img class="ponki-hero" src="/static/ponki/ponki.png" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">
         </div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
           <button class="btn btn-secondary" style="width:44px;height:44px;font-size:20px;flex-shrink:0;padding:0" onclick="changeQty(-1)">−</button>
-          <div style="flex:1;text-align:center"><span id="qty-val" style="font-size:22px;font-weight:800">1</span> <span id="qty-word" style="font-size:13px;color:var(--text2)">${t.cardCount(1)}</span></div>
+          <div style="flex:1;text-align:center"><span id="qty-val" style="font-size:22px;font-weight:800">${qty}</span> <span id="qty-word" style="font-size:13px;color:var(--text2)">${t.cardCount(qty)}</span></div>
           <button class="btn btn-secondary" style="width:44px;height:44px;font-size:20px;flex-shrink:0;padding:0" onclick="changeQty(1)">+</button>
         </div>
-        <button class="btn btn-primary" id="buy-btn" onclick="buyCard(${col.id},${col.base_price},${useDev})">${useDev?`${t.buy} — ${col.base_price} DEV`:`${t.buy} — ${col.base_price} ⭐`}</button>
+        <button class="btn btn-primary" id="buy-btn" onclick="buyCard(${col.id})">${qty===1?`${t.buy} — 1 ⭐`:`${t.buy} ${qty} — ${qty} ⭐`}</button>
       </div>`;
   } catch(e) { el.innerHTML=`<div class="empty-state"><p>${e.message}</p></div>`; }
 }
 
-let _buyQty=1,_buyColId=null,_buyPrice=null,_buyUseDev=false;
+let _buyQty=1,_buyColId=null,_buyPrice=1;
 function changeQty(d) {
   haptic(); _buyQty=Math.max(1,Math.min(500,_buyQty+d));
   const qv=document.getElementById('qty-val'), qw=document.getElementById('qty-word'), bb=document.getElementById('buy-btn');
   if(qv) qv.textContent=_buyQty;
   if(qw) qw.textContent=t.cardCount(_buyQty);
-  if(bb&&_buyPrice){const tot=_buyQty*_buyPrice;bb.textContent=_buyUseDev?`${t.buy} ${_buyQty} — ${tot} DEV`:`${t.buy} ${_buyQty} — ${tot} ⭐`;}
+  if(bb) bb.textContent=_buyQty===1?`${t.buy} — 1 ⭐`:`${t.buy} ${_buyQty} — ${_buyQty} ⭐`;
 }
 
-async function buyCard(colId, price, useDev) {
-  haptic('medium'); _buyColId=colId; _buyPrice=price; _buyUseDev=useDev??((userData.dev_tokens??0)>=price);
-  const qty=_buyQty||1, total=qty*price;
-  if(_buyUseDev&&(userData.dev_tokens??0)<total){toast(t.notEnoughDev,'err');return;}
-  if(!_buyUseDev&&userData.stars_balance<total){toast(t.notEnoughStars,'err');return;}
+async function buyCard(colId) {
+  haptic('medium');
+  const qty=_buyQty||1;
+  if(!tg){toast('Open in Telegram','err');return;}
   try {
-    for(let i=0;i<qty;i++) await api('/api/buy_card_internal','POST',{telegram_id:tgUser.id,collection_id:colId,dev:_buyUseDev});
-    userData=await api(`/api/user/${tgUser.id}`); updateBalances(); _buyQty=1;
-    toast(`${qty} ${t.cardCount(qty)} ${userLang==='ru'?'куплено!':'bought!'}`,'ok'); loadBuy();
+    const res = await api('/api/create_invoice','POST',{
+      telegram_id: tgUser.id,
+      collection_id: colId,
+      qty: qty
+    });
+    if(res.invoice_link) {
+      tg.openInvoice(res.invoice_link, async (status) => {
+        if(status === 'paid') {
+          toast(userLang==='ru'?'Оплачено!':'Paid!','ok');
+          setTimeout(async()=>{
+            userData = await api(`/api/user/${tgUser.id}`);
+            updateBalances();
+            loadBuy();
+          }, 1500);
+        }
+      });
+    }
   } catch(e){toast(e.message,'err');}
 }
 
@@ -326,19 +379,23 @@ function renderTradeUI() {
   const el=document.getElementById('trade-content'); if(!el) return;
   const modCount=selectedModels.size;
   el.innerHTML=`
-    <div style="display:flex;gap:8px;margin-bottom:8px">
-      <button class="trade-filter-btn ${tradeView==='market'?'has-filter':''}" onclick="setTradeView('market')">${userLang==='ru'?'Рынок':'Market'}</button>
-      <button class="trade-filter-btn ${tradeView==='history'?'has-filter':''}" onclick="setTradeView('history')">${t.historyTitle||'History'}</button>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:3px;flex-shrink:0" onclick="setTradeView(tradeView==='market'?'history':'market')">
+        <div style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:16px;font-size:11px;font-weight:700;transition:all 0.2s;background:${tradeView==='market'?'#ff2d78':'transparent'};color:${tradeView==='market'?'#fff':'var(--text3)'}">
+          <span>${userLang==='ru'?'Рынок':'Market'}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:16px;font-size:11px;font-weight:700;transition:all 0.2s;background:${tradeView==='history'?'#ff2d78':'transparent'};color:${tradeView==='history'?'#fff':'var(--text3)'}">
+          <span>${t.historyTitle||'History'}</span>
+        </div>
+      </div>
+      <button class="trade-filter-btn" style="font-size:12px;flex:1" onclick="openCollectionFilter()">${t.collection} <span class="trade-filter-count">1</span></button>
+      <button class="trade-filter-btn ${modCount>0?'has-filter':''}" style="font-size:12px;flex:1" onclick="openModelFilter()">${t.model}${modCount>0?`<span class="trade-filter-count">${modCount}</span>`:''}</button>
     </div>
     <div id="trade-market-section" style="display:${tradeView==='market'?'flex':'none'};flex-direction:column;gap:8px">
-      <div style="display:flex;gap:8px">
-        <button class="trade-filter-btn" style="font-size:12px" onclick="openCollectionFilter()">${t.collection} <span class="trade-filter-count">1</span></button>
-        <button class="trade-filter-btn ${modCount>0?'has-filter':''}" style="font-size:12px" onclick="openModelFilter()">${t.model}${modCount>0?`<span class="trade-filter-count">${modCount}</span>`:''}</button>
-      </div>
       <div class="filters">
-        <button class="filter-btn ${tradeSortBy==='serial_asc'||tradeSortBy==='serial_desc'?'active':''}" onclick="toggleSerialSort()"># ${tradeSortBy==='serial_desc'?'↓':'↑'}</button>
-        <button class="filter-btn ${tradeSortBy==='price_asc'||tradeSortBy==='price_desc'?'active':''}" onclick="togglePriceSort()">${t.price} ${tradeSortBy==='price_desc'?'↓':'↑'}</button>
+        <button class="filter-btn ${tradeSortBy==='price_asc'||tradeSortBy==='price_desc'?'active':''}" onclick="togglePriceSort()" style="display:flex;align-items:center;gap:4px"><img src="/static/icons/ton.png" style="width:12px;height:12px;object-fit:contain"> ${tradeSortBy==='price_desc'?'↓':'↑'}</button>
         <button class="filter-btn ${tradeSortBy==='rarity_asc'||tradeSortBy==='rarity_desc'?'active':''}" onclick="toggleTradeRarity()">% ${tradeSortBy==='rarity_desc'?'↓':'↑'}</button>
+        <button class="filter-btn ${tradeSortBy==='serial_asc'||tradeSortBy==='serial_desc'?'active':''}" onclick="toggleSerialSort()"># ${tradeSortBy==='serial_desc'?'↓':'↑'}</button>
       </div>
       <div id="listings-list"></div>
     </div>
@@ -346,7 +403,7 @@ function renderTradeUI() {
       <div id="history-list"><div class="spinner" style="margin:32px auto"></div></div>
     </div>`;
   if(tradeView==='market') renderListings();
-  else loadHistory();
+  else if(tradeView==='history') loadHistory();
 }
 
 function setTradeView(view) {
@@ -424,7 +481,7 @@ async function loadHistory() {
           <div style="font-size:13px;font-weight:700">${item.card_name||'Ponki'}${item.serial_number?` <span style="color:var(--text2);font-weight:400">#${item.serial_number}</span>`:''}</div>
           <div style="font-size:11px;color:var(--text2);margin-top:1px">${label}</div>
         </div>
-        <div style="font-size:14px;font-weight:800;color:${isIncome?'var(--success)':'var(--text2)'};white-space:nowrap">${isIncome?'+':'−'}${item.stars_amount}⭐</div>
+        <div style="font-size:14px;font-weight:800;color:${isIncome?'var(--success)':'var(--text2)'};white-space:nowrap">${isIncome?'+':'−'}${item.type==='market_buy_ton'?`<span style="display:inline-flex;align-items:center;gap:2px"><img src="/static/icons/ton.png" style="width:12px;height:12px;object-fit:contain"> ${fmtNano(item.stars_amount)}</span>`:`${item.stars_amount}⭐`}</div>
       </div>`;
     }
     html+=`</div>`; el.innerHTML=html;
@@ -450,7 +507,7 @@ function renderListings() {
       <div class="card-img">
         <img src="${l.image_url}" onerror="this.style.background='var(--bg3)'">
         <span class="pct-badge">${dropPct(l.drop_weight)}</span>
-        <span class="price-badge">⭐${l.price_stars}</span>
+        <span class="price-badge" style="color:#4ab0ff">${fmtTon(l.price_stars)} TON</span>
       </div>
       <div class="card-info"><div class="card-name">${l.name}</div><div class="card-meta">#${l.serial_number}</div></div>
     </div>`;
@@ -464,12 +521,15 @@ function openMarketModal(listing,isOwn) {
     <div class="modal-card-preview"><img src="${listing.image_url}" onerror="this.style.background='var(--bg3)'"></div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
       <div class="stat-box"><div class="val" style="font-size:14px">#${listing.serial_number}</div><div class="lbl">${t.serial}</div></div>
-      <div class="stat-box"><div class="val" style="font-size:14px;color:var(--star)">${listing.price_stars}⭐</div><div class="lbl">${t.price}</div></div>
+      <div class="stat-box"><div class="val" style="font-size:14px;color:#4ab0ff">${fmtTon(listing.price_stars)} TON</div><div class="lbl">${t.price}</div></div>
       <div class="stat-box"><div class="val" style="font-size:14px;color:var(--star)">${dropPct(listing.drop_weight)}</div><div class="lbl">${t.drop}</div></div>
     </div>
     ${isOwn
       ?`<button class="btn btn-danger btn-wide" onclick="unlistCard(${listing.id})">${t.remove}</button>`
-      :`<button class="btn btn-primary" onclick="buyListing(${listing.id},${listing.price_stars})">${t.buy} ${listing.price_stars} ⭐</button>`
+      :`<div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn btn-primary" onclick="buyListing(${listing.id},${listing.price_stars})">${t.buy} ${fmtTon(listing.price_stars)} TON</button>
+        <button class="btn btn-secondary btn-wide" onclick="openOfferModal(${listing.user_card_id},'${listing.name}','${listing.image_url}')">${userLang==='ru'?'Предложить цену':'Make offer'}</button>
+       </div>`
     }
     <button class="btn btn-secondary btn-wide" onclick="closeModal()">${t.close}</button>
   `);
@@ -477,8 +537,21 @@ function openMarketModal(listing,isOwn) {
 
 async function buyListing(id,price){
   haptic('medium');
-  if(userData.stars_balance<price){toast(t.notEnoughStars,'err');return;}
-  try{await api('/api/market/buy','POST',{telegram_id:tgUser.id,listing_id:id});closeModal();userData=await api(`/api/user/${tgUser.id}`);updateBalances();toast(`🃏 ${t.purchased}`,'ok');loadTrade();}catch(e){toast(e.message,'err');}
+  const tonNano = 1_000_000_000;
+  const priceNano = price * 10_000_000; // price stored as cents (0.1 TON = 10), convert to nano
+  const bal = userData?.ton_balance || 0;
+  if(bal < priceNano){
+    toast(userLang==='ru'?`Недостаточно TON. Баланс: ${(bal/tonNano).toFixed(2)}`:`Not enough TON. Balance: ${(bal/tonNano).toFixed(2)}`,'err');
+    return;
+  }
+  try{
+    await api('/api/market/buy_ton','POST',{telegram_id:tgUser.id,listing_id:id});
+    closeModal();
+    toast(userLang==='ru'?'Куплено!':'Purchased!','ok');
+    userData=await api(`/api/user/${tgUser.id}`);
+    updateBalances();
+    loadTrade();
+  }catch(e){toast(e.message,'err');}
 }
 async function unlistCard(id){
   haptic();
@@ -534,58 +607,92 @@ async function loadProfile() {
     }
 
     el.innerHTML=`
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:18px;display:flex;align-items:center;gap:14px">
-        <div style="width:52px;height:52px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;flex-shrink:0">${((tgUser.first_name||'?')[0]||'?').toUpperCase()}</div>
+      <div style="background:var(--bg2);border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:18px;display:flex;align-items:center;gap:14px;box-shadow:inset 0 0 1px rgba(255,255,255,0.05)">
+        <div style="width:52px;height:52px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800">
+          ${tgUser.photo_url?`<img src="${tgUser.photo_url}" style="width:100%;height:100%;object-fit:cover">`:((tgUser.first_name||'?')[0]||'?').toUpperCase()}
+        </div>
         <div style="flex:1">
           <div style="font-size:18px;font-weight:800">${tgUser.first_name||'User'} ${tgUser.last_name||''}</div>
           <div style="font-size:12px;color:var(--text2);font-family:'Space Mono',monospace">${tgUser.username?'@'+tgUser.username:'ID '+tgUser.id}</div>
         </div>
       </div>
-      <div class="stats-row">
-        <div class="stat-box" onclick="openSplitLink()" style="cursor:pointer"><div class="val" style="color:var(--star)">${userData.stars_balance}</div><div class="lbl">⭐ Stars</div></div>
-        <div class="stat-box"><div class="val" style="color:var(--dev)">${devBal}</div><div class="lbl">🧪 DEV</div></div>
-        <div class="stat-box"><div class="val" id="friends-count">—</div><div class="lbl">${t.friends}</div></div>
-        <div class="stat-box"><div class="val">${cards.length}</div><div class="lbl">${userLang==='ru'?'Карты':'Cards'}</div></div>
+      <div class="stats-row" style="grid-template-columns:repeat(3,1fr)">
+        <div class="stat-box" onclick="openTonModal()" style="cursor:pointer"><div class="val" style="color:#4ab0ff;display:flex;align-items:center;justify-content:center;gap:4px"><img src="/static/icons/ton.png" style="width:14px;height:14px;object-fit:contain" onerror="this.style.display='none'"><span>${userData.ton_balance>0?((userData.ton_balance/1000000000).toFixed(2)):'0'}</span></div><div class="lbl">TON</div></div>
+        <div class="stat-box" onclick="openFriendsModal()" style="cursor:pointer"><div class="val" id="friends-count">—</div><div class="lbl">${t.friends}</div></div>
+        <div class="stat-box" onclick="openCashbackModal()" style="cursor:pointer"><div class="val" style="color:#4ab0ff" id="cashback-val">${(userData.cashback_balance||0)===0?'0':fmtNano(userData.cashback_balance||0)}</div><div class="lbl">КЕШБЭК</div></div>
       </div>
 
       <div style="display:flex;gap:8px">
-        <button class="trade-filter-btn ${profileView==='cards'?'has-filter':''}" onclick="setProfileView('cards')">${t.myCards}</button>
-        <button class="trade-filter-btn ${profileView==='history'?'has-filter':''}" onclick="setProfileView('history')">${t.historyTitle||'History'}</button>
+        <button class="trade-filter-btn ${profileView==='cards'?'has-filter':''}" onclick="setProfileView('cards')" style="position:relative">
+          ${userLang==='ru'?'Карты':'Cards'}
+          ${cards.length>0?`<span style="position:absolute;top:-6px;right:-6px;background:#4aff8a;color:#000;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace">${cards.length}</span>`:''}
+        </button>
+        <button class="trade-filter-btn ${profileView==='selling'?'has-filter':''}" onclick="setProfileView('selling')" style="position:relative" id="selling-tab-btn">
+          ${userLang==='ru'?'Продаю':'Selling'}
+          <span id="selling-count-badge" style="display:none;position:absolute;top:-6px;right:-6px;background:#4aff8a;color:#000;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:800;align-items:center;justify-content:center;font-family:'Space Mono',monospace"></span>
+        </button>
+        <button class="trade-filter-btn ${profileView==='offers'?'has-filter':''}" onclick="setProfileView('offers')" style="position:relative">
+          ${userLang==='ru'?'Оферы':'Offers'}
+          <span id="offers-count-badge" style="display:none;position:absolute;top:-6px;right:-6px;background:#4aff8a;color:#000;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:800;align-items:center;justify-content:center;font-family:'Space Mono',monospace"></span>
+        </button>
+        <button class="trade-filter-btn ${profileView==='history'?'has-filter':''}" onclick="setProfileView('history')">${t.historyTitle||'История'}</button>
       </div>
 
       <div id="profile-cards-section" style="display:${profileView==='cards'?'flex':'none'};flex-direction:column;gap:14px">
         ${cardsHtml}
-        <div class="section-label" style="margin-top:4px">${t.friends}</div>
-        <div id="friends-block"><div class="spinner" style="margin:16px auto"></div></div>
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px">
+        <div style="background:var(--bg2);border:1px solid rgba(255,45,120,0.3);border-radius:16px;padding:16px;box-shadow:0 0 24px rgba(255,45,120,0.06),inset 0 0 1px rgba(255,45,120,0.1)">
           <h3 style="font-size:15px;font-weight:700;margin-bottom:6px">🎁 ${t.refEarn}</h3>
-          <p style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.5">${t.refText} <strong style="color:var(--star)">10%</strong> ${t.refOf} 🔥</p>
+          <p style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.5">${t.refText} <strong style="color:var(--star)">20%</strong> ${t.refOf} 🔥</p>
           <div style="display:flex;gap:8px;align-items:center">
-            <div style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:'Space Mono',monospace;font-size:11px;color:var(--star);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">t.me/memstroybot?start=${userData.telegram_id}</div>
-            <button class="btn btn-secondary" style="white-space:nowrap;flex-shrink:0" onclick="copyRef(${userData.telegram_id})">${userLang==='ru'?'Копировать':'Copy'}</button>
+            <div style="flex:1;background:var(--bg3);border:1px solid rgba(255,45,120,0.2);border-radius:8px;padding:10px 12px;font-family:'Space Mono',monospace;font-size:11px;color:var(--star);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">t.me/memstroybot?start=${userData.telegram_id}</div>
+            <button class="btn btn-secondary" style="white-space:nowrap;flex-shrink:0;border-color:rgba(255,45,120,0.25)" onclick="copyRef(${userData.telegram_id})">${userLang==='ru'?'Копировать':'Copy'}</button>
           </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:4px">
-          <div class="menu-item" onclick="openSplitLink()">
+          <div class="menu-item" style="border:1px solid rgba(74,176,255,0.18);box-shadow:0 0 12px rgba(74,176,255,0.04)" onclick="setProfileView('whales');document.getElementById('profile-whales-section') && (document.getElementById('profile-whales-section').style.display='flex')">
+            <span class="menu-icon">🐳</span>
+            <div class="menu-text"><div class="menu-label">${userLang==='ru'?'Киты':'Whales'}</div></div>
+            <span style="color:var(--text3);font-size:16px">›</span>
+          </div>
+          <div class="menu-item" style="border:1px solid rgba(240,192,64,0.18);box-shadow:0 0 12px rgba(240,192,64,0.04)" onclick="openSplitLink()">
             <span class="menu-icon">⭐</span>
             <div class="menu-text"><div class="menu-label">${t.buyCheapStars}</div></div>
             <span style="color:var(--text3);font-size:16px">›</span>
           </div>
-          <div class="menu-item" onclick="connectTon()">
+          <div class="menu-item" style="border:1px solid rgba(74,180,255,0.18);box-shadow:0 0 12px rgba(74,180,255,0.04)" onclick="connectTon()">
             <span class="menu-icon"><img src="/static/icons/ton.png" style="width:22px;height:22px;object-fit:contain" onerror="this.outerHTML='💎'"></span>
-            <div class="menu-text"><div class="menu-label" id="ton-label">${t.connectTon}</div><div id="ton-sub" style="font-size:11px;color:var(--text2);margin-top:1px"></div></div>
-            <span style="color:var(--text3);font-size:16px" id="ton-arrow">›</span>
+            <div class="menu-text">
+              <div class="menu-label" id="ton-label">${userData.ton_address?'TON Connected':t.connectTon}</div>
+              <div id="ton-sub" style="font-size:11px;color:var(--text2);margin-top:1px">${userData.ton_address?userData.ton_address.slice(0,8)+'...'+userData.ton_address.slice(-4):''}</div>
+            </div>
+            <span style="color:var(--text3);font-size:16px" id="ton-arrow">${userData.ton_address?'✓':'›'}</span>
           </div>
         </div>
+      </div>
+
+      <div id="profile-offers-section" style="display:${profileView==='offers'?'flex':'none'};flex-direction:column;gap:8px">
+        <div id="profile-offers-list"><div class="spinner" style="margin:32px auto"></div></div>
+      </div>
+
+      <div id="profile-selling-section" style="display:${profileView==='selling'?'flex':'none'};flex-direction:column;gap:8px">
+        <div id="profile-selling-list"><div class="spinner" style="margin:32px auto"></div></div>
       </div>
 
       <div id="profile-history-section" style="display:${profileView==='history'?'flex':'none'};flex-direction:column;gap:8px">
         <div id="profile-history-list"><div class="spinner" style="margin:32px auto"></div></div>
       </div>
 
+      <div id="profile-whales-section" style="display:${profileView==='whales'?'flex':'none'};flex-direction:column;gap:8px">
+        <div id="profile-whales-list"><div class="spinner" style="margin:32px auto"></div></div>
+      </div>
+
       <div style="height:16px"></div>`;
     loadFriends();
     if(profileView==='history') loadProfileHistory();
+    if(profileView==='selling') loadProfileSelling();
+    if(profileView==='offers') loadProfileOffers();
+    loadSellingBadge();
+    loadOffersBadge();
   } catch(e){el.innerHTML=`<div class="empty-state"><p>${e.message}</p></div>`;}
 }
 
@@ -596,6 +703,9 @@ function setProfileView(view) {
   haptic();
   profileView=view;
   loadProfile();
+  if(view==='selling') setTimeout(loadProfileSelling, 100);
+  if(view==='whales') setTimeout(loadProfileWhales, 100);
+  if(view==='offers') setTimeout(loadProfileOffers, 100);
 }
 
 async function loadProfileHistory() {
@@ -609,14 +719,14 @@ async function loadProfileHistory() {
     }
     const typeLabel=(type,isIncome)=>{
       if(userLang==='ru'){
-        const map={buy:'Куплено',market_buy:isIncome?'Продано на рынке':'Куплено на рынке',upgrade:'Улучшено',transfer:isIncome?'Получено':'Передано',sell:'Продано',buy_stars:'Пополнение ⭐'};
+        const map={buy:'Куплено',market_buy:isIncome?'Продано на рынке':'Куплено на рынке',market_buy_ton:isIncome?'Продано за TON':'Куплено за TON',upgrade:'Улучшено',transfer:isIncome?'Получено':'Передано',sell:'Продано',buy_stars:'Пополнение ⭐'};
         return map[type]||type;
       } else {
-        const map={buy:'Bought',market_buy:isIncome?'Sold on market':'Bought on market',upgrade:'Upgraded',transfer:isIncome?'Received':'Transferred',sell:'Sold',buy_stars:'Stars added'};
+        const map={buy:'Bought',market_buy:isIncome?'Sold on market':'Bought on market',market_buy_ton:isIncome?'Sold for TON':'Bought for TON',upgrade:'Upgraded',transfer:isIncome?'Received':'Transferred',sell:'Sold',buy_stars:'Stars added'};
         return map[type]||type;
       }
     };
-    const typeIcon=(type)=>({buy:'🛒',market_buy:'🏪',upgrade:'✨',transfer:'✈️',sell:'💰',buy_stars:'⭐'}[type]||'📋');
+    const typeIcon=(type)=>({buy:'🛒',market_buy:'🏪',market_buy_ton:'🏪',upgrade:'✨',transfer:'✈️',sell:'💰',buy_stars:'⭐'}[type]||'📋');
     let html=`<div style="display:flex;flex-direction:column;gap:8px">`;
     for(const item of items){
       const isIncome=item.to_user_id===userData.id&&item.stars_amount>0&&item.type!=='buy';
@@ -630,27 +740,46 @@ async function loadProfileHistory() {
           <div style="font-size:11px;color:var(--text2);margin-top:1px">${typeLabel(item.type,isIncome)}</div>
           ${timeStr?`<div style="font-size:10px;color:var(--text3);margin-top:1px;font-family:'Space Mono',monospace">${timeStr}</div>`:''}
         </div>
-        ${item.stars_amount>0?`<div style="font-size:14px;font-weight:800;color:${isIncome?'var(--success)':'var(--text2)'};white-space:nowrap">${isIncome?'+':'−'}${item.stars_amount}⭐</div>`:''}
+        ${item.stars_amount>0?`<div style="font-size:14px;font-weight:800;color:${isIncome?'var(--success)':'var(--text2)'};white-space:nowrap">${isIncome?'+':'−'}${item.type==='market_buy_ton'?`<span style="display:inline-flex;align-items:center;gap:2px"><img src="/static/icons/ton.png" style="width:12px;height:12px;object-fit:contain"> ${fmtNano(item.stars_amount)}</span>`:`${item.stars_amount}⭐`}</div>`:''}
       </div>`;
     }
     html+=`</div>`; el.innerHTML=html;
   }catch(e){el.innerHTML=`<div class="empty-state"><p>${e.message}</p></div>`;}
 }
 
+let _friendsCache = null;
 async function loadFriends(){
   try{
     const data=await api(`/api/friends/${tgUser.id}`);
-    const friends=data.friends||[];
-    const fc=document.getElementById('friends-count'); if(fc) fc.textContent=friends.length;
-    const el=document.getElementById('friends-block'); if(!el) return;
-    if(friends.length===0){el.innerHTML=`<div style="font-size:13px;color:var(--text3);padding:4px 0">${t.noFriends}</div>`;return;}
-    let html=`<div style="display:flex;flex-direction:column;gap:6px">`;
+    _friendsCache=data.friends||[];
+    const fc=document.getElementById('friends-count'); if(fc) fc.textContent=_friendsCache.length;
+  }catch(e){}
+}
+
+function openFriendsModal(){
+  haptic();
+  const friends=_friendsCache||[];
+  let html='';
+  if(friends.length===0){
+    html=`<div class="empty-state"><p>${t.noFriends}</p></div>`;
+  } else {
+    html=`<div style="display:flex;flex-direction:column;gap:8px">`;
     for(const f of friends){
       const name=f.first_name||f.username||'User';
-      html+=`<div class="friend-item"><div class="friend-av">${name[0].toUpperCase()}</div><div><div class="friend-name">${name}</div><div class="friend-meta">${f.username?'@'+f.username:'ID '+f.telegram_id}</div></div><div class="friend-cards">🃏 ${f.cards_count}</div></div>`;
+      const colors=['#ff2d78','#4ab0ff','#4aff8a','#f0c040','#ff8c00'];
+      const color=colors[(name.charCodeAt(0)||0)%colors.length];
+      html+=`<div class="friend-item">
+        <div class="friend-av" style="background:${color}22;border-color:${color}44;color:${color};font-size:17px">${name[0].toUpperCase()}</div>
+        <div style="flex:1">
+          <div class="friend-name">${name}</div>
+          <div class="friend-meta">${f.username?'@'+f.username:'ID '+f.telegram_id}</div>
+        </div>
+        <div style="font-size:12px;color:var(--text2);font-family:'Space Mono',monospace">${f.cards_count} ${userLang==='ru'?'карт':'cards'}</div>
+      </div>`;
     }
-    html+=`</div>`; el.innerHTML=html;
-  }catch(e){}
+    html+=`</div>`;
+  }
+  openModal(userLang==='ru'?'Мои друзья':'My Friends', html);
 }
 
 function openCardModal(card, allCards, direction){
@@ -679,7 +808,10 @@ function openCardModal(card, allCards, direction){
       <div class="stat-box"><div class="val" style="font-size:14px;color:var(--star)">${upgraded?dropPct(card.drop_weight):'Base'}</div><div class="lbl">${upgraded?t.drop:t.status}</div></div>
       <div class="stat-box"><div class="val" style="font-size:14px">10K</div><div class="lbl">${t.supplyLbl}</div></div>
     </div>
-    ${!upgraded?`<button class="btn btn-primary" onclick="upgradeCard(${card.id})">${t.upgrade}</button>`:`
+    ${!upgraded?`
+      <button class="btn btn-primary" onclick="upgradeCard(${card.id})">${t.upgrade}</button>
+      <button class="btn btn-secondary btn-wide" onclick="openTransferModal(${card.id})">${t.transfer}</button>
+    `:`
       <button class="btn btn-secondary btn-wide" onclick="openListModal()">${t.sell}</button>
       <button class="btn btn-secondary btn-wide" onclick="openTransferModal(${card.id})">${t.transfer}</button>
     `}
@@ -717,7 +849,7 @@ async function upgradeCard(cardId){
     if(selectedCard){ selectedCard.is_upgraded=1; if(res.card?.image_url) selectedCard.image_url=res.card.image_url; if(res.card?.name) selectedCard.name=res.card.name; if(res.card?.drop_weight) selectedCard.drop_weight=res.card.drop_weight; }
     setTimeout(async()=>{
       userData=await api(`/api/user/${tgUser.id}`); updateBalances();
-      toast(`✨ ${res.card?.name||'Upgraded'}!`,'ok');
+      toast(`${res.card?.name||'Upgraded'}!`,'ok');
       // Update modal title to show real name
       const modalTitle=document.getElementById('modal-title');
       if(modalTitle&&res.card?.name) modalTitle.textContent=res.card.name;
@@ -729,8 +861,7 @@ async function upgradeCard(cardId){
       const upgradeBtn=document.querySelector('#modal-body .btn-primary');
       if(upgradeBtn){
         upgradeBtn.outerHTML=`
-          <button class="btn btn-secondary btn-wide" onclick="openListModal()">${t.sell}</button>
-          <button class="btn btn-secondary btn-wide" onclick="openTransferModal(${cardId})">${t.transfer}</button>`;
+          <button class="btn btn-secondary btn-wide" onclick="openListModal()">${t.sell}</button>`;
       }
       loadProfile();
     },800);
@@ -740,9 +871,9 @@ async function upgradeCard(cardId){
 function openListModal(){
   const card=selectedCard;
   openModal(t.listSale,`
-    <div class="modal-card-preview"><img src="${card.image_url}" onerror="this.style.background='var(--bg3)'"></div>
+    <div class="modal-card-preview" style="max-height:160px;overflow:hidden"><img src="${card.image_url}" onerror="this.style.background='var(--bg3)'"></div>
     <div style="font-size:12px;color:var(--text2)">${t.commission}</div>
-    <div class="price-input-row"><input type="number" id="sell-price" placeholder="${t.enterPrice}" min="1"><span class="cur">⭐</span></div>
+    <div class="price-input-row"><input type="number" id="sell-price" placeholder="0.10" min="0.01" step="0.01"><span class="cur" style="color:#4ab0ff">TON</span></div>
     <button class="btn btn-primary" onclick="listCard(${card.id})">${t.listSale}</button>
     <button class="btn btn-secondary btn-wide" onclick="closeModal()">${t.cancel}</button>
   `);
@@ -750,15 +881,16 @@ function openListModal(){
 
 async function listCard(cardId){
   haptic('medium');
-  const price=parseInt(document.getElementById('sell-price')?.value);
-  if(!price||price<1){toast(t.enterPrice,'err');return;}
-  try{await api('/api/market/list','POST',{telegram_id:tgUser.id,user_card_id:cardId,price_stars:price});closeModal();toast(`${t.listed} 🏪`,'ok');loadProfile();}catch(e){toast(e.message,'err');}
+  const priceInput=parseFloat(document.getElementById('sell-price')?.value);
+  if(!priceInput||priceInput<0.1){toast(userLang==='ru'?'Минимум 0.10 TON':'Min 0.10 TON','err');return;}
+  const price=Math.round(priceInput*100); // store as integer (0.1 TON = 10)
+  try{await api('/api/market/list','POST',{telegram_id:tgUser.id,user_card_id:cardId,price_dev:price});closeModal();toast(t.listed,'ok');loadProfile();}catch(e){toast(e.message,'err');}
 }
 
 function openTransferModal(cardId){
   openModal(t.transfer,`
     <div style="font-size:13px;color:var(--text2);line-height:1.5">${t.enterTgId}<br><span style="font-size:11px;color:var(--text3)">${userLang==='ru'?'Стоимость: 1 ⭐':'Cost: 1 ⭐'}</span></div>
-    <input class="transfer-input" id="transfer-to" placeholder="Telegram ID" type="text" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+    <input class="transfer-input" id="transfer-to" placeholder="@username или Telegram ID" type="text" inputmode="text">
     <button class="btn btn-primary" onclick="doTransfer(${cardId})">${t.send}</button>
     <button class="btn btn-secondary btn-wide" onclick="closeModal()">${t.cancel}</button>
   `);
@@ -766,21 +898,44 @@ function openTransferModal(cardId){
 
 async function doTransfer(cardId){
   haptic('medium');
-  const toId=parseInt(document.getElementById('transfer-to')?.value);
+  const rawInput=(document.getElementById('transfer-to')?.value||'').trim();
+  if(!rawInput){toast(t.enterTgId,'err');return;}
+  const isUsername=rawInput.startsWith('@')||isNaN(rawInput);
+  const toId=isUsername?rawInput.replace('@',''):parseInt(rawInput);
   if(!toId){toast(t.enterTgId,'err');return;}
-  try{
-    await api('/api/transfer','POST',{from_telegram_id:tgUser.id,to_telegram_id:toId,user_card_id:cardId});
-    closeModal(); toast(`${t.cardSent} ✈️`,'ok');
-    userData=await api(`/api/user/${tgUser.id}`); updateBalances(); loadProfile();
-  }catch(e){
+
+  // First create invoice for 1 Star transfer fee
+  try {
+    const res = await api('/api/create_invoice','POST',{
+      telegram_id: tgUser.id,
+      collection_id: 0,
+      qty: 1,
+      purpose: 'transfer',
+      card_id: cardId,
+      to_id: String(toId)
+    });
+    if(res.invoice_link) {
+      closeModal();
+      tg.openInvoice(res.invoice_link, async (status) => {
+        if(status === 'paid') {
+          // Now do the actual transfer
+          try {
+            await api('/api/transfer','POST',{from_telegram_id:tgUser.id,to_telegram_id:toId,user_card_id:cardId});
+            toast(t.cardSent,'ok');
+            userData=await api(`/api/user/${tgUser.id}`); updateBalances(); loadProfile();
+          } catch(e){ toast(e.message,'err'); }
+        }
+      });
+    }
+  } catch(e){
     if(e.message.includes('not found')||e.message.includes('404')){
-      document.getElementById('modal-body').innerHTML=`<div style="text-align:center;padding:8px 0">
+      openModal(t.transfer,`<div style="text-align:center;padding:8px 0">
         <div style="font-size:36px;margin-bottom:12px">🤔</div>
         <div style="font-size:15px;font-weight:700;margin-bottom:8px">${t.notInPonki}</div>
-        <div style="font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.5">${t.notJoined}<br>${userLang==='ru'?'Пригласи — получи <strong style="color:var(--star)">10%</strong>!':'Invite them — earn <strong style="color:var(--star)">10%</strong>!'}</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.5">${t.notJoined}<br>${userLang==='ru'?'Пригласи!':'Invite them!'}</div>
         <button class="btn btn-primary" onclick="inviteForTransfer(${toId})">${t.invite}</button>
         <button class="btn btn-secondary btn-wide" style="margin-top:8px" onclick="closeModal()">${t.cancel}</button>
-      </div>`;
+      </div>`);
     } else toast(e.message,'err');
   }
 }
@@ -792,6 +947,35 @@ function inviteForTransfer(toId){
   if(tg) tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`);
   else navigator.clipboard.writeText(link).then(()=>toast(t.linkCopied,'ok'));
   closeModal();
+}
+
+function openCashbackModal(){
+  haptic();
+  const cashback = userData?.cashback_balance || 0;
+  const cashbackTon = fmtNano(cashback);
+  const canWithdraw = cashback >= 1e9; // 1 TON minimum
+  openModal(userLang==='ru'?'КЕШБЭК':'Cashback', `
+    <div style="text-align:center;padding:8px 0 16px">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:6px">${userLang==='ru'?'Накоплено':'Accumulated'}</div>
+      <div style="font-size:36px;font-weight:800;color:#4ab0ff">${cashback===0?'0':cashbackTon}</div>
+      <div style="font-size:14px;color:var(--text2);margin-bottom:16px">TON</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:16px;line-height:1.6">${userLang==='ru'?'1% от каждой твоей траты в TON возвращается сюда.<br>Минимум для вывода: 1 TON':'1% of every TON you spend comes back here.<br>Minimum withdrawal: 1 TON'}</div>
+      ${canWithdraw
+        ? `<button class="btn btn-primary" onclick="withdrawCashback();closeModal()">${userLang==='ru'?'Вывести на кошелёк':'Withdraw to wallet'}</button>`
+        : `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--text3)">${userLang==='ru'?`Ещё ${(1 - cashback/1e9).toFixed(4)} TON до вывода`:`${(1 - cashback/1e9).toFixed(4)} TON until withdrawal`}</div>`
+      }
+    </div>
+  `);
+}
+
+async function withdrawCashback(){
+  haptic('medium');
+  try {
+    const res = await api('/api/cashback/withdraw','POST',{telegram_id:tgUser.id});
+    toast(res.message||'✅','ok');
+    userData = await api(`/api/user/${tgUser.id}`);
+    updateBalances();
+  } catch(e){ toast(e.message,'err'); }
 }
 
 function openSplitLink(){
@@ -806,7 +990,115 @@ function copyRef(tgId){
   navigator.clipboard.writeText(link).then(()=>toast(t.linkCopied,'ok')).catch(()=>toast(link));
 }
 
-let tonUI=null;
+
+async function loadSellingBadge(){
+  try{
+    const data = await api(`/api/user/${tgUser.id}`);
+    const listed = (data.cards||[]).filter ? 0 : 0; // cards endpoint returns unlisted only
+    // Get listed cards count via market
+    const market = await api('/api/market');
+    const mine = (market||[]).filter(l=>l.seller_id===userData?.id);
+    const badge = document.getElementById('selling-count-badge');
+    if(badge){
+      if(mine.length>0){
+        badge.textContent=mine.length;
+        badge.style.display='flex';
+      } else {
+        badge.style.display='none';
+      }
+    }
+  }catch(e){}
+}
+
+async function loadProfileSelling(){
+  const el = document.getElementById('profile-selling-list');
+  if(!el) return;
+  el.innerHTML = '<div class="spinner" style="margin:32px auto"></div>';
+  try{
+    const market = await api('/api/market');
+    const mine = (market||[]).filter(l=>l.seller_id===userData?.id);
+    if(mine.length===0){
+      el.innerHTML=`<div class="empty-state"><p>${userLang==='ru'?'Нет карточек в продаже':'No cards listed for sale'}</p></div>`;
+      return;
+    }
+    let html=`<div class="cards-grid">`;
+    for(const l of mine){
+      html+=`<div class="card-item" onclick='openMarketModal(${JSON.stringify(l)},true)'>
+        <div class="card-img">
+          <img src="${l.image_url}" onerror="this.style.background='var(--bg3)'">
+          <span class="pct-badge">${dropPct(l.drop_weight)}</span>
+          <span class="price-badge" style="color:#4ab0ff">${fmtTon(l.price_stars)} TON</span>
+        </div>
+        <div class="card-info"><div class="card-name">${l.name}</div><div class="card-meta">#${l.serial_number}</div></div>
+      </div>`;
+    }
+    html+=`</div>`;
+    el.innerHTML=html;
+  }catch(e){el.innerHTML=`<div class="empty-state"><p>${e.message}</p></div>`;}
+}
+
+async function loadProfileWhales() {
+  const el = document.getElementById('profile-whales-list');
+  if (!el) return;
+  el.innerHTML = '<div class="spinner" style="margin:32px auto"></div>';
+  try {
+    const data = await api(`/api/leaderboard?telegram_id=${tgUser.id}`);
+    const list = data.top || [];
+    const myRank = data.my_rank;
+    const myRow = data.my_entry;
+    const medals = ['🥇','🥈','🥉'];
+    const rankColors = ['#ffd700','#c0c0c0','#cd7f32'];
+
+    // Sort by stars_spent desc (using stars_balance as proxy since we track purchases)
+    // We show stars spent + ton spent
+    const renderRow = (u, rank, isMe) => {
+      const medal = medals[rank-1] || '';
+      const rankColor = rankColors[rank-1] || 'var(--text2)';
+      const name = u.first_name || u.username || 'User';
+      const starsSpent = u.stars_spent || 0;
+      const tonSpent = u.ton_spent || 0;
+      return `<div style="background:${isMe?'rgba(255,45,120,0.08)':'var(--bg2)'};border:1px solid ${isMe?'rgba(255,45,120,0.4)':'rgba(255,255,255,0.07)'};border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:10px;box-shadow:${rank<=3?`0 0 12px ${rankColor}22`:'none'}">
+        <div style="min-width:26px;text-align:center;font-size:${rank<=3?'17':'12'}px;font-weight:800;color:${rankColor};font-family:'Space Mono',monospace">${medal||'#'+rank}</div>
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--bg3);border:1px solid ${isMe?'rgba(255,45,120,0.4)':'rgba(255,255,255,0.08)'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">${(name[0]||'?').toUpperCase()}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}${isMe?` <span style="color:#ff2d78;font-size:10px">(${userLang==='ru'?'ты':'you'})</span>`:''}</div>
+          ${u.username?`<div style="font-size:10px;color:var(--text2);font-family:'Space Mono',monospace">@${u.username}</div>`:''}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0">
+          <div style="font-size:12px;font-weight:800;color:var(--star);font-family:'Space Mono',monospace">⭐ ${starsSpent.toLocaleString()}</div>
+          <div style="display:flex;align-items:center;gap:3px;font-size:12px;font-weight:800;color:#4ab0ff;font-family:'Space Mono',monospace"><img src="/static/icons/ton.png" style="width:12px;height:12px;object-fit:contain"> ${tonSpent===0?'0':((tonSpent/1e9).toFixed(2).replace(/\.?0+$/, ''))}</div>
+        </div>
+      </div>`;
+    };
+
+    let html = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:16px;font-weight:800">🐳 ${userLang==='ru'?'Зал китов':'Hall of Whales'}</span>
+        <span style="font-size:11px;color:var(--text2);font-family:'Space Mono',monospace">${userLang==='ru'?'ТОП 100':'TOP 100'}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">`;
+
+    if (list.length === 0) {
+      html += `<div class="empty-state"><p>${userLang==='ru'?'Ещё никого — будь первым!':'No one yet — be first!'}</p></div>`;
+    } else {
+      list.forEach((u, i) => {
+        const isMe = userData && u.telegram_id === userData.telegram_id;
+        html += renderRow(u, i+1, isMe);
+      });
+    }
+
+    if (myRow && myRank > 100) {
+      html += `<div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px">${renderRow(myRow, myRank, true)}</div>`;
+    }
+
+    html += `</div>`;
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = `<div class="empty-state"><p>${e.message}</p></div>`;
+  }
+}
+
+
 async function initTon(){
   try{
     tonUI=new TON_CONNECT_UI.TonConnectUI({manifestUrl:location.origin+'/webapp/tonconnect-manifest.json',buttonRootId:null});
@@ -823,6 +1115,318 @@ async function connectTon(){
   if(!tonUI) await initTon();
   if(tonUI?.wallet){if(confirm(userLang==='ru'?'Отключить кошелёк?':'Disconnect wallet?')){await tonUI.disconnect();toast('Disconnected');}}
   else tonUI?.openModal();
+}
+
+async function openTonModal(){
+  haptic();
+  const tonNano = 1_000_000_000;
+  const tonBal = userData?.ton_balance || 0;
+  const tonFmt = (tonBal / tonNano).toFixed(2);
+  const walletAddr = userData?.ton_address || '';
+  const shortAddr = walletAddr ? walletAddr.slice(0,6)+'...'+walletAddr.slice(-3) : '';
+  let depInfo = null;
+  try { depInfo = await api(`/api/ton/deposit_address?telegram_id=${tgUser.id}`); } catch(e){}
+  const botAddr = depInfo?.address || '';
+  const memo = depInfo?.memo || '';
+
+  // Fetch Tonkeeper wallet balance
+  let walletBal = '—';
+  if(walletAddr) {
+    try {
+      const r = await fetch(`https://toncenter.com/api/v2/getAddressBalance?address=${walletAddr}`);
+      const j = await r.json();
+      if(j.ok) walletBal = (parseInt(j.result) / tonNano).toFixed(2) + ' TON';
+    } catch(e){}
+  }
+
+  openModal('TON', `
+    ${walletAddr ? `
+    <div style="background:var(--bg3);border:1px solid rgba(74,176,255,0.2);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <img src="/static/icons/ton.png" style="width:20px;height:20px;object-fit:contain">
+      <div style="flex:1">
+        <div style="font-size:11px;color:var(--text2)">${userLang==='ru'?'Кошелёк':'Wallet'}: ${shortAddr}</div>
+        <div style="font-size:13px;font-weight:700;color:#4ab0ff">${walletBal}</div>
+      </div>
+      <span style="color:var(--success)">✓</span>
+    </div>` : ''}
+
+    <div style="background:var(--bg3);border:1px solid rgba(74,176,255,0.3);border-radius:14px;padding:16px;text-align:center;margin-bottom:12px">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:6px">${userLang==='ru'?'Баланс в боте':'Balance in bot'}</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px">
+        <img src="/static/icons/ton.png" style="width:24px;height:24px;object-fit:contain">
+        <span style="font-size:32px;font-weight:800;color:#4ab0ff">${tonFmt}</span>
+        <span style="font-size:16px;color:var(--text2);font-weight:700">TON</span>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button onclick="showTonDeposit('${botAddr}','${memo}')" style="flex:1;background:rgba(74,176,255,0.1);border:1px solid rgba(74,176,255,0.3);border-radius:14px;padding:16px 8px;cursor:pointer">
+        <div style="font-size:15px;font-weight:800;color:#4ab0ff">${userLang==='ru'?'Пополнить':'Deposit'}</div>
+      </button>
+      <button onclick="showTonWithdraw()" style="flex:1;background:rgba(74,176,255,0.1);border:1px solid rgba(74,176,255,0.3);border-radius:14px;padding:16px 8px;cursor:pointer">
+        <div style="font-size:15px;font-weight:800;color:#4ab0ff">${userLang==='ru'?'Вывести':'Withdraw'}</div>
+      </button>
+    </div>
+
+    <div id="ton-action-area"></div>
+    <div id="ton-history-area"></div>
+  `);
+}
+
+function showTonDeposit(botAddr, memo){
+  haptic();
+  const el = document.getElementById('ton-action-area');
+  if(!el) return;
+  // Check if wallet connected
+  if(!tonUI?.wallet){
+    el.innerHTML=`
+      <div style="background:var(--bg3);border:1px solid rgba(74,176,255,0.2);border-radius:12px;padding:14px;margin-bottom:12px;text-align:center">
+        <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:#4ab0ff">${userLang==='ru'?'Подключи кошелёк Tonkeeper':'Connect Tonkeeper wallet'}</div>
+        <button class="btn btn-primary" onclick="connectTon()">${userLang==='ru'?'Подключить кошелёк':'Connect wallet'}</button>
+      </div>`;
+    return;
+  }
+  el.innerHTML=`
+    <div style="background:var(--bg3);border:1px solid rgba(74,176,255,0.2);border-radius:12px;padding:14px;margin-bottom:12px">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:8px">${userLang==='ru'?'Сумма пополнения:':'Deposit amount:'}</div>
+      <div class="price-input-row" style="margin-bottom:12px">
+        <input type="number" id="ton-dep-amount" placeholder="0.1" min="0.1" step="0.1" oninput="toggleDepBtn(this.value)">
+        <span class="cur" style="color:#4ab0ff">TON</span>
+      </div>
+      <button id="ton-dep-btn" class="btn btn-primary" style="opacity:0.4;pointer-events:none" onclick="doTonDeposit('${botAddr}','${memo}')">${userLang==='ru'?'Пополнить':'Deposit'}</button>
+    </div>`;
+  loadTonHistory();
+  setTimeout(()=>{
+    const inp = document.getElementById('ton-dep-amount');
+    if(inp){inp.focus();}
+  }, 100);
+}
+
+async function doTonDeposit(botAddr, memo){
+  haptic('medium');
+  const amountTon = parseFloat(document.getElementById('ton-dep-amount')?.value);
+  if(!amountTon || amountTon < 0.1){ toast(userLang==='ru'?'Минимум 0.1 TON':'Min 0.1 TON','err'); return; }
+  if(!tonUI?.wallet){ toast(userLang==='ru'?'Подключи кошелёк':'Connect wallet first','err'); return; }
+
+  const amountNano = Math.floor(amountTon * 1_000_000_000).toString();
+
+  try {
+    await tonUI.sendTransaction({
+      validUntil: Math.floor(Date.now() / 1000) + 360,
+      messages: [{
+        address: botAddr,
+        amount: amountNano
+      }]
+    });
+    // Optimistic credit - trust TonConnect confirmation
+    const res = await api('/api/ton/deposit_confirm','POST',{
+      telegram_id: tgUser.id,
+      amount_nano: parseInt(amountNano)
+    });
+    userData.ton_balance = res.ton_balance;
+    updateBalances();
+    toast(`+${amountTon} TON ${userLang==='ru'?'зачислено':'credited'}!`,'ok');
+    const el = document.getElementById('ton-action-area');
+    if(el) el.innerHTML='';
+    // Reload full user to update cashback and other balances
+    setTimeout(async()=>{
+      userData = await api(`/api/user/${tgUser.id}`);
+      updateBalances();
+      openTonModal();
+    }, 800);
+  } catch(e){
+    const msg = (e?.message||'').toLowerCase();
+    if(msg.includes('cancel')||msg.includes('reject')||msg.includes('denied')||msg.includes('user')){
+      toast(userLang==='ru'?'Отменено':'Cancelled','');
+    } else {
+      toast(e?.message||'Error','err');
+    }
+  }
+}
+
+function toggleDepBtn(val){
+  const btn = document.getElementById('ton-dep-btn');
+  if(!btn) return;
+  if(parseFloat(val) >= 0.1){
+    btn.style.opacity='1'; btn.style.pointerEvents='auto';
+  } else {
+    btn.style.opacity='0.4'; btn.style.pointerEvents='none';
+  }
+}
+
+function showTonWithdraw(){
+  haptic();
+  const el = document.getElementById('ton-action-area');
+  if(!el) return;
+  const bal = userData?.ton_balance || 0;
+  const balFmt = fmtNano(bal);
+  el.innerHTML=`
+    <div style="background:var(--bg3);border:1px solid rgba(74,176,255,0.2);border-radius:12px;padding:14px;margin-bottom:12px;display:flex;flex-direction:column;gap:8px">
+      <div style="font-size:11px;color:var(--text2)">${userLang==='ru'?'Доступно':'Available'}: <span style="color:#4ab0ff">${balFmt} TON</span></div>
+      <div class="price-input-row"><input type="number" id="ton-withdraw-amount" placeholder="${balFmt}" value="${balFmt}" min="0.1" step="0.1"><span class="cur" style="color:#4ab0ff">TON</span></div>
+      <button class="btn btn-primary" onclick="doTonWithdraw()">${userLang==='ru'?'Вывести':'Withdraw'}</button>
+    </div>`;
+  setTimeout(()=>{
+    const inp = document.getElementById('ton-withdraw-amount');
+    if(inp){inp.focus();inp.select();}
+  }, 100);
+}
+
+async function loadTonHistory(){
+  const el = document.getElementById('ton-history-area');
+  if(!el) return;
+  el.innerHTML=`
+    <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:8px">${userLang==='ru'?'История':'History'}</div>
+    <div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0">${userLang==='ru'?'История транзакций появится после первого депозита':'Transaction history will appear after first deposit'}</div>`;
+}
+
+async function checkTonDeposit(){
+  haptic();
+  try {
+    const res = await api('/api/ton/check_deposits','POST',{telegram_id:tgUser.id});
+    userData.ton_balance = res.ton_balance;
+    updateBalances();
+    if(res.new_deposits > 0) {
+      toast(`+${res.new_deposits} TON ${userLang==='ru'?'зачислено':'credited'}!`,'ok');
+      setTimeout(()=>{ openTonModal(); }, 500);
+    } else {
+      toast(userLang==='ru'?'Новых поступлений нет':'No new deposits','');
+    }
+  } catch(e){ toast(e.message,'err'); }
+}
+
+async function doTonWithdraw(){
+  haptic('medium');
+  const amount = parseFloat(document.getElementById('ton-withdraw-amount')?.value);
+  if(!amount||amount<0.1){toast(userLang==='ru'?'Минимум 0.1 TON':'Min 0.1 TON','err');return;}
+  const addr = tonUI?.wallet?.account?.address || userData?.ton_address || '';
+  if(!addr){toast(userLang==='ru'?'Подключи кошелёк сначала':'Connect wallet first','err');return;}
+  const bal = userData?.ton_balance||0;
+  const amountNano = Math.floor(amount*1_000_000_000);
+  if(bal < amountNano){
+    toast(userLang==='ru'?`Недостаточно TON. Баланс: ${fmtNano(bal)}`:`Not enough TON. Balance: ${fmtNano(bal)}`,'err');
+    return;
+  }
+  try {
+    const res = await api('/api/ton/withdraw','POST',{telegram_id:tgUser.id,amount,to_address:addr});
+    // Deduct from local balance immediately
+    userData.ton_balance = (userData.ton_balance||0) - amountNano;
+    updateBalances();
+    const el = document.getElementById('ton-action-area');
+    if(el) el.innerHTML=`
+      <div style="background:var(--bg3);border:1px solid rgba(74,255,138,0.2);border-radius:12px;padding:14px;text-align:center">
+        <div style="font-size:14px;font-weight:700;color:var(--success);margin-bottom:4px">✅ ${userLang==='ru'?'Вывод обрабатывается':'Withdrawal processing'}</div>
+        <div style="font-size:12px;color:var(--text2)">${amount} TON → ${addr.slice(0,6)}...${addr.slice(-4)}</div>
+      </div>`;
+  } catch(e){ toast(e.message,'err'); }
+}
+
+function openOfferModal(cardId, cardName, imageUrl){
+  haptic();
+  openModal(userLang==='ru'?'Предложить цену':'Make Offer', `
+    <div class="modal-card-preview" style="max-height:140px"><img src="${imageUrl}" onerror="this.style.background='var(--bg3)'"></div>
+    <div style="font-size:14px;font-weight:700;text-align:center;margin-bottom:4px">${cardName}</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:8px;text-align:center">${userLang==='ru'?'Ваш баланс':'Your balance'}: <span style="color:#4ab0ff">${fmtNano(userData?.ton_balance||0)} TON</span></div>
+    <div class="price-input-row"><input type="number" id="offer-amount" placeholder="0.1" min="0.01" step="0.01"><span class="cur" style="color:#4ab0ff">TON</span></div>
+    <button class="btn btn-primary" onclick="submitOffer(${cardId})">${userLang==='ru'?'Отправить оффер':'Send offer'}</button>
+    <button class="btn btn-secondary btn-wide" onclick="closeModal()">${userLang==='ru'?'Отмена':'Cancel'}</button>
+  `);
+}
+
+async function submitOffer(cardId){
+  haptic('medium');
+  const amount = parseFloat(document.getElementById('offer-amount')?.value);
+  if(!amount||amount<0.01){toast(userLang==='ru'?'Минимум 0.01 TON':'Min 0.01 TON','err');return;}
+  try{
+    await api('/api/offer/make','POST',{telegram_id:tgUser.id,user_card_id:cardId,amount_ton:amount});
+    closeModal();
+    toast(userLang==='ru'?'Оффер отправлен!':'Offer sent!','ok');
+  }catch(e){toast(e.message,'err');}
+}
+
+async function loadOffersBadge(){
+  try{
+    const data = await api(`/api/offers/${tgUser.id}`);
+    const count = (data.received||[]).length;
+    const badge = document.getElementById('offers-count-badge');
+    if(badge){
+      if(count>0){badge.textContent=count;badge.style.display='flex';}
+      else badge.style.display='none';
+    }
+  }catch(e){}
+}
+
+async function loadProfileOffers(){
+  const el = document.getElementById('profile-offers-list');
+  if(!el) return;
+  el.innerHTML='<div class="spinner" style="margin:32px auto"></div>';
+  try{
+    const data = await api(`/api/offers/${tgUser.id}`);
+    const received = data.received||[];
+    const sent = data.sent||[];
+    let html='';
+
+    if(received.length>0){
+      html+=`<div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:6px">${userLang==='ru'?'Входящие':'Incoming'}</div>`;
+      for(const o of received){
+        const ton = fmtNano(o.amount_nano);
+        html+=`<div style="background:var(--bg2);border:1px solid rgba(74,255,138,0.2);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px">
+          <div style="width:40px;height:40px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--bg3)"><img src="${o.image_url}" style="width:100%;height:100%;object-fit:cover"></div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:700">${o.card_name} <span style="color:var(--text2);font-weight:400">#${o.serial_number}</span></div>
+            <div style="font-size:11px;color:var(--text2)">${o.from_name||'@'+o.from_username||'User'}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:14px;font-weight:800;color:#4ab0ff;margin-bottom:6px">${ton} TON</div>
+            <div style="display:flex;gap:6px">
+              <button onclick="acceptOffer(${o.id})" style="background:rgba(74,255,138,0.15);border:1px solid rgba(74,255,138,0.3);color:var(--success);border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer">✓</button>
+              <button onclick="declineOffer(${o.id})" style="background:rgba(255,74,74,0.1);border:1px solid rgba(255,74,74,0.2);color:var(--danger);border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer">✕</button>
+            </div>
+          </div>
+        </div>`;
+      }
+    }
+
+    if(sent.length>0){
+      html+=`<div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin:${received.length>0?'12':'0'}px 0 6px">${userLang==='ru'?'Отправленные':'Sent'}</div>`;
+      for(const o of sent){
+        const ton = fmtNano(o.amount_nano);
+        html+=`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px">
+          <div style="width:40px;height:40px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--bg3)"><img src="${o.image_url}" style="width:100%;height:100%;object-fit:cover"></div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:700">${o.card_name} <span style="color:var(--text2);font-weight:400">#${o.serial_number}</span></div>
+            <div style="font-size:11px;color:var(--text2)">${o.to_name||'@'+o.to_username||'User'}</div>
+          </div>
+          <div style="font-size:14px;font-weight:800;color:#4ab0ff;flex-shrink:0">${ton} TON</div>
+        </div>`;
+      }
+    }
+
+    if(!html) html=`<div class="empty-state"><p>${userLang==='ru'?'Офферов пока нет':'No offers yet'}</p></div>`;
+    el.innerHTML=html;
+  }catch(e){el.innerHTML=`<div class="empty-state"><p>${e.message}</p></div>`;}
+}
+
+async function acceptOffer(offerId){
+  haptic('medium');
+  try{
+    await api('/api/offer/accept','POST',{telegram_id:tgUser.id,offer_id:offerId});
+    toast(userLang==='ru'?'Оффер принят!':'Offer accepted!','ok');
+    userData=await api(`/api/user/${tgUser.id}`);
+    updateBalances();
+    loadProfileOffers();
+    loadProfile();
+  }catch(e){toast(e.message,'err');}
+}
+
+async function declineOffer(offerId){
+  haptic();
+  try{
+    await api('/api/offer/decline','POST',{telegram_id:tgUser.id,offer_id:offerId});
+    toast(userLang==='ru'?'Отклонено':'Declined','');
+    loadProfileOffers();
+    loadOffersBadge();
+  }catch(e){toast(e.message,'err');}
 }
 
 initTon();

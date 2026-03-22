@@ -2,27 +2,14 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="16f86fe9-2afa-47b3-8050-ae285a8bafe4" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.env" beforeDir="false" afterPath="$PROJECT_DIR$/.env" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/api.py" beforeDir="false" afterPath="$PROJECT_DIR$/api.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/bot.py" beforeDir="false" afterPath="$PROJECT_DIR$/bot.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/database.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/memstroy.db" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/static/cards/1.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/static/cards/2.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/static/cards/3.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/static/cards/4.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/static/cards/5.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/static/cards/6.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/static/cards/7.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/static/cards/Mellstroy (1).jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/static/cards/Mellstroy (3).jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/static/cards/buy.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/static/cards/mellstroy (2).jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/static/cards/mellstroy.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/static/cards/profile.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/static/cards/trade.png" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/webapp/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/webapp/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/webapp/tonconnect-manifest.json" beforeDir="false" afterPath="$PROJECT_DIR$/webapp/tonconnect-manifest.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -52,17 +39,17 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "main",
-    "ignore.virus.scanning.warn.message": "true",
-    "last_opened_file_path": "C:/memstroy"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/memstroy&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\mellstroyx" />

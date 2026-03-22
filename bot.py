@@ -1,16 +1,18 @@
 import asyncio
 import logging
+import json
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import CommandStart
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo, LabeledPrice, PreCheckoutQuery
-from aiogram.utils.keyboard import InlineKeyboardBuilder
 import os
+import aiohttp
 from dotenv import load_dotenv
 
-load_dotenv(dotenv_path=os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'))
+load_dotenv(r"C:\memstroy\.env")
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 WEBAPP_URL = os.getenv("WEBAPP_URL", "https://yourdomain.com")
+API_URL = os.getenv("API_URL", "http://localhost:8000")
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=BOT_TOKEN)
@@ -25,34 +27,55 @@ async def start(message: types.Message):
             web_app=WebAppInfo(url=WEBAPP_URL)
         )]
     ])
-    
-    # Pass referral if exists
+
     ref_code = None
     if message.text and len(message.text.split()) > 1:
         ref_code = message.text.split()[1]
-    
+
     name = message.from_user.username or message.from_user.first_name or "friend"
     await message.answer(
         f"Hey, @{name} 👋",
         reply_markup=kb
     )
-    
-    # Register user via API
-    import aiohttp
+
     async with aiohttp.ClientSession() as session:
-        user = message.from_user
         payload = {
-            "telegram_id": user.id,
-            "username": user.username or "",
-            "first_name": user.first_name or "",
-            "last_name": user.last_name or "",
+            "telegram_id": message.from_user.id,
+            "username": message.from_user.username or "",
+            "first_name": message.from_user.first_name or "",
+            "last_name": message.from_user.last_name or "",
             "ref_code": ref_code
         }
         try:
-            async with session.post(f"http://localhost:8000/api/register", json=payload) as resp:
+            async with session.post(f"{API_URL}/api/register", json=payload) as resp:
                 pass
         except:
             pass
+
+
+@dp.message(F.web_app_data)
+async def web_app_data_handler(message: types.Message):
+    """Handle buy requests from Mini App via sendData"""
+    try:
+        data = json.loads(message.web_app_data.data)
+        if data.get("action") == "buy_stars":
+            collection_id = data.get("collection_id", 1)
+            qty = max(1, int(data.get("qty", 1)))
+            price_per = 1  # 1 star per card for testing
+            prices = [LabeledPrice(
+                label=f"Ponki Cards x{qty}",
+                amount=price_per * qty
+            )]
+            await bot.send_invoice(
+                chat_id=message.from_user.id,
+                title="Ponki Card Pack",
+                description=f"Open {qty} Ponki card pack{'s' if qty > 1 else ''}. Each card is unique!",
+                payload=f"buy_card_{collection_id}_{qty}",
+                currency="XTR",
+                prices=prices,
+            )
+    except Exception as e:
+        logging.error(f"web_app_data error: {e}")
 
 
 @dp.pre_checkout_query()
@@ -63,19 +86,26 @@ async def pre_checkout(query: PreCheckoutQuery):
 @dp.message(F.successful_payment)
 async def successful_payment(message: types.Message):
     payload = message.successful_payment.invoice_payload
-    # payload format: "buy_stars_{user_id}_{amount}" or "upgrade_{user_id}_{card_id}" etc.
-    import aiohttp
+    stars_paid = message.successful_payment.total_amount
+
     async with aiohttp.ClientSession() as session:
         try:
-            async with session.post(f"http://localhost:8000/api/payment/confirm", json={
+            async with session.post(f"{API_URL}/api/payment/confirm", json={
                 "telegram_id": message.from_user.id,
                 "payload": payload,
-                "stars": message.successful_payment.total_amount
+                "stars": stars_paid
             }) as resp:
                 data = await resp.json()
-                await message.answer(f"✅ {data.get('message', 'Payment confirmed!')}")
+                # Silent - user sees result in app
+                pass
         except Exception as e:
-            await message.answer("✅ Payment received!")
+            logging.error(f"payment confirm error: {e}")
+            await message.answer(
+                "✅ Payment received!",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="Open", web_app=WebAppInfo(url=WEBAPP_URL))]
+                ])
+            )
 
 
 async def main():
