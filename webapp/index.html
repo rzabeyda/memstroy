@@ -3,9 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Ponki</title>
-<link rel="icon" type="image/png" href="/static/ponki/ponki.png">
-<link rel="apple-touch-icon" href="/static/ponki/ponki.png">
+<title>Memstroy</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦄</text></svg>">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
 <style>
@@ -75,7 +74,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;height
 .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .stat-box{background:var(--bg2);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:10px 6px;text-align:center;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04)}
 .stat-box .val{font-size:18px;font-weight:800;font-family:'Space Mono',monospace}
-.stat-box .lbl{font-size:9px;color:var(--text2);margin-top:2px;text-transform:uppercase;letter-spacing:0.5px}
+.stat-box .lbl{font-size:9px;color:var(--text2);margin-top:2px;text-transform:uppercase;letter-spacing:0.5px;min-height:14px;display:flex;align-items:center;justify-content:center}
 .section-label{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:8px}
 .empty-state{text-align:center;padding:48px 20px;color:var(--text3)}
 .empty-state p{font-size:14px}
@@ -110,7 +109,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;height
 .trade-filter-btn{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:10px 8px;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;font-family:'Syne',sans-serif;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:6px}
 .trade-filter-btn:active{transform:scale(0.95)}
 .trade-filter-btn.has-filter{border-color:#ff2d78;color:#ff2d78}
-.trade-filter-count{background:#ff2d78;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:800}
+.trade-filter-count{background:#fff;color:#000;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:800;display:inline-flex;align-items:center;justify-content:center}
 </style>
 </head>
 <body>
@@ -167,18 +166,13 @@ let userData = null, selectedCard = null;
 
 const userLang = ((tg?.initDataUnsafe?.user?.language_code || navigator.language || 'en')+'').toLowerCase().startsWith('ru') ? 'ru' : 'en';
 const T = {
-  en:{shop:'Shop',trade:'Trade',profile:'Profile',whales:'Whales',left:'LEFT',price:'PRICE',supply:'SUPPLY',buy:'Buy',cardCount:(n)=>n===1?'card':`cards`,upgrade:'UPGRADE',sell:'Sell',transfer:'Transfer',serial:'Serial',drop:'Drop %',status:'Status',supplyLbl:'Supply',listSale:'List for Sale',cancel:'Cancel',close:'Close',send:'Send',remove:'Remove listing',noListings:'No listings yet',collection:'Collection',model:'Model',refEarn:'Refer & Earn',refText:'Invite friends — you earn',refOf:'of all their spending!',buyCheapStars:'Buy Stars',connectTon:'Connect TON Wallet',myCards:'My Cards',friends:'Friends',noCards:'No cards yet',noFriends:'No friends yet',showAll:'Show all',showLess:'Show less',clear:'Clear',apply:'Apply',notInPonki:'User not in Ponki',notJoined:"This person hasn't joined yet.",invite:'Invite',purchased:'Purchased!',listed:'Listed!',removed:'Removed',cardSent:'Card sent!',linkCopied:'Link copied!',notEnoughDev:'Not enough DEV',notEnoughStars:'Not enough stars',enterPrice:'Enter price',enterTgId:'Enter Telegram ID',commission:'Commission: 5%',rarity:'Rarity',descShop:'50 unique models · upgrade free',historyTitle:'History'},
-  ru:{shop:'Магазин',trade:'Торговля',profile:'Профиль',whales:'Киты',left:'ОСТАЛОСЬ',price:'ЦЕНА',supply:'ТИРАЖ',buy:'Купить',cardCount:(n)=>{if(n%10===1&&n%100!==11)return'карта';if([2,3,4].includes(n%10)&&![12,13,14].includes(n%100))return'карты';return'карт';},upgrade:'УЛУЧШИТЬ',sell:'Продать',transfer:'Передать',serial:'Номер',drop:'Редкость',status:'Статус',supplyLbl:'Тираж',listSale:'Выставить',cancel:'Отмена',close:'Закрыть',send:'Отправить',remove:'Снять',noListings:'Нет объявлений',collection:'Коллекция',model:'Модель',refEarn:'Приглашай и зарабатывай',refText:'Приглашай друзей — получай',refOf:'от их трат автоматически!',buyCheapStars:'Купить звёзды',connectTon:'Подключить TON кошелёк',myCards:'Мои карточки',friends:'Друзья',noCards:'Карточек пока нет',noFriends:'Нет друзей — поделись ссылкой!',showAll:'Показать все',showLess:'Скрыть',clear:'Сбросить',apply:'Применить',notInPonki:'Пользователь не в Ponki',notJoined:'Этот человек ещё не вступил.',invite:'Пригласить',purchased:'Куплено!',listed:'Выставлено!',removed:'Снято',cardSent:'Карточка отправлена!',linkCopied:'Ссылка скопирована!',notEnoughDev:'Недостаточно DEV',notEnoughStars:'Недостаточно звёзд',enterPrice:'Введите цену',enterTgId:'Введите Telegram ID',commission:'Комиссия: 5%',rarity:'Редкость',descShop:'50 уникальных моделей · улучшение бесплатно',historyTitle:'История'}
+  en:{shop:'Shop',trade:'Market',profile:'Profile',whales:'Whales',left:'LEFT',price:'PRICE',supply:'SUPPLY',buy:'Buy',cardCount:(n)=>n===1?'card':`cards`,upgrade:'UPGRADE',sell:'Sell',transfer:'Transfer',serial:'Serial',drop:'Drop %',status:'Status',supplyLbl:'Supply',listSale:'List for Sale',cancel:'Cancel',close:'Close',send:'Send',remove:'Remove listing',noListings:'No listings yet',collection:'Collection',model:'Model',refEarn:'Refer & Earn',refText:'Invite friends — you earn',refOf:'of all their spending!',buyCheapStars:'Buy Stars',connectTon:'Connect TON Wallet',myCards:'My Cards',friends:'Friends',noCards:'No cards yet',noFriends:'No friends yet',showAll:'Show all',showLess:'Show less',clear:'Clear',apply:'Apply',notInPonki:'User not in Ponki',notJoined:"This person hasn't joined yet.",invite:'Invite',purchased:'Purchased!',listed:'Listed!',removed:'Removed',cardSent:'Card sent!',linkCopied:'Link copied!',notEnoughDev:'Not enough DEV',notEnoughStars:'Not enough stars',enterPrice:'Enter price',enterTgId:'Enter Telegram ID',commission:'Commission: 5%',rarity:'Rarity',descShop:'50 unique models · upgrade free',historyTitle:'History'},
+  ru:{shop:'Магазин',trade:'Рынок',profile:'Профиль',whales:'Киты',left:'ОСТАЛОСЬ',price:'ЦЕНА',supply:'ТИРАЖ',buy:'Купить',cardCount:(n)=>{if(n%10===1&&n%100!==11)return'карта';if([2,3,4].includes(n%10)&&![12,13,14].includes(n%100))return'карты';return'карт';},upgrade:'УЛУЧШИТЬ',sell:'Продать',transfer:'Передать',serial:'Номер',drop:'Редкость',status:'Статус',supplyLbl:'Тираж',listSale:'Выставить',cancel:'Отмена',close:'Закрыть',send:'Отправить',remove:'Снять',noListings:'Нет объявлений',collection:'Коллекция',model:'Модель',refEarn:'Приглашай и зарабатывай',refText:'Приглашай друзей — получай',refOf:'от их трат автоматически!',buyCheapStars:'Купить звёзды',connectTon:'Подключить TON кошелёк',myCards:'Мои карточки',friends:'Друзья',noCards:'Карточек пока нет',noFriends:'Нет друзей — поделись ссылкой!',showAll:'Показать все',showLess:'Скрыть',clear:'Сбросить',apply:'Применить',notInPonki:'Пользователь не в Ponki',notJoined:'Этот человек ещё не вступил.',invite:'Пригласить',purchased:'Куплено!',listed:'Выставлено!',removed:'Снято',cardSent:'Карточка отправлена!',linkCopied:'Ссылка скопирована!',notEnoughDev:'Недостаточно DEV',notEnoughStars:'Недостаточно звёзд',enterPrice:'Введите цену',enterTgId:'Введите Telegram ID',commission:'Комиссия: 5%',rarity:'Редкость',descShop:'50 уникальных моделей · улучшение бесплатно',historyTitle:'История'}
 };
 const t = T[userLang];
 
 function fmtNum(n) {
-  if (n >= 10000) return '10K';
-  if (n >= 1000) {
-    const val = Math.floor(n / 100) / 10; // truncate, not round
-    return val.toFixed(1).replace(/\.0$/,'') + 'K';
-  }
-  return n.toLocaleString();
+  return n.toLocaleString('ru-RU');
 }
 
 function applyLang() {
@@ -240,11 +234,14 @@ function updateBalances() {
   // Cashback
   const cb = userData.cashback_balance || 0;
   const cbEl = document.getElementById('cashback-val');
-  if (cbEl) cbEl.textContent = cb === 0 ? '0' : fmtNano(cb);
+  if (cbEl) cbEl.textContent = (cb/1e9).toFixed(2);
+  const earnEl = document.getElementById('earned-val');
+  if (earnEl) earnEl.textContent = userData.referral_earnings || 0;
 }
 
 function switchTab(tab) {
   haptic();
+  sessionStorage.setItem('activeTab', tab);
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+(tab==='sell'?'sell':tab)).classList.add('active');
@@ -319,7 +316,7 @@ async function loadBuy() {
           <div style="flex:1;text-align:center"><span id="qty-val" style="font-size:22px;font-weight:800">${qty}</span> <span id="qty-word" style="font-size:13px;color:var(--text2)">${t.cardCount(qty)}</span></div>
           <button class="btn btn-secondary" style="width:44px;height:44px;font-size:20px;flex-shrink:0;padding:0" onclick="changeQty(1)">+</button>
         </div>
-        <button class="btn btn-primary" id="buy-btn" onclick="buyCard(${col.id})">${qty===1?`${t.buy} — 1 ⭐`:`${t.buy} ${qty} — ${qty} ⭐`}</button>
+        <button class="btn btn-primary" id="buy-btn" onclick="buyCard(${col.id})">${qty===1?`${t.buy} — 1 ⭐`:`${t.buy} ${qty} ⭐`}</button>
       </div>`;
   } catch(e) { el.innerHTML=`<div class="empty-state"><p>${e.message}</p></div>`; }
 }
@@ -330,7 +327,7 @@ function changeQty(d) {
   const qv=document.getElementById('qty-val'), qw=document.getElementById('qty-word'), bb=document.getElementById('buy-btn');
   if(qv) qv.textContent=_buyQty;
   if(qw) qw.textContent=t.cardCount(_buyQty);
-  if(bb) bb.textContent=_buyQty===1?`${t.buy} — 1 ⭐`:`${t.buy} ${_buyQty} — ${_buyQty} ⭐`;
+  if(bb) bb.textContent=_buyQty===1?`${t.buy} — 1 ⭐`:`${t.buy} ${_buyQty} ⭐`;
 }
 
 async function buyCard(colId) {
@@ -374,6 +371,7 @@ async function loadTrade() {
 }
 
 let tradeView = 'market'; // 'market' or 'history'
+let historySortBy = 'date';
 
 function renderTradeUI() {
   const el=document.getElementById('trade-content'); if(!el) return;
@@ -400,6 +398,12 @@ function renderTradeUI() {
       <div id="listings-list"></div>
     </div>
     <div id="trade-history-section" style="display:${tradeView==='history'?'flex':'none'};flex-direction:column;gap:8px">
+      <div class="filters" style="margin-bottom:4px">
+        <button class="filter-btn ${historySortBy==='date'?'active':''}" onclick="setHistorySort('date')">${userLang==='ru'?'Новые':'New'}</button>
+        <button class="filter-btn ${historySortBy==='price_asc'||historySortBy==='price_desc'?'active':''}" onclick="setHistorySort(historySortBy==='price_asc'?'price_desc':'price_asc')" style="display:flex;align-items:center;gap:3px"><img src="/static/icons/ton.png" style="width:11px;height:11px;object-fit:contain"> ${historySortBy==='price_desc'?'↓':'↑'}</button>
+        <button class="filter-btn ${historySortBy==='rarity_asc'||historySortBy==='rarity_desc'?'active':''}" onclick="setHistorySort(historySortBy==='rarity_asc'?'rarity_desc':'rarity_asc')">% ${historySortBy==='rarity_desc'?'↓':'↑'}</button>
+        <button class="filter-btn ${historySortBy==='serial'?'active':''}" onclick="setHistorySort('serial')">#</button>
+      </div>
       <div id="history-list"><div class="spinner" style="margin:32px auto"></div></div>
     </div>`;
   if(tradeView==='market') renderListings();
@@ -410,6 +414,13 @@ function setTradeView(view) {
   haptic();
   tradeView=view;
   renderTradeUI();
+}
+
+function setHistorySort(sort) {
+  haptic();
+  historySortBy = sort;
+  renderTradeUI();
+  loadHistory();
 }
 
 function openCollectionFilter() {
@@ -461,10 +472,16 @@ function toggleTradeRarity(){tradeSortBy=tradeSortBy==='rarity_asc'?'rarity_desc
 
 async function loadHistory() {
   const el=document.getElementById('history-list'); if(!el) return;
-  // P2P history - only show market_buy transactions between different users
   try {
     const data=await api(`/api/history/${tgUser.id}`);
-    const items=(data.history||[]).filter(i=>i.type==='market_buy');
+    let items=(data.history||[]).filter(i=>i.type==='market_buy'||i.type==='market_buy_ton');
+    // Sort
+    if(historySortBy==='price_asc') items.sort((a,b)=>a.stars_amount-b.stars_amount);
+    else if(historySortBy==='price_desc') items.sort((a,b)=>b.stars_amount-a.stars_amount);
+    else if(historySortBy==='rarity_asc') items.sort((a,b)=>(a.drop_weight||99)-(b.drop_weight||99));
+    else if(historySortBy==='rarity_desc') items.sort((a,b)=>(b.drop_weight||99)-(a.drop_weight||99));
+    else if(historySortBy==='serial') items.sort((a,b)=>(a.serial_number||0)-(b.serial_number||0));
+    // default: date (already sorted by created_at DESC from API)
     if(items.length===0){
       el.innerHTML=`<div class="empty-state"><p>${userLang==='ru'?'Сделок пока нет':'No trades yet'}</p></div>`;
       return;
@@ -478,10 +495,11 @@ async function loadHistory() {
           <img src="${item.image_url||'/static/ponki/ponki.png'}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.background='var(--bg3)'">
         </div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700">${item.card_name||'Ponki'}${item.serial_number?` <span style="color:var(--text2);font-weight:400">#${item.serial_number}</span>`:''}</div>
+          <div style="font-size:13px;font-weight:700">Ponki · ${item.card_name||'?'}${item.serial_number?` <span style="color:var(--text2);font-weight:400">#${item.serial_number}</span>`:''}</div>
           <div style="font-size:11px;color:var(--text2);margin-top:1px">${label}</div>
+          <div style="font-size:10px;color:var(--text3);font-family:'Space Mono',monospace">${item.created_at?(new Date(item.created_at.replace(' ','T')+'Z')).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Tallinn'}).replace(',',''):''}</div>
         </div>
-        <div style="font-size:14px;font-weight:800;color:${isIncome?'var(--success)':'var(--text2)'};white-space:nowrap">${isIncome?'+':'−'}${item.type==='market_buy_ton'?`<span style="display:inline-flex;align-items:center;gap:2px"><img src="/static/icons/ton.png" style="width:12px;height:12px;object-fit:contain"> ${fmtNano(item.stars_amount)}</span>`:`${item.stars_amount}⭐`}</div>
+        <div style="font-size:14px;font-weight:800;color:${isIncome?'var(--success)':'var(--text2)'};white-space:nowrap;display:flex;align-items:center;gap:3px">${item.type==='market_buy_ton'?`<img src="/static/icons/ton.png" style="width:13px;height:13px;object-fit:contain"> ${fmtNano(item.stars_amount)}`:`${item.stars_amount}⭐`}</div>
       </div>`;
     }
     html+=`</div>`; el.innerHTML=html;
@@ -617,41 +635,48 @@ async function loadProfile() {
         </div>
       </div>
       <div class="stats-row" style="grid-template-columns:repeat(3,1fr)">
-        <div class="stat-box" onclick="openTonModal()" style="cursor:pointer"><div class="val" style="color:#4ab0ff;display:flex;align-items:center;justify-content:center;gap:4px"><img src="/static/icons/ton.png" style="width:14px;height:14px;object-fit:contain" onerror="this.style.display='none'"><span>${userData.ton_balance>0?((userData.ton_balance/1000000000).toFixed(2)):'0'}</span></div><div class="lbl">TON</div></div>
-        <div class="stat-box" onclick="openFriendsModal()" style="cursor:pointer"><div class="val" id="friends-count">—</div><div class="lbl">${t.friends}</div></div>
-        <div class="stat-box" onclick="openCashbackModal()" style="cursor:pointer"><div class="val" style="color:#4ab0ff" id="cashback-val">${(userData.cashback_balance||0)===0?'0':fmtNano(userData.cashback_balance||0)}</div><div class="lbl">КЕШБЭК</div></div>
+        <div class="stat-box" onclick="openTonModal()" style="cursor:pointer">
+          <div class="val" style="color:#4ab0ff;display:flex;align-items:center;justify-content:center;gap:4px"><img src="/static/icons/ton.png" style="width:14px;height:14px;object-fit:contain" onerror="this.style.display='none'"><span>${userData.ton_balance>0?((userData.ton_balance/1000000000).toFixed(2)):'0'}</span></div>
+          <div class="lbl">TON</div>
+        </div>
+        <div class="stat-box" onclick="openEarnedModal()" style="cursor:pointer">
+          <div style="display:flex;align-items:center;justify-content:center;gap:3px"><span style="font-size:14px">⭐</span><span class="val" style="color:var(--star)" id="earned-val">${userData.referral_earnings||0}</span></div>
+          <div class="lbl">${userLang==='ru'?'Заработано':'Earned'}</div>
+        </div>
+        <div class="stat-box" onclick="openCashbackModal()" style="cursor:pointer">
+          <div style="display:flex;align-items:center;justify-content:center;gap:3px"><img src="/static/icons/ton.png" style="width:14px;height:14px;object-fit:contain"><span class="val" style="color:#4ab0ff" id="cashback-val">${(userData.cashback_balance||0)===0?'0':((userData.cashback_balance||0)/1e9).toFixed(2)}</span></div>
+          <div class="lbl">КЕШБЭК</div>
+        </div>
       </div>
 
       <div style="display:flex;gap:8px">
         <button class="trade-filter-btn ${profileView==='cards'?'has-filter':''}" onclick="setProfileView('cards')" style="position:relative">
           ${userLang==='ru'?'Карты':'Cards'}
-          ${cards.length>0?`<span style="position:absolute;top:-6px;right:-6px;background:#4aff8a;color:#000;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace">${cards.length}</span>`:''}
+          ${cards.length>0?`<span style="position:absolute;top:-6px;right:-6px;background:#fff;color:#000;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif">${cards.length}</span>`:''}
         </button>
         <button class="trade-filter-btn ${profileView==='selling'?'has-filter':''}" onclick="setProfileView('selling')" style="position:relative" id="selling-tab-btn">
           ${userLang==='ru'?'Продаю':'Selling'}
-          <span id="selling-count-badge" style="display:none;position:absolute;top:-6px;right:-6px;background:#4aff8a;color:#000;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:800;align-items:center;justify-content:center;font-family:'Space Mono',monospace"></span>
+          <span id="selling-count-badge" style="display:none;position:absolute;top:-6px;right:-6px;background:#fff;color:#000;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:800;align-items:center;justify-content:center;font-family:'Syne',sans-serif"></span>
         </button>
         <button class="trade-filter-btn ${profileView==='offers'?'has-filter':''}" onclick="setProfileView('offers')" style="position:relative">
           ${userLang==='ru'?'Оферы':'Offers'}
-          <span id="offers-count-badge" style="display:none;position:absolute;top:-6px;right:-6px;background:#4aff8a;color:#000;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:800;align-items:center;justify-content:center;font-family:'Space Mono',monospace"></span>
+          <span id="offers-count-badge" style="display:none;position:absolute;top:-6px;right:-6px;background:#fff;color:#000;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:800;align-items:center;justify-content:center;font-family:'Syne',sans-serif"></span>
         </button>
         <button class="trade-filter-btn ${profileView==='history'?'has-filter':''}" onclick="setProfileView('history')">${t.historyTitle||'История'}</button>
       </div>
 
       <div id="profile-cards-section" style="display:${profileView==='cards'?'flex':'none'};flex-direction:column;gap:14px">
         ${cardsHtml}
-        <div style="background:var(--bg2);border:1px solid rgba(255,45,120,0.3);border-radius:16px;padding:16px;box-shadow:0 0 24px rgba(255,45,120,0.06),inset 0 0 1px rgba(255,45,120,0.1)">
-          <h3 style="font-size:15px;font-weight:700;margin-bottom:6px">🎁 ${t.refEarn}</h3>
-          <p style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.5">${t.refText} <strong style="color:var(--star)">20%</strong> ${t.refOf} 🔥</p>
-          <div style="display:flex;gap:8px;align-items:center">
-            <div style="flex:1;background:var(--bg3);border:1px solid rgba(255,45,120,0.2);border-radius:8px;padding:10px 12px;font-family:'Space Mono',monospace;font-size:11px;color:var(--star);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">t.me/memstroybot?start=${userData.telegram_id}</div>
-            <button class="btn btn-secondary" style="white-space:nowrap;flex-shrink:0;border-color:rgba(255,45,120,0.25)" onclick="copyRef(${userData.telegram_id})">${userLang==='ru'?'Копировать':'Copy'}</button>
-          </div>
-        </div>
+
         <div style="display:flex;flex-direction:column;gap:4px">
-          <div class="menu-item" style="border:1px solid rgba(74,176,255,0.18);box-shadow:0 0 12px rgba(74,176,255,0.04)" onclick="setProfileView('whales');document.getElementById('profile-whales-section') && (document.getElementById('profile-whales-section').style.display='flex')">
+          <div class="menu-item" onclick="openFriendsModal()">
+            <span class="menu-icon">👥</span>
+            <div class="menu-text"><div class="menu-label">${t.friends}</div></div>
+            <span style="background:#fff;color:#000;border-radius:50%;width:20px;height:20px;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center" id="friends-menu-count">—</span>
+          </div>
+          <div class="menu-item" style="border:1px solid rgba(74,176,255,0.18);box-shadow:0 0 12px rgba(74,176,255,0.04)" onclick="setProfileView('whales')">
             <span class="menu-icon">🐳</span>
-            <div class="menu-text"><div class="menu-label">${userLang==='ru'?'Киты':'Whales'}</div></div>
+            <div class="menu-text"><div class="menu-label">${userLang==='ru'?'Рейтинг китов':'Whale Rating'}</div></div>
             <span style="color:var(--text3);font-size:16px">›</span>
           </div>
           <div class="menu-item" style="border:1px solid rgba(240,192,64,0.18);box-shadow:0 0 12px rgba(240,192,64,0.04)" onclick="openSplitLink()">
@@ -659,13 +684,20 @@ async function loadProfile() {
             <div class="menu-text"><div class="menu-label">${t.buyCheapStars}</div></div>
             <span style="color:var(--text3);font-size:16px">›</span>
           </div>
-          <div class="menu-item" style="border:1px solid rgba(74,180,255,0.18);box-shadow:0 0 12px rgba(74,180,255,0.04)" onclick="connectTon()">
+          <div class="menu-item" id="ton-menu-item" style="box-shadow:0 0 12px rgba(74,180,255,0.04)" onclick="connectTon()">
             <span class="menu-icon"><img src="/static/icons/ton.png" style="width:22px;height:22px;object-fit:contain" onerror="this.outerHTML='💎'"></span>
             <div class="menu-text">
-              <div class="menu-label" id="ton-label">${userData.ton_address?'TON Connected':t.connectTon}</div>
-              <div id="ton-sub" style="font-size:11px;color:var(--text2);margin-top:1px">${userData.ton_address?userData.ton_address.slice(0,8)+'...'+userData.ton_address.slice(-4):''}</div>
+              <div class="menu-label" id="ton-label">${userData.ton_address?'TON подключён':t.connectTon}</div>
             </div>
-            <span style="color:var(--text3);font-size:16px" id="ton-arrow">${userData.ton_address?'✓':'›'}</span>
+            <span style="font-size:18px;font-weight:800" id="ton-arrow">${userData.ton_address?'✓':'›'}</span>
+          </div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid rgba(255,45,120,0.3);border-radius:16px;padding:16px;box-shadow:0 0 24px rgba(255,45,120,0.06),inset 0 0 1px rgba(255,45,120,0.1)">
+          <h3 style="font-size:15px;font-weight:700;margin-bottom:6px">🎁 ${t.refEarn}</h3>
+          <p style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.5">${t.refText} <strong style="color:var(--star)">20%</strong> ${t.refOf} 🔥</p>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div style="flex:1;background:var(--bg3);border:1px solid rgba(255,45,120,0.2);border-radius:8px;padding:10px 12px;font-family:'Space Mono',monospace;font-size:11px;color:var(--star);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">t.me/memstroybot?start=${userData.telegram_id}</div>
+            <button class="btn btn-secondary" style="white-space:nowrap;flex-shrink:0;border-color:rgba(255,45,120,0.25)" onclick="copyRef(${userData.telegram_id})">${userLang==='ru'?'Копировать':'Copy'}</button>
           </div>
         </div>
       </div>
@@ -719,10 +751,10 @@ async function loadProfileHistory() {
     }
     const typeLabel=(type,isIncome)=>{
       if(userLang==='ru'){
-        const map={buy:'Куплено',market_buy:isIncome?'Продано на рынке':'Куплено на рынке',market_buy_ton:isIncome?'Продано за TON':'Куплено за TON',upgrade:'Улучшено',transfer:isIncome?'Получено':'Передано',sell:'Продано',buy_stars:'Пополнение ⭐'};
+        const map={buy:'Куплено',market_buy:isIncome?'Продано':'Куплено',market_buy_ton:isIncome?'Продано за TON':'Куплено за TON',upgrade:'Улучшено',transfer:isIncome?'Получено':'Передано',sell:'Продано',buy_stars:'Пополнение ⭐'};
         return map[type]||type;
       } else {
-        const map={buy:'Bought',market_buy:isIncome?'Sold on market':'Bought on market',market_buy_ton:isIncome?'Sold for TON':'Bought for TON',upgrade:'Upgraded',transfer:isIncome?'Received':'Transferred',sell:'Sold',buy_stars:'Stars added'};
+        const map={buy:'Bought',market_buy:isIncome?'Sold':'Bought',market_buy_ton:isIncome?'Sold for TON':'Bought for TON',upgrade:'Upgraded',transfer:isIncome?'Received':'Transferred',sell:'Sold',buy_stars:'Stars added'};
         return map[type]||type;
       }
     };
@@ -730,7 +762,10 @@ async function loadProfileHistory() {
     let html=`<div style="display:flex;flex-direction:column;gap:8px">`;
     for(const item of items){
       const isIncome=item.to_user_id===userData.id&&item.stars_amount>0&&item.type!=='buy';
-      const timeStr=item.created_at?item.created_at.replace('T',' ').slice(0,16):'';
+      const timeStr=item.created_at?((d=>{
+        const dt=new Date(d+'Z'); // treat as UTC
+        return dt.toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Tallinn'}).replace(',','');
+      })(item.created_at.replace(' ','T'))):'';
       html+=`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px">
         <div style="width:40px;height:40px;border-radius:8px;background:var(--bg3);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px">
           ${item.image_url?`<img src="${item.image_url}" style="width:100%;height:100%;object-fit:cover" onerror="this.outerHTML='${typeIcon(item.type)}'">`:typeIcon(item.type)}
@@ -752,7 +787,9 @@ async function loadFriends(){
   try{
     const data=await api(`/api/friends/${tgUser.id}`);
     _friendsCache=data.friends||[];
-    const fc=document.getElementById('friends-count'); if(fc) fc.textContent=_friendsCache.length;
+    const cnt = _friendsCache.length;
+    const fc=document.getElementById('friends-count'); if(fc) fc.textContent=cnt;
+    const fm=document.getElementById('friends-menu-count'); if(fm) fm.textContent=cnt;
   }catch(e){}
 }
 
@@ -809,8 +846,11 @@ function openCardModal(card, allCards, direction){
       <div class="stat-box"><div class="val" style="font-size:14px">10K</div><div class="lbl">${t.supplyLbl}</div></div>
     </div>
     ${!upgraded?`
-      <button class="btn btn-primary" onclick="upgradeCard(${card.id})">${t.upgrade}</button>
-      <button class="btn btn-secondary btn-wide" onclick="openTransferModal(${card.id})">${t.transfer}</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" style="flex:1" onclick="upgradeCard(${card.id})">${t.upgrade}</button>
+        <button class="btn btn-secondary" style="flex:1" onclick="openListModal()">${t.sell}</button>
+        <button class="btn btn-secondary" style="flex:1" onclick="openTransferModal(${card.id})">${t.transfer}</button>
+      </div>
     `:`
       <button class="btn btn-secondary btn-wide" onclick="openListModal()">${t.sell}</button>
       <button class="btn btn-secondary btn-wide" onclick="openTransferModal(${card.id})">${t.transfer}</button>
@@ -889,11 +929,12 @@ async function listCard(cardId){
 
 function openTransferModal(cardId){
   openModal(t.transfer,`
-    <div style="font-size:13px;color:var(--text2);line-height:1.5">${t.enterTgId}<br><span style="font-size:11px;color:var(--text3)">${userLang==='ru'?'Стоимость: 1 ⭐':'Cost: 1 ⭐'}</span></div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.5">${t.enterTgId}</div>
     <input class="transfer-input" id="transfer-to" placeholder="@username или Telegram ID" type="text" inputmode="text">
     <button class="btn btn-primary" onclick="doTransfer(${cardId})">${t.send}</button>
     <button class="btn btn-secondary btn-wide" onclick="closeModal()">${t.cancel}</button>
   `);
+  setTimeout(()=>{ const i=document.getElementById('transfer-to'); if(i){i.focus();} }, 200);
 }
 
 async function doTransfer(cardId){
@@ -904,29 +945,11 @@ async function doTransfer(cardId){
   const toId=isUsername?rawInput.replace('@',''):parseInt(rawInput);
   if(!toId){toast(t.enterTgId,'err');return;}
 
-  // First create invoice for 1 Star transfer fee
   try {
-    const res = await api('/api/create_invoice','POST',{
-      telegram_id: tgUser.id,
-      collection_id: 0,
-      qty: 1,
-      purpose: 'transfer',
-      card_id: cardId,
-      to_id: String(toId)
-    });
-    if(res.invoice_link) {
-      closeModal();
-      tg.openInvoice(res.invoice_link, async (status) => {
-        if(status === 'paid') {
-          // Now do the actual transfer
-          try {
-            await api('/api/transfer','POST',{from_telegram_id:tgUser.id,to_telegram_id:toId,user_card_id:cardId});
-            toast(t.cardSent,'ok');
-            userData=await api(`/api/user/${tgUser.id}`); updateBalances(); loadProfile();
-          } catch(e){ toast(e.message,'err'); }
-        }
-      });
-    }
+    await api('/api/transfer','POST',{from_telegram_id:tgUser.id,to_telegram_id:toId,user_card_id:cardId});
+    closeModal();
+    toast(t.cardSent,'ok');
+    userData=await api(`/api/user/${tgUser.id}`); updateBalances(); loadProfile();
   } catch(e){
     if(e.message.includes('not found')||e.message.includes('404')){
       openModal(t.transfer,`<div style="text-align:center;padding:8px 0">
@@ -947,6 +970,18 @@ function inviteForTransfer(toId){
   if(tg) tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`);
   else navigator.clipboard.writeText(link).then(()=>toast(t.linkCopied,'ok'));
   closeModal();
+}
+
+function openEarnedModal(){
+  haptic();
+  const earned = userData?.referral_earnings || 0;
+  openModal(userLang==='ru'?'Заработано с рефералов':'Referral Earnings', `
+    <div style="text-align:center;padding:8px 0 16px">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:6px">${userLang==='ru'?'Всего заработано':'Total earned'}</div>
+      <div style="font-size:36px;font-weight:800;color:var(--star)">${earned} ⭐</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:12px;line-height:1.6">${userLang==='ru'?'20% от трат каждого приглашённого друга в звёздах':'20% of every invited friend\'s star spending'}</div>
+    </div>
+  `);
 }
 
 function openCashbackModal(){
@@ -980,7 +1015,7 @@ async function withdrawCashback(){
 
 function openSplitLink(){
   haptic();
-  const url='https://split.tg/?ref=UQDngkmwbJxausCBgrbXcS_LmQYtGLG0-qfsaCYijyczQVap';
+  const url='https://split.tg/?ref=UQB9w-0DhlC_r3FbJcogENllaJTxxCmb9QRbwjWw4pGg60Cy';
   if(tg) tg.openLink(url); else window.open(url,'_blank');
 }
 
@@ -1073,7 +1108,7 @@ async function loadProfileWhales() {
 
     let html = `
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-        <span style="font-size:16px;font-weight:800">🐳 ${userLang==='ru'?'Зал китов':'Hall of Whales'}</span>
+        <span style="font-size:16px;font-weight:800">🐳 ${userLang==='ru'?'Рейтинг китов':'Whale Rating'}</span>
         <span style="font-size:11px;color:var(--text2);font-family:'Space Mono',monospace">${userLang==='ru'?'ТОП 100':'TOP 100'}</span>
       </div>
       <div style="display:flex;flex-direction:column;gap:6px">`;
@@ -1126,8 +1161,7 @@ async function openTonModal(){
   const shortAddr = walletAddr ? walletAddr.slice(0,6)+'...'+walletAddr.slice(-3) : '';
   let depInfo = null;
   try { depInfo = await api(`/api/ton/deposit_address?telegram_id=${tgUser.id}`); } catch(e){}
-  const botAddr = depInfo?.address || '';
-  const memo = depInfo?.memo || '';
+  const personalAddr = depInfo?.address || '';
 
   // Fetch Tonkeeper wallet balance
   let walletBal = '—';
@@ -1157,10 +1191,11 @@ async function openTonModal(){
         <span style="font-size:32px;font-weight:800;color:#4ab0ff">${tonFmt}</span>
         <span style="font-size:16px;color:var(--text2);font-weight:700">TON</span>
       </div>
+      ${userData?.wallet_address?`<div style="font-size:10px;color:var(--text3);margin-top:6px;font-family:'Space Mono',monospace">${userData.wallet_address.slice(0,8)}...${userData.wallet_address.slice(-6)}</div>`:''}
     </div>
 
     <div style="display:flex;gap:8px;margin-bottom:12px">
-      <button onclick="showTonDeposit('${botAddr}','${memo}')" style="flex:1;background:rgba(74,176,255,0.1);border:1px solid rgba(74,176,255,0.3);border-radius:14px;padding:16px 8px;cursor:pointer">
+      <button onclick="showTonDeposit('${personalAddr}')" style="flex:1;background:rgba(74,176,255,0.1);border:1px solid rgba(74,176,255,0.3);border-radius:14px;padding:16px 8px;cursor:pointer">
         <div style="font-size:15px;font-weight:800;color:#4ab0ff">${userLang==='ru'?'Пополнить':'Deposit'}</div>
       </button>
       <button onclick="showTonWithdraw()" style="flex:1;background:rgba(74,176,255,0.1);border:1px solid rgba(74,176,255,0.3);border-radius:14px;padding:16px 8px;cursor:pointer">
@@ -1173,33 +1208,28 @@ async function openTonModal(){
   `);
 }
 
-function showTonDeposit(botAddr, memo){
+function showTonDeposit(personalAddr, memo){
   haptic();
   const el = document.getElementById('ton-action-area');
   if(!el) return;
-  // Check if wallet connected
   if(!tonUI?.wallet){
     el.innerHTML=`
       <div style="background:var(--bg3);border:1px solid rgba(74,176,255,0.2);border-radius:12px;padding:14px;margin-bottom:12px;text-align:center">
-        <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:#4ab0ff">${userLang==='ru'?'Подключи кошелёк Tonkeeper':'Connect Tonkeeper wallet'}</div>
-        <button class="btn btn-primary" onclick="connectTon()">${userLang==='ru'?'Подключить кошелёк':'Connect wallet'}</button>
+        <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:#4ab0ff">${userLang==='ru'?'Подключи Tonkeeper':'Connect Tonkeeper'}</div>
+        <button class="btn btn-primary" onclick="connectTon()">${userLang==='ru'?'Подключить':'Connect'}</button>
       </div>`;
     return;
   }
   el.innerHTML=`
     <div style="background:var(--bg3);border:1px solid rgba(74,176,255,0.2);border-radius:12px;padding:14px;margin-bottom:12px">
-      <div style="font-size:11px;color:var(--text2);margin-bottom:8px">${userLang==='ru'?'Сумма пополнения:':'Deposit amount:'}</div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:8px">${userLang==='ru'?'Сумма:':'Amount:'}</div>
       <div class="price-input-row" style="margin-bottom:12px">
         <input type="number" id="ton-dep-amount" placeholder="0.1" min="0.1" step="0.1" oninput="toggleDepBtn(this.value)">
         <span class="cur" style="color:#4ab0ff">TON</span>
       </div>
-      <button id="ton-dep-btn" class="btn btn-primary" style="opacity:0.4;pointer-events:none" onclick="doTonDeposit('${botAddr}','${memo}')">${userLang==='ru'?'Пополнить':'Deposit'}</button>
+      <button id="ton-dep-btn" class="btn btn-primary" style="opacity:0.4;pointer-events:none" onclick="doTonDeposit('${personalAddr}')">${userLang==='ru'?'Пополнить':'Deposit'}</button>
     </div>`;
-  loadTonHistory();
-  setTimeout(()=>{
-    const inp = document.getElementById('ton-dep-amount');
-    if(inp){inp.focus();}
-  }, 100);
+  setTimeout(()=>{ const i=document.getElementById('ton-dep-amount'); if(i)i.focus(); }, 100);
 }
 
 async function doTonDeposit(botAddr, memo){
@@ -1221,18 +1251,23 @@ async function doTonDeposit(botAddr, memo){
     // Optimistic credit - trust TonConnect confirmation
     const res = await api('/api/ton/deposit_confirm','POST',{
       telegram_id: tgUser.id,
-      amount_nano: parseInt(amountNano)
+      amount_nano: parseInt(amountNano),
+      init_data: tg?.initData || ''
     });
     userData.ton_balance = res.ton_balance;
     updateBalances();
     toast(`+${amountTon} TON ${userLang==='ru'?'зачислено':'credited'}!`,'ok');
     const el = document.getElementById('ton-action-area');
     if(el) el.innerHTML='';
-    // Reload full user to update cashback and other balances
+    // Reload and close modal, go back to where user was
     setTimeout(async()=>{
       userData = await api(`/api/user/${tgUser.id}`);
       updateBalances();
-      openTonModal();
+      closeModal();
+      // Go to trade if on trade tab, else profile
+      const activeTab = document.querySelector('.tab-btn.active')?.dataset?.page;
+      if(activeTab === 'sell') loadTrade();
+      else { profileView='cards'; loadProfile(); switchTab('profile'); }
     }, 800);
   } catch(e){
     const msg = (e?.message||'').toLowerCase();
@@ -1397,7 +1432,10 @@ async function loadProfileOffers(){
             <div style="font-size:13px;font-weight:700">${o.card_name} <span style="color:var(--text2);font-weight:400">#${o.serial_number}</span></div>
             <div style="font-size:11px;color:var(--text2)">${o.to_name||'@'+o.to_username||'User'}</div>
           </div>
-          <div style="font-size:14px;font-weight:800;color:#4ab0ff;flex-shrink:0">${ton} TON</div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+            <div style="font-size:14px;font-weight:800;color:#4ab0ff">${ton} TON</div>
+            <button onclick="declineOffer(${o.id})" style="background:rgba(255,74,74,0.1);border:1px solid rgba(255,74,74,0.2);color:var(--danger);border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer">${userLang==='ru'?'Отменить':'Cancel'}</button>
+          </div>
         </div>`;
       }
     }

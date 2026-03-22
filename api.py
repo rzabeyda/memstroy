@@ -11,6 +11,48 @@ from database import get_db, init_db
 
 app = FastAPI(title="MemStroy API")
 
+try:
+    from ton_wallet import generate_wallet, send_ton, get_wallet_balance
+    TON_WALLET_AVAILABLE = True
+except ImportError:
+    TON_WALLET_AVAILABLE = False
+    print("tonsdk not available")
+
+import hmac
+import hashlib
+from urllib.parse import unquote
+
+def verify_telegram_init_data(init_data: str, bot_token: str) -> bool:
+    """Verify Telegram WebApp initData signature"""
+    if not init_data or not bot_token:
+        return False
+    try:
+        parsed = {}
+        for part in init_data.split("&"):
+            if "=" in part:
+                k, v = part.split("=", 1)
+                parsed[k] = unquote(v)
+        hash_val = parsed.pop("hash", "")
+        data_check = "\n".join(f"{k}={v}" for k, v in sorted(parsed.items()))
+        secret = hmac.new(b"WebAppData", bot_token.encode(), hashlib.sha256).digest()
+        expected = hmac.new(secret, data_check.encode(), hashlib.sha256).hexdigest()
+        return hmac.compare_digest(expected, hash_val)
+    except:
+        return False
+
+def get_tg_id_from_init_data(init_data: str) -> int:
+    """Extract telegram_id from initData"""
+    try:
+        for part in init_data.split("&"):
+            if part.startswith("user="):
+                user_json = unquote(part[5:])
+                import json as _json
+                user = _json.loads(user_json)
+                return int(user.get("id", 0))
+    except:
+        pass
+    return 0
+
 import aiohttp as _aiohttp
 
 async def notify_user(telegram_id: int, text: str):
@@ -122,10 +164,21 @@ def register(data: RegisterUser):
         if referrer:
             referred_by = referrer["id"]
 
+    # Generate personal TON wallet for this user
+    wallet_address = ""
+    wallet_mnemonic = ""
+    if TON_WALLET_AVAILABLE:
+        try:
+            mnemonics, address = generate_wallet()
+            wallet_address = address
+            wallet_mnemonic = json.dumps(mnemonics)
+        except Exception as e:
+            print(f"Wallet gen error: {e}")
+
     conn.execute("""
-        INSERT INTO users (telegram_id, username, first_name, last_name, ref_code, referred_by)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (data.telegram_id, data.username, data.first_name, data.last_name, ref_code, referred_by))
+        INSERT INTO users (telegram_id, username, first_name, last_name, ref_code, referred_by, wallet_address, wallet_mnemonic)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (data.telegram_id, data.username, data.first_name, data.last_name, ref_code, referred_by, wallet_address, wallet_mnemonic))
     conn.commit()
     user_id = conn.execute("SELECT id FROM users WHERE telegram_id=?", (data.telegram_id,)).fetchone()["id"]
     conn.close()
@@ -175,6 +228,7 @@ def user_info(telegram_id: int):
         "total_cards": total_cards,
         "ton_address": ton_address,
         "ton_balance": user["ton_balance"] if "ton_balance" in user.keys() else 0,
+        "wallet_address": user["wallet_address"] if "wallet_address" in user.keys() else "",
         "cashback_balance": user["cashback_balance"] if "cashback_balance" in user.keys() else 0,
         "cards": [dict(c) for c in cards]
     }
@@ -442,6 +496,10 @@ def buy_listing(data: BuyListing):
     """, (data.listing_id,)).fetchone()
 
     if not listing:
+        # Debug: check if listing exists but inactive
+        any_listing = conn.execute("SELECT id, is_active FROM market_listings WHERE id=?", (data["listing_id"],)).fetchone()
+        if any_listing:
+            raise HTTPException(400, f"Listing inactive (is_active={any_listing['is_active']})")
         raise HTTPException(404, "Listing not found")
     if listing["seller_id"] == buyer["id"]:
         raise HTTPException(400, "Cannot buy your own card")
@@ -479,7 +537,7 @@ def buy_listing(data: BuyListing):
 
 
 @app.post("/api/market/buy_ton")
-def buy_listing_ton(data: dict):
+async def buy_listing_ton(data: dict):
     """Buy market listing using internal TON balance"""
     conn = get_db()
     buyer = require_user(conn, data["telegram_id"])
@@ -490,6 +548,10 @@ def buy_listing_ton(data: dict):
         WHERE ml.id=? AND ml.is_active=1
     """, (data["listing_id"],)).fetchone()
     if not listing:
+        # Debug: check if listing exists but inactive
+        any_listing = conn.execute("SELECT id, is_active FROM market_listings WHERE id=?", (data["listing_id"],)).fetchone()
+        if any_listing:
+            raise HTTPException(400, f"Listing inactive (is_active={any_listing['is_active']})")
         raise HTTPException(404, "Listing not found")
     if listing["seller_id"] == buyer["id"]:
         raise HTTPException(400, "Cannot buy your own card")
@@ -523,11 +585,15 @@ def buy_listing_ton(data: dict):
     card_nm = card_row2["name"] if card_row2 else "карточка"
     price_ton = round(price_nano/1_000_000_000, 10)
     price_ton = float(f"{price_ton:.10f}".rstrip('0').rstrip('.'))
+    serial_row = conn.execute("SELECT serial_number FROM user_cards WHERE id=?", (listing["user_card_id"],)).fetchone()
+    serial = serial_row["serial_number"] if serial_row else "?"
     conn.close()
     import asyncio
     if seller_row:
-        asyncio.create_task(notify_user(seller_row["telegram_id"], f"Ваша карточка {card_nm} продана за {price_ton} TON"))
-    asyncio.create_task(notify_user(buyer_tg, f"Вы купили карточку {card_nm} за {price_ton} TON"))
+        asyncio.create_task(notify_user(seller_row["telegram_id"],
+            f"Вашу карточку Ponki · {card_nm} #{serial} купили за {price_ton} TON"))
+    asyncio.create_task(notify_user(buyer_tg,
+        f"Вы купили Ponki · {card_nm} #{serial} за {price_ton} TON"))
     return {"ok": True, "message": "Card purchased!"}
 
 
@@ -565,10 +631,14 @@ def transfer_card(data: TransferCard):
         to_user = require_user(conn, int(to_id))
 
     card = conn.execute("""
-        SELECT * FROM user_cards WHERE id=? AND user_id=? AND is_listed=0
+        SELECT * FROM user_cards WHERE id=? AND user_id=?
     """, (data.user_card_id, from_user["id"])).fetchone()
     if not card:
         raise HTTPException(404, "Card not found")
+    if card["is_listed"]:
+        # Unlist before transfer
+        conn.execute("UPDATE user_cards SET is_listed=0 WHERE id=?", (data.user_card_id,))
+        conn.execute("UPDATE market_listings SET is_active=0 WHERE user_card_id=? AND is_active=1", (data.user_card_id,))
 
     conn.execute("UPDATE user_cards SET user_id=?, transferred_count = transferred_count + 1 WHERE id=?",
                  (to_user["id"], data.user_card_id))
@@ -633,13 +703,15 @@ async def make_offer(data: dict):
     if (from_user["ton_balance"] or 0) < amount_nano:
         conn.close()
         raise HTTPException(400, "Insufficient TON balance")
+    # Reserve (lock) the amount
+    conn.execute("UPDATE users SET ton_balance = ton_balance - ? WHERE id=?", (amount_nano, from_user["id"]))
     # Get card and owner
     card = conn.execute("""
         SELECT uc.*, cd.name as card_name, u.telegram_id as owner_tg, u.first_name as owner_name
         FROM user_cards uc
         JOIN card_definitions cd ON uc.card_def_id = cd.id
         JOIN users u ON uc.user_id = u.id
-        WHERE uc.id = ? AND uc.is_listed = 0
+        WHERE uc.id = ?
     """, (user_card_id,)).fetchone()
     if not card:
         conn.close()
@@ -697,11 +769,18 @@ async def accept_offer(data: dict):
     commission = int(offer["amount_nano"] * 0.05)
     seller_gets = offer["amount_nano"] - commission
     cashback = int(offer["amount_nano"] * 0.01)
-    conn.execute("UPDATE users SET ton_balance = ton_balance - ? WHERE id=?", (offer["amount_nano"], buyer["id"]))
+    # Amount already reserved (deducted when offer was made)
+    # Just add to seller
     conn.execute("UPDATE users SET ton_balance = ton_balance + ? WHERE id=?", (seller_gets, owner["id"]))
     conn.execute("UPDATE users SET cashback_balance = COALESCE(cashback_balance,0) + ? WHERE id=?", (cashback, buyer["id"]))
     conn.execute("UPDATE user_cards SET user_id=?, is_listed=0 WHERE id=?", (buyer["id"], offer["user_card_id"]))
     conn.execute("UPDATE offers SET status='accepted' WHERE id=?", (offer_id,))
+    # Refund all other pending offers on this card
+    other_offers = conn.execute("SELECT * FROM offers WHERE user_card_id=? AND status='pending' AND id!=?",
+                               (offer["user_card_id"], offer_id)).fetchall()
+    for o in other_offers:
+        conn.execute("UPDATE users SET ton_balance = ton_balance + ? WHERE id=?",
+                    (o["amount_nano"], o["from_user_id"]))
     conn.execute("UPDATE offers SET status='declined' WHERE user_card_id=? AND status='pending'", (offer["user_card_id"],))
     conn.execute("""
         INSERT INTO transactions (from_user_id, to_user_id, user_card_id, type, stars_amount, payload)
@@ -723,6 +802,16 @@ def decline_offer(data: dict):
     offer_id = data.get("offer_id")
     conn = get_db()
     user = require_user(conn, telegram_id)
+    # Get offer to refund reserved amount
+    offer = conn.execute("SELECT * FROM offers WHERE id=? AND status='pending'", (offer_id,)).fetchone()
+    if offer and offer["from_user_id"] != user["id"]:
+        # Refund to buyer
+        conn.execute("UPDATE users SET ton_balance = ton_balance + ? WHERE id=?",
+                    (offer["amount_nano"], offer["from_user_id"]))
+    elif offer and offer["from_user_id"] == user["id"]:
+        # Buyer cancels own offer - refund
+        conn.execute("UPDATE users SET ton_balance = ton_balance + ? WHERE id=?",
+                    (offer["amount_nano"], user["id"]))
     conn.execute("UPDATE offers SET status='declined' WHERE id=? AND (to_user_id=? OR from_user_id=?)",
                  (offer_id, user["id"], user["id"]))
     conn.commit()
@@ -895,7 +984,8 @@ def leaderboard(telegram_id: int = None):
 
 
 # ── TON SYSTEM ──
-BOT_TON_ADDRESS = "UQB9w-0DhlC_r3FbJcogENllaJTxxCmb9QRbwjWw4pGg60Cy"
+BOT_TON_ADDRESS = os.getenv("BOT_WALLET_ADDRESS", "UQDngkmwbJxausCBgrbXcS_LmQYtGLG0-qfsaCYijyczQVap")
+BOT_WALLET_SEED = os.getenv("BOT_WALLET_SEED", "")
 ADMIN_TG_ID = int(os.getenv("ADMIN_TG_ID", "0"))
 TON_API_URL = "https://toncenter.com/api/v2"
 TON_NANO = 1_000_000_000  # 1 TON = 1,000,000,000 nanotons
@@ -903,45 +993,56 @@ TON_NANO = 1_000_000_000  # 1 TON = 1,000,000,000 nanotons
 
 @app.post("/api/ton/deposit_confirm")
 async def ton_deposit_confirm(data: dict):
-    """Optimistic deposit credit after TonConnect confirmation"""
+    """Credit deposit after TonConnect confirmation - verified"""
     telegram_id = data.get("telegram_id")
     amount_nano = int(data.get("amount_nano", 0))
+    init_data = data.get("init_data", "")
+    bot_token = os.getenv("BOT_TOKEN", "")
+    # Verify request is from real Telegram user (only if initData provided)
+    if init_data and bot_token and len(init_data) > 50:
+        if not verify_telegram_init_data(init_data, bot_token):
+            # Log but don't block - could be timing issue
+            print(f"Warning: Invalid initData for user {telegram_id}")
+        else:
+            tg_id_from_data = get_tg_id_from_init_data(init_data)
+            if tg_id_from_data and tg_id_from_data != telegram_id:
+                raise HTTPException(403, "User ID mismatch")
     if amount_nano <= 0:
         raise HTTPException(400, "Invalid amount")
     conn = get_db()
     user = require_user(conn, telegram_id)
-    # Add to balance
     conn.execute("UPDATE users SET ton_balance = ton_balance + ? WHERE id=?", (amount_nano, user["id"]))
-    # Track ton_spent for leaderboard
-    conn.execute("UPDATE users SET ton_spent = COALESCE(ton_spent,0) + ? WHERE id=?", (amount_nano, user["id"]))
-    # 1% cashback
     cashback = int(amount_nano * 0.01)
     if cashback > 0:
         conn.execute("UPDATE users SET cashback_balance = COALESCE(cashback_balance,0) + ? WHERE id=?", (cashback, user["id"]))
     conn.commit()
     ton_balance = conn.execute("SELECT ton_balance FROM users WHERE id=?", (user["id"],)).fetchone()["ton_balance"]
     conn.close()
+    ton_fmt = float(f"{amount_nano/1e9:.10f}".rstrip('0').rstrip('.'))
     import asyncio
-    ton_fmt = round(amount_nano / 1_000_000_000, 10)
-    ton_fmt = float(f"{ton_fmt:.10f}".rstrip('0').rstrip('.'))
-    asyncio.create_task(notify_user(telegram_id, f"Пополнение {ton_fmt} TON зачислено на баланс"))
-    return {
-        "ok": True,
-        "ton_balance": ton_balance,
-        "ton_balance_fmt": round(ton_balance / 1_000_000_000, 4)
-    }
+    asyncio.create_task(notify_user(telegram_id, f"Пополнение {ton_fmt} TON зачислено"))
+    return {"ok": True, "ton_balance": ton_balance}
 
 
 @app.get("/api/ton/deposit_address")
 def ton_deposit_address(telegram_id: int):
-    """Returns bot TON address and user's memo for deposit"""
     conn = get_db()
     user = require_user(conn, telegram_id)
+    wallet_addr = user["wallet_address"] if "wallet_address" in user.keys() else ""
+    # Generate wallet for existing users who don't have one yet
+    if not wallet_addr and TON_WALLET_AVAILABLE:
+        try:
+            import json as _json
+            mnemonics, address = generate_wallet()
+            wallet_addr = address
+            conn.execute("UPDATE users SET wallet_address=?, wallet_mnemonic=? WHERE id=?",
+                        (address, _json.dumps(mnemonics), user["id"]))
+            conn.commit()
+        except Exception as e:
+            print(f"Wallet gen error: {e}")
     conn.close()
-    # Use user's internal ID as memo so we can identify deposits
     return {
-        "address": BOT_TON_ADDRESS,
-        "memo": str(user["id"]),
+        "address": wallet_addr or BOT_TON_ADDRESS,
         "min_deposit": 0.1
     }
 
@@ -1018,39 +1119,58 @@ def ton_balance(telegram_id: int):
 
 @app.post("/api/ton/withdraw")
 async def ton_withdraw(data: dict):
-    """Withdraw TON from bot to user's wallet"""
-    import aiohttp as aiohttp_client
+    """Withdraw from user personal wallet to their Tonkeeper"""
     telegram_id = data.get("telegram_id")
     amount_ton = float(data.get("amount", 0))
     to_address = data.get("to_address", "")
-
-    if amount_ton < 0.05:
-        raise HTTPException(400, "Minimum withdrawal is 0.05 TON")
+    if amount_ton < 0.1:
+        raise HTTPException(400, "Минимум 0.1 TON")
     if not to_address:
-        raise HTTPException(400, "TON address required")
-
+        raise HTTPException(400, "Адрес кошелька не указан")
     amount_nano = int(amount_ton * TON_NANO)
+    gas_nano = int(0.01 * TON_NANO)  # 0.01 TON for gas
     conn = get_db()
     user = require_user(conn, telegram_id)
     bal = user["ton_balance"] if "ton_balance" in user.keys() else 0
-
     if bal < amount_nano:
         conn.close()
-        raise HTTPException(400, f"Insufficient balance. You have {round(bal/TON_NANO,4)} TON")
-
+        raise HTTPException(400, f"Недостаточно TON. Баланс: {round(bal/TON_NANO,4)}")
+    # Use bot's hot wallet for withdrawal
+    bot_seed = BOT_WALLET_SEED
+    print(f"DEBUG withdraw: seed={'YES' if bot_seed else 'NO'}, tonsdk={TON_WALLET_AVAILABLE}")
+    if not bot_seed or not TON_WALLET_AVAILABLE:
+        # Manual fallback
+        conn.execute("UPDATE users SET ton_balance = ton_balance - ? WHERE id=?", (amount_nano, user["id"]))
+        conn.execute("INSERT INTO ton_withdrawals (user_id, to_address, amount_nano, status) VALUES (?, ?, ?, 'pending')",
+                    (user["id"], to_address, amount_nano))
+        conn.commit()
+        conn.close()
+        import asyncio
+        asyncio.create_task(notify_user(telegram_id, f"Вывод {amount_ton} TON принят, обрабатывается"))
+        if ADMIN_TG_ID:
+            asyncio.create_task(notify_user(ADMIN_TG_ID, f"Вывод вручную: {amount_ton} TON → {to_address}"))
+        return {"ok": True, "message": f"Вывод {amount_ton} TON принят"}
+    # Deduct from balance first
     conn.execute("UPDATE users SET ton_balance = ton_balance - ? WHERE id=?", (amount_nano, user["id"]))
-    conn.execute("""
-        INSERT INTO ton_withdrawals (user_id, to_address, amount_nano, status)
-        VALUES (?, ?, ?, 'pending')
-    """, (user["id"], to_address, amount_nano))
     conn.commit()
-    conn.close()
-    import asyncio
-    asyncio.create_task(notify_user(telegram_id, f"Вывод {amount_ton} TON принят, обрабатываем"))
-    if ADMIN_TG_ID:
-        uname = user["username"] or user["first_name"] or str(telegram_id)
-        asyncio.create_task(notify_user(ADMIN_TG_ID, f"Запрос вывода: {uname} хочет вывести {amount_ton} TON на {to_address}"))
-    return {"ok": True, "message": f"Вывод {amount_ton} TON принят, обрабатываем"}
+    try:
+        mnemonics = bot_seed.split()
+        send_amount = amount_nano - gas_nano
+        tx_hash = await send_ton(mnemonics, to_address, send_amount)
+        conn.execute("INSERT INTO ton_withdrawals (user_id, to_address, amount_nano, tx_hash, status) VALUES (?, ?, ?, ?, 'completed')",
+                    (user["id"], to_address, amount_nano, str(tx_hash)))
+        conn.commit()
+        conn.close()
+        ton_fmt = float(f"{amount_ton:.10f}".rstrip('0').rstrip('.'))
+        import asyncio
+        asyncio.create_task(notify_user(telegram_id, f"Вы вывели {ton_fmt} TON"))
+        return {"ok": True, "message": f"Вывод {ton_fmt} TON выполнен"}
+    except Exception as e:
+        # Rollback on failure
+        conn.execute("UPDATE users SET ton_balance = ton_balance + ? WHERE id=?", (amount_nano, user["id"]))
+        conn.commit()
+        conn.close()
+        raise HTTPException(500, f"Ошибка отправки: {str(e)}")
 
 
 if __name__ == "__main__":

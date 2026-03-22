@@ -145,6 +145,16 @@ def init_db():
     except:
         pass
 
+    # Custodial wallet columns
+    try:
+        cur.execute("ALTER TABLE users ADD COLUMN wallet_address TEXT DEFAULT ''")
+    except:
+        pass
+    try:
+        cur.execute("ALTER TABLE users ADD COLUMN wallet_mnemonic TEXT DEFAULT ''")
+    except:
+        pass
+
     # Add cashback_balance column
     try:
         cur.execute("ALTER TABLE users ADD COLUMN cashback_balance INTEGER DEFAULT 0")
@@ -236,6 +246,19 @@ def init_db():
                 INSERT INTO card_definitions (collection_id, name, image_url, drop_weight)
                 VALUES (?, ?, ?, ?)
             """, (collection_id, name, image_url, weight))
+
+    # Offers table
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS offers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            from_user_id INTEGER REFERENCES users(id),
+            to_user_id INTEGER REFERENCES users(id),
+            user_card_id INTEGER REFERENCES user_cards(id),
+            amount_nano INTEGER NOT NULL,
+            status TEXT DEFAULT 'pending',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
 
     conn.commit()
     conn.close()
