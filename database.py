@@ -260,6 +260,33 @@ def init_db():
         )
     """)
 
+    # Auctions table
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS auctions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_card_id INTEGER REFERENCES user_cards(id),
+            seller_id INTEGER REFERENCES users(id),
+            start_price_nano INTEGER NOT NULL,
+            current_price_nano INTEGER NOT NULL,
+            min_step_nano INTEGER DEFAULT 100000000,
+            current_bidder_id INTEGER REFERENCES users(id),
+            ends_at DATETIME NOT NULL,
+            is_active INTEGER DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # Auction bids log
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS auction_bids (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            auction_id INTEGER REFERENCES auctions(id),
+            user_id INTEGER REFERENCES users(id),
+            amount_nano INTEGER NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
     conn.commit()
     conn.close()
     print("✅ Database initialized")

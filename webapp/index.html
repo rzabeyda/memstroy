@@ -8,25 +8,25 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 :root{--bg:#0a0a0a;--bg2:#111;--bg3:#1a1a1a;--border:#222;--text:#fff;--text2:#888;--text3:#444;--star:#f0c040;--dev:#4aff8a;--success:#4aff8a;--danger:#ff4a4a;--tab-h:64px;--safe-b:env(safe-area-inset-bottom,0px)}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;height:100vh;overflow:hidden;position:fixed;width:100%}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;height:100vh;overflow:hidden;position:fixed;width:100%}
 .page{position:absolute;inset:0;bottom:calc(var(--tab-h) + var(--safe-b));overflow-y:auto;overflow-x:hidden;display:none;-webkit-overflow-scrolling:touch}
 .page.active{display:block}
 .page::-webkit-scrollbar{display:none}
 .page-header{padding:20px 20px 0;display:flex;align-items:center;justify-content:space-between}
 .page-title{font-size:22px;font-weight:800;letter-spacing:-0.5px}
-.badge{display:flex;align-items:center;gap:5px;border-radius:20px;padding:6px 12px;font-size:13px;font-weight:700;font-family:'Space Mono',monospace;cursor:pointer;transition:transform 0.12s,opacity 0.15s}
+.badge{display:flex;align-items:center;gap:5px;border-radius:20px;padding:6px 12px;font-size:13px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;transition:transform 0.12s,opacity 0.15s}
 .badge:active{transform:scale(0.93);opacity:0.8}
 .badge-star{background:#1a1500;border:1px solid #332800;color:var(--star)}
 .badge-dev{background:#0d1a0d;border:1px solid #1a3a1a;color:var(--dev)}
 .tabs{position:fixed;bottom:0;left:0;right:0;height:calc(var(--tab-h) + var(--safe-b));padding-bottom:var(--safe-b);background:var(--bg2);border-top:1px solid var(--border);display:flex;align-items:center;z-index:100}
-.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;height:100%;background:none;border:none;cursor:pointer;color:var(--text3);font-family:'Syne',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.5px;transition:color 0.2s}
+.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;height:100%;background:none;border:none;cursor:pointer;color:var(--text3);font-family:'Inter',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.5px;transition:color 0.2s}
 .tab-btn.active{color:#ff2d78}
 .tab-btn svg{width:24px;height:24px;transition:transform 0.2s,opacity 0.2s;opacity:0.4}
 .tab-btn.active svg{opacity:1;transform:scale(1.1)}
-.btn{display:flex;align-items:center;justify-content:center;gap:8px;border:none;border-radius:12px;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;letter-spacing:0.3px;position:relative;overflow:hidden;transition:transform 0.12s,box-shadow 0.12s}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;border:none;border-radius:12px;font-family:'Inter',sans-serif;font-weight:700;cursor:pointer;letter-spacing:0.3px;position:relative;overflow:hidden;transition:transform 0.12s,box-shadow 0.12s}
 .btn:active{transform:scale(0.95)}
 .btn-primary{background:var(--text);color:var(--bg);padding:14px 20px;font-size:15px;width:100%}
 .btn-primary:active{box-shadow:0 0 20px rgba(255,255,255,0.3)}
@@ -59,9 +59,9 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;height
 .card-img img{width:100%;height:100%;object-fit:cover;display:block}
 .card-info{padding:6px 8px}
 .card-name{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.card-meta{font-size:10px;color:var(--text2);font-family:'Space Mono',monospace;margin-top:1px}
-.pct-badge{position:absolute;top:5px;right:5px;background:rgba(0,0,0,0.75);border:1px solid rgba(255,255,255,0.1);border-radius:5px;padding:2px 6px;font-size:9px;font-weight:700;font-family:'Space Mono',monospace;color:var(--star)}
-.price-badge{position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.7);border:1px solid rgba(74,255,138,0.25);border-radius:5px;padding:2px 5px;font-size:10px;font-weight:700;font-family:'Space Mono',monospace;color:var(--dev);opacity:0.85}
+.card-meta{font-size:10px;color:var(--text2);font-family:'Inter',sans-serif;margin-top:1px}
+.pct-badge{position:absolute;top:5px;right:5px;background:rgba(0,0,0,0.75);border:1px solid rgba(255,255,255,0.1);border-radius:5px;padding:2px 6px;font-size:9px;font-weight:700;font-family:'Inter',sans-serif;color:var(--star)}
+.price-badge{position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.7);border:1px solid rgba(74,255,138,0.25);border-radius:5px;padding:2px 5px;font-size:10px;font-weight:700;font-family:'Inter',sans-serif;color:var(--dev);opacity:0.85}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);z-index:200;display:none;align-items:flex-end}
 .modal-overlay.open{display:flex}
 .modal{background:var(--bg2);border:1px solid var(--border);border-radius:24px 24px 0 0;width:100%;max-height:90vh;overflow-y:auto;padding-bottom:calc(20px + var(--safe-b));animation:slideUp 0.3s cubic-bezier(0.32,0.72,0,1)}
@@ -73,7 +73,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;height
 .modal-card-preview img{width:100%;height:100%;object-fit:cover}
 .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .stat-box{background:var(--bg2);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:10px 6px;text-align:center;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04)}
-.stat-box .val{font-size:18px;font-weight:800;font-family:'Space Mono',monospace}
+.stat-box .val{font-size:18px;font-weight:800;font-family:'Inter',sans-serif}
 .stat-box .lbl{font-size:9px;color:var(--text2);margin-top:2px;text-transform:uppercase;letter-spacing:0.5px;min-height:14px;display:flex;align-items:center;justify-content:center}
 .section-label{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:8px}
 .empty-state{text-align:center;padding:48px 20px;color:var(--text3)}
@@ -84,15 +84,15 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;height
 .menu-text{flex:1}
 .menu-label{font-size:14px;font-weight:600}
 .price-input-row{display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:4px 4px 4px 14px}
-.price-input-row input{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:'Space Mono',monospace;font-size:16px;font-weight:700}
+.price-input-row input{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:'Inter',sans-serif;font-size:16px;font-weight:700}
 .price-input-row .cur{color:var(--star);font-size:13px;font-weight:700;padding:8px 12px;background:rgba(240,192,64,0.1);border-radius:7px}
-.transfer-input{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-family:'Space Mono',monospace;font-size:13px;width:100%;outline:none}
+.transfer-input{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;width:100%;outline:none}
 .transfer-input::placeholder{color:var(--text3)}
 .friend-item{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px}
 .friend-av{width:38px;height:38px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;font-weight:700}
 .friend-name{font-size:13px;font-weight:700}
 .friend-meta{font-size:11px;color:var(--text2);margin-top:1px}
-.friend-cards{margin-left:auto;font-size:12px;color:var(--text2);font-family:'Space Mono',monospace}
+.friend-cards{margin-left:auto;font-size:12px;color:var(--text2);font-family:'Inter',sans-serif}
 .toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-80px);background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:13px;font-weight:600;z-index:999;transition:transform 0.25s cubic-bezier(0.32,0.72,0,1);white-space:nowrap}
 .toast.show{transform:translateX(-50%) translateY(0)}
 .toast.ok{border-color:var(--success);color:var(--success)}
@@ -103,10 +103,10 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;height
 .content{padding:16px;display:flex;flex-direction:column;gap:14px}
 .filters{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
 .filters::-webkit-scrollbar{display:none}
-.filter-btn{flex-shrink:0;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:11px;font-weight:700;color:var(--text2);cursor:pointer;font-family:'Syne',sans-serif;transition:all 0.15s;white-space:nowrap}
+.filter-btn{flex-shrink:0;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:11px;font-weight:700;color:var(--text2);cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.15s;white-space:nowrap}
 .filter-btn:active{transform:scale(0.94)}
 .filter-btn.active{background:#ff2d78;border-color:#ff2d78;color:#fff}
-.trade-filter-btn{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:10px 8px;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;font-family:'Syne',sans-serif;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.trade-filter-btn{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:10px 8px;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:6px}
 .trade-filter-btn:active{transform:scale(0.95)}
 .trade-filter-btn.has-filter{border-color:#ff2d78;color:#ff2d78}
 .trade-filter-count{background:#fff;color:#000;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:800;display:inline-flex;align-items:center;justify-content:center}
@@ -125,7 +125,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;height
 <div id="page-sell" class="page">
   <div class="page-header">
     <span class="page-title" id="t-trade">Trade</span>
-    <div class="badge" style="background:#0a1a2a;border:1px solid rgba(74,176,255,0.3);color:#4ab0ff;gap:5px;display:flex;align-items:center;border-radius:20px;padding:6px 12px;font-size:13px;font-weight:700;font-family:'Space Mono',monospace;cursor:pointer" onclick="openTonModal()"><img src="/static/icons/ton.png" style="width:16px;height:16px;object-fit:contain" onerror="this.outerHTML='💎'"><span id="ton-val-trade">0</span></div>
+    <div class="badge" style="background:#0a1a2a;border:1px solid rgba(74,176,255,0.3);color:#4ab0ff;gap:5px;display:flex;align-items:center;border-radius:20px;padding:6px 12px;font-size:13px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer" onclick="openTonModal()"><img src="/static/icons/ton.png" style="width:16px;height:16px;object-fit:contain" onerror="this.outerHTML='💎'"><span id="ton-val-trade">0</span></div>
   </div>
   <div class="content" id="trade-content"><div class="loading-page"><div class="spinner"></div></div></div>
 </div>
@@ -172,7 +172,12 @@ const T = {
 const t = T[userLang];
 
 function fmtNum(n) {
-  return n.toLocaleString('ru-RU');
+  if (n >= 10000) return '10K';
+  if (n >= 1000) {
+    const val = Math.floor(n / 100) / 10;
+    return val.toFixed(1).replace(/\.0$/,'') + 'K';
+  }
+  return n.toString();
 }
 
 function applyLang() {
@@ -378,24 +383,30 @@ function renderTradeUI() {
   const modCount=selectedModels.size;
   el.innerHTML=`
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-      <div style="display:flex;align-items:center;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:3px;flex-shrink:0" onclick="setTradeView(tradeView==='market'?'history':'market')">
-        <div style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:16px;font-size:11px;font-weight:700;transition:all 0.2s;background:${tradeView==='market'?'#ff2d78':'transparent'};color:${tradeView==='market'?'#fff':'var(--text3)'}">
-          <span>${userLang==='ru'?'Рынок':'Market'}</span>
+      <div style="display:flex;align-items:center;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:3px;flex-shrink:0">
+        <div onclick="setTradeView('market')" style="padding:5px 10px;border-radius:16px;font-size:11px;font-weight:700;transition:all 0.2s;cursor:pointer;background:${tradeView==='market'?'#ff2d78':'transparent'};color:${tradeView==='market'?'#fff':'var(--text3)'}">
+          ${userLang==='ru'?'Рынок':'Market'}
         </div>
-        <div style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:16px;font-size:11px;font-weight:700;transition:all 0.2s;background:${tradeView==='history'?'#ff2d78':'transparent'};color:${tradeView==='history'?'#fff':'var(--text3)'}">
-          <span>${t.historyTitle||'History'}</span>
+        <div onclick="setTradeView('auction')" style="padding:5px 10px;border-radius:16px;font-size:11px;font-weight:700;transition:all 0.2s;cursor:pointer;background:${tradeView==='auction'?'#ff2d78':'transparent'};color:${tradeView==='auction'?'#fff':'var(--text3)'}">
+          ${userLang==='ru'?'Аукцион':'Auction'}
+        </div>
+        <div onclick="setTradeView('history')" style="padding:5px 10px;border-radius:16px;font-size:11px;font-weight:700;transition:all 0.2s;cursor:pointer;background:${tradeView==='history'?'#ff2d78':'transparent'};color:${tradeView==='history'?'#fff':'var(--text3)'}">
+          ${t.historyTitle||'History'}
         </div>
       </div>
-      <button class="trade-filter-btn" style="font-size:12px;flex:1" onclick="openCollectionFilter()">${t.collection} <span class="trade-filter-count">1</span></button>
-      <button class="trade-filter-btn ${modCount>0?'has-filter':''}" style="font-size:12px;flex:1" onclick="openModelFilter()">${t.model}${modCount>0?`<span class="trade-filter-count">${modCount}</span>`:''}</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
+      <button class="trade-filter-btn" style="font-size:12px" onclick="openCollectionFilter()">${t.collection} <span class="trade-filter-count">1</span></button>
+      <button class="trade-filter-btn ${modCount>0?'has-filter':''}" style="font-size:12px" onclick="openModelFilter()">${t.model}${modCount>0?`<span class="trade-filter-count">${modCount}</span>`:''}</button>
+      <button class="trade-filter-btn ${tradeSortBy!=='serial_asc'?'has-filter':''}" style="font-size:12px" onclick="openSortFilter()">
+        ${tradeSortBy==='price_asc'?'◈ ↑':tradeSortBy==='price_desc'?'◈ ↓':tradeSortBy==='rarity_asc'?'% ↑':tradeSortBy==='rarity_desc'?'% ↓':tradeSortBy==='serial_desc'?'# ↓':'# ↑'}
+      </button>
     </div>
     <div id="trade-market-section" style="display:${tradeView==='market'?'flex':'none'};flex-direction:column;gap:8px">
-      <div class="filters">
-        <button class="filter-btn ${tradeSortBy==='price_asc'||tradeSortBy==='price_desc'?'active':''}" onclick="togglePriceSort()" style="display:flex;align-items:center;gap:4px"><img src="/static/icons/ton.png" style="width:12px;height:12px;object-fit:contain"> ${tradeSortBy==='price_desc'?'↓':'↑'}</button>
-        <button class="filter-btn ${tradeSortBy==='rarity_asc'||tradeSortBy==='rarity_desc'?'active':''}" onclick="toggleTradeRarity()">% ${tradeSortBy==='rarity_desc'?'↓':'↑'}</button>
-        <button class="filter-btn ${tradeSortBy==='serial_asc'||tradeSortBy==='serial_desc'?'active':''}" onclick="toggleSerialSort()"># ${tradeSortBy==='serial_desc'?'↓':'↑'}</button>
-      </div>
       <div id="listings-list"></div>
+    </div>
+    <div id="trade-auction-section" style="display:${tradeView==='auction'?'flex':'none'};flex-direction:column;gap:8px">
+      <div id="auction-list"><div class="spinner" style="margin:32px auto"></div></div>
     </div>
     <div id="trade-history-section" style="display:${tradeView==='history'?'flex':'none'};flex-direction:column;gap:8px">
       <div class="filters" style="margin-bottom:4px">
@@ -408,6 +419,7 @@ function renderTradeUI() {
     </div>`;
   if(tradeView==='market') renderListings();
   else if(tradeView==='history') loadHistory();
+  else if(tradeView==='auction') loadAuctions();
 }
 
 function setTradeView(view) {
@@ -470,6 +482,25 @@ function toggleSerialSort(){tradeSortBy=tradeSortBy==='serial_asc'?'serial_desc'
 function togglePriceSort(){tradeSortBy=tradeSortBy==='price_asc'?'price_desc':'price_asc';renderTradeUI();}
 function toggleTradeRarity(){tradeSortBy=tradeSortBy==='rarity_asc'?'rarity_desc':'rarity_asc';renderTradeUI();}
 
+function openSortFilter(){
+  haptic();
+  const sorts=[
+    {key:'price_asc',label:'<img src="/static/icons/ton.png" style="width:12px;height:12px;vertical-align:middle"> ↑'},
+    {key:'price_desc',label:'<img src="/static/icons/ton.png" style="width:12px;height:12px;vertical-align:middle"> ↓'},
+    {key:'rarity_asc',label:'% ↑'},
+    {key:'rarity_desc',label:'% ↓'},
+    {key:'serial_asc',label:'# ↑'},
+    {key:'serial_desc',label:'# ↓'},
+  ];
+  let html=`<div style="display:flex;flex-direction:column;gap:8px">`;
+  for(const s of sorts){
+    const active = tradeSortBy===s.key;
+    html+=`<div onclick="tradeSortBy='${s.key}';renderTradeUI();closeModal();" style="background:${active?'#ff2d78':'var(--bg3)'};color:${active?'#fff':'var(--text)'};border-radius:10px;padding:12px 16px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:space-between">${s.label}${active?'<span>✓</span>':''}</div>`;
+  }
+  html+=`</div>`;
+  openModal(userLang==='ru'?'Сортировка':'Sort', html);
+}
+
 async function loadHistory() {
   const el=document.getElementById('history-list'); if(!el) return;
   try {
@@ -497,7 +528,7 @@ async function loadHistory() {
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:700">Ponki · ${item.card_name||'?'}${item.serial_number?` <span style="color:var(--text2);font-weight:400">#${item.serial_number}</span>`:''}</div>
           <div style="font-size:11px;color:var(--text2);margin-top:1px">${label}</div>
-          <div style="font-size:10px;color:var(--text3);font-family:'Space Mono',monospace">${item.created_at?(new Date(item.created_at.replace(' ','T')+'Z')).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Tallinn'}).replace(',',''):''}</div>
+          <div style="font-size:10px;color:var(--text3);font-family:'Inter',sans-serif">${item.created_at?(new Date(item.created_at.replace(' ','T')+'Z')).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Tallinn'}).replace(',',''):''}</div>
         </div>
         <div style="font-size:14px;font-weight:800;color:${isIncome?'var(--success)':'var(--text2)'};white-space:nowrap;display:flex;align-items:center;gap:3px">${item.type==='market_buy_ton'?`<img src="/static/icons/ton.png" style="width:13px;height:13px;object-fit:contain"> ${fmtNano(item.stars_amount)}`:`${item.stars_amount}⭐`}</div>
       </div>`;
@@ -521,7 +552,7 @@ function renderListings() {
   let html=`<div class="cards-grid">`;
   for(const l of list){
     const isOwn=l.seller_id===userData.id;
-    html+=`<div class="card-item" onclick='openMarketModal(${JSON.stringify(l)},${isOwn})'>
+    html+=`<div class="card-item" onclick='openMarketModal(${JSON.stringify(l)},${isOwn})' style="${isOwn?'border:2px solid #4ab0ff;box-shadow:0 0 10px rgba(74,176,255,0.3)':''}">
       <div class="card-img">
         <img src="${l.image_url}" onerror="this.style.background='var(--bg3)'">
         <span class="pct-badge">${dropPct(l.drop_weight)}</span>
@@ -631,7 +662,7 @@ async function loadProfile() {
         </div>
         <div style="flex:1">
           <div style="font-size:18px;font-weight:800">${tgUser.first_name||'User'} ${tgUser.last_name||''}</div>
-          <div style="font-size:12px;color:var(--text2);font-family:'Space Mono',monospace">${tgUser.username?'@'+tgUser.username:'ID '+tgUser.id}</div>
+          <div style="font-size:12px;color:var(--text2);font-family:'Inter',sans-serif">${tgUser.username?'@'+tgUser.username:'ID '+tgUser.id}</div>
         </div>
       </div>
       <div class="stats-row" style="grid-template-columns:repeat(3,1fr)">
@@ -652,15 +683,15 @@ async function loadProfile() {
       <div style="display:flex;gap:8px">
         <button class="trade-filter-btn ${profileView==='cards'?'has-filter':''}" onclick="setProfileView('cards')" style="position:relative">
           ${userLang==='ru'?'Карты':'Cards'}
-          ${cards.length>0?`<span style="position:absolute;top:-6px;right:-6px;background:#fff;color:#000;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif">${cards.length}</span>`:''}
+          ${cards.length>0?`<span style="position:absolute;top:-6px;right:-6px;background:#fff;color:#000;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;line-height:1">${cards.length}</span>`:''}
         </button>
         <button class="trade-filter-btn ${profileView==='selling'?'has-filter':''}" onclick="setProfileView('selling')" style="position:relative" id="selling-tab-btn">
           ${userLang==='ru'?'Продаю':'Selling'}
-          <span id="selling-count-badge" style="display:none;position:absolute;top:-6px;right:-6px;background:#fff;color:#000;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:800;align-items:center;justify-content:center;font-family:'Syne',sans-serif"></span>
+          <span id="selling-count-badge" style="display:none;position:absolute;top:-6px;right:-6px;background:#fff;color:#000;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:900;align-items:center;justify-content:center;font-family:Arial,sans-serif;line-height:1"></span>
         </button>
         <button class="trade-filter-btn ${profileView==='offers'?'has-filter':''}" onclick="setProfileView('offers')" style="position:relative">
           ${userLang==='ru'?'Оферы':'Offers'}
-          <span id="offers-count-badge" style="display:none;position:absolute;top:-6px;right:-6px;background:#fff;color:#000;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:800;align-items:center;justify-content:center;font-family:'Syne',sans-serif"></span>
+          <span id="offers-count-badge" style="display:none;position:absolute;top:-6px;right:-6px;background:#fff;color:#000;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:900;align-items:center;justify-content:center;font-family:Arial,sans-serif;line-height:1"></span>
         </button>
         <button class="trade-filter-btn ${profileView==='history'?'has-filter':''}" onclick="setProfileView('history')">${t.historyTitle||'История'}</button>
       </div>
@@ -684,7 +715,7 @@ async function loadProfile() {
             <div class="menu-text"><div class="menu-label">${t.buyCheapStars}</div></div>
             <span style="color:var(--text3);font-size:16px">›</span>
           </div>
-          <div class="menu-item" id="ton-menu-item" style="box-shadow:0 0 12px rgba(74,180,255,0.04)" onclick="connectTon()">
+          <div class="menu-item" id="ton-menu-item" style="border:1px solid rgba(74,176,255,0.3);box-shadow:0 0 12px rgba(74,176,255,0.08)" onclick="connectTon()">
             <span class="menu-icon"><img src="/static/icons/ton.png" style="width:22px;height:22px;object-fit:contain" onerror="this.outerHTML='💎'"></span>
             <div class="menu-text">
               <div class="menu-label" id="ton-label">${userData.ton_address?'TON подключён':t.connectTon}</div>
@@ -696,7 +727,7 @@ async function loadProfile() {
           <h3 style="font-size:15px;font-weight:700;margin-bottom:6px">🎁 ${t.refEarn}</h3>
           <p style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.5">${t.refText} <strong style="color:var(--star)">20%</strong> ${t.refOf} 🔥</p>
           <div style="display:flex;gap:8px;align-items:center">
-            <div style="flex:1;background:var(--bg3);border:1px solid rgba(255,45,120,0.2);border-radius:8px;padding:10px 12px;font-family:'Space Mono',monospace;font-size:11px;color:var(--star);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">t.me/memstroybot?start=${userData.telegram_id}</div>
+            <div style="flex:1;background:var(--bg3);border:1px solid rgba(255,45,120,0.2);border-radius:8px;padding:10px 12px;font-family:'Inter',sans-serif;font-size:11px;color:var(--star);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">t.me/memstroybot?start=${userData.telegram_id}</div>
             <button class="btn btn-secondary" style="white-space:nowrap;flex-shrink:0;border-color:rgba(255,45,120,0.25)" onclick="copyRef(${userData.telegram_id})">${userLang==='ru'?'Копировать':'Copy'}</button>
           </div>
         </div>
@@ -734,10 +765,12 @@ function toggleProfileRarity(){haptic();profileSortBy=profileSortBy==='rarity_as
 function setProfileView(view) {
   haptic();
   profileView=view;
-  loadProfile();
-  if(view==='selling') setTimeout(loadProfileSelling, 100);
-  if(view==='whales') setTimeout(loadProfileWhales, 100);
-  if(view==='offers') setTimeout(loadProfileOffers, 100);
+  loadProfile().then(()=>{
+    if(view==='selling') loadProfileSelling();
+    if(view==='whales') loadProfileWhales();
+    if(view==='offers') loadProfileOffers();
+    if(view==='history') loadProfileHistory();
+  });
 }
 
 async function loadProfileHistory() {
@@ -751,10 +784,10 @@ async function loadProfileHistory() {
     }
     const typeLabel=(type,isIncome)=>{
       if(userLang==='ru'){
-        const map={buy:'Куплено',market_buy:isIncome?'Продано':'Куплено',market_buy_ton:isIncome?'Продано за TON':'Куплено за TON',upgrade:'Улучшено',transfer:isIncome?'Получено':'Передано',sell:'Продано',buy_stars:'Пополнение ⭐'};
+        const map={buy:'Куплено',market_buy:'Продано',market_buy_ton:'Продано',market_buy_offer:'Офер принят',upgrade:'Улучшено',transfer:isIncome?'Получено':'Передано',sell:'Продано',buy_stars:'Пополнение ⭐'};
         return map[type]||type;
       } else {
-        const map={buy:'Bought',market_buy:isIncome?'Sold':'Bought',market_buy_ton:isIncome?'Sold for TON':'Bought for TON',upgrade:'Upgraded',transfer:isIncome?'Received':'Transferred',sell:'Sold',buy_stars:'Stars added'};
+        const map={buy:'Bought',market_buy:'Sold',market_buy_ton:'Sold',market_buy_offer:'Offer accepted',upgrade:'Upgraded',transfer:isIncome?'Received':'Transferred',sell:'Sold',buy_stars:'Stars added'};
         return map[type]||type;
       }
     };
@@ -773,7 +806,7 @@ async function loadProfileHistory() {
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:700">${item.card_name||'Ponki'}${item.serial_number?` <span style="color:var(--text2);font-weight:400">#${item.serial_number}</span>`:''}</div>
           <div style="font-size:11px;color:var(--text2);margin-top:1px">${typeLabel(item.type,isIncome)}</div>
-          ${timeStr?`<div style="font-size:10px;color:var(--text3);margin-top:1px;font-family:'Space Mono',monospace">${timeStr}</div>`:''}
+          ${timeStr?`<div style="font-size:10px;color:var(--text3);margin-top:1px;font-family:'Inter',sans-serif">${timeStr}</div>`:''}
         </div>
         ${item.stars_amount>0?`<div style="font-size:14px;font-weight:800;color:${isIncome?'var(--success)':'var(--text2)'};white-space:nowrap">${isIncome?'+':'−'}${item.type==='market_buy_ton'?`<span style="display:inline-flex;align-items:center;gap:2px"><img src="/static/icons/ton.png" style="width:12px;height:12px;object-fit:contain"> ${fmtNano(item.stars_amount)}</span>`:`${item.stars_amount}⭐`}</div>`:''}
       </div>`;
@@ -811,7 +844,7 @@ function openFriendsModal(){
           <div class="friend-name">${name}</div>
           <div class="friend-meta">${f.username?'@'+f.username:'ID '+f.telegram_id}</div>
         </div>
-        <div style="font-size:12px;color:var(--text2);font-family:'Space Mono',monospace">${f.cards_count} ${userLang==='ru'?'карт':'cards'}</div>
+        <div style="font-size:12px;color:var(--text2);font-family:'Inter',sans-serif">${f.cards_count} ${userLang==='ru'?'карт':'cards'}</div>
       </div>`;
     }
     html+=`</div>`;
@@ -839,20 +872,19 @@ function openCardModal(card, allCards, direction){
       </div>
       <button onclick="swipeCard(${idx},1)" style="background:${idx<cards.length-1?'var(--bg3)':'transparent'};border:1px solid ${idx<cards.length-1?'var(--border)':'transparent'};color:${idx<cards.length-1?'var(--text)':'var(--text3)'};font-size:22px;cursor:pointer;padding:0;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s">›</button>
     </div>
-    <div style="text-align:center;font-size:11px;color:var(--text3);font-family:'Space Mono',monospace">${idx+1} / ${cards.length}</div>
+    <div style="text-align:center;font-size:11px;color:var(--text3);font-family:'Inter',sans-serif">${idx+1} / ${cards.length}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
       <div class="stat-box"><div class="val" style="font-size:14px">#${card.serial_number}</div><div class="lbl">${t.serial}</div></div>
       <div class="stat-box"><div class="val" style="font-size:14px;color:var(--star)">${upgraded?dropPct(card.drop_weight):'Base'}</div><div class="lbl">${upgraded?t.drop:t.status}</div></div>
       <div class="stat-box"><div class="val" style="font-size:14px">10K</div><div class="lbl">${t.supplyLbl}</div></div>
     </div>
     ${!upgraded?`
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-primary" style="flex:1" onclick="upgradeCard(${card.id})">${t.upgrade}</button>
-        <button class="btn btn-secondary" style="flex:1" onclick="openListModal()">${t.sell}</button>
-        <button class="btn btn-secondary" style="flex:1" onclick="openTransferModal(${card.id})">${t.transfer}</button>
-      </div>
+      <button class="btn btn-primary btn-wide" onclick="upgradeCard(${card.id})">${t.upgrade}</button>
+      <button class="btn btn-secondary btn-wide" onclick="openListModal()">${t.sell}</button>
+      <button class="btn btn-secondary btn-wide" onclick="openTransferModal(${card.id})">${t.transfer}</button>
     `:`
       <button class="btn btn-secondary btn-wide" onclick="openListModal()">${t.sell}</button>
+      <button class="btn btn-secondary btn-wide" onclick="openCreateAuctionModalForCard(${card.id})">${userLang==='ru'?'Аукцион':'Auction'}</button>
       <button class="btn btn-secondary btn-wide" onclick="openTransferModal(${card.id})">${t.transfer}</button>
     `}
     <button class="btn btn-secondary btn-wide" onclick="closeModal()">${t.close}</button>
@@ -929,7 +961,7 @@ async function listCard(cardId){
 
 function openTransferModal(cardId){
   openModal(t.transfer,`
-    <div style="font-size:13px;color:var(--text2);line-height:1.5">${t.enterTgId}</div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.5">Введите Telegram @username <span style="color:var(--star)">— 1 ⭐</span></div>
     <input class="transfer-input" id="transfer-to" placeholder="@username или Telegram ID" type="text" inputmode="text">
     <button class="btn btn-primary" onclick="doTransfer(${cardId})">${t.send}</button>
     <button class="btn btn-secondary btn-wide" onclick="closeModal()">${t.cancel}</button>
@@ -945,11 +977,26 @@ async function doTransfer(cardId){
   const toId=isUsername?rawInput.replace('@',''):parseInt(rawInput);
   if(!toId){toast(t.enterTgId,'err');return;}
 
+  // 1 Star transfer fee via invoice
   try {
-    await api('/api/transfer','POST',{from_telegram_id:tgUser.id,to_telegram_id:toId,user_card_id:cardId});
-    closeModal();
-    toast(t.cardSent,'ok');
-    userData=await api(`/api/user/${tgUser.id}`); updateBalances(); loadProfile();
+    const res = await api('/api/create_invoice','POST',{
+      telegram_id: tgUser.id, collection_id: 0, qty: 1,
+      purpose: 'transfer', card_id: cardId, to_id: String(toId)
+    });
+    if(res.invoice_link) {
+      closeModal();
+      tg.openInvoice(res.invoice_link, async (status) => {
+        if(status === 'paid') {
+          try {
+            await api('/api/transfer','POST',{from_telegram_id:tgUser.id,to_telegram_id:toId,user_card_id:cardId});
+          } catch(e2){ /* ignore - card likely transferred */ }
+          toast(t.cardSent,'ok');
+          userData=await api(`/api/user/${tgUser.id}`); updateBalances(); loadProfile();
+        } else if(status === 'cancelled' || status === 'failed') {
+          toast(userLang==='ru'?'Отменено':'Cancelled','');
+        }
+      });
+    }
   } catch(e){
     if(e.message.includes('not found')||e.message.includes('404')){
       openModal(t.transfer,`<div style="text-align:center;padding:8px 0">
@@ -1093,15 +1140,15 @@ async function loadProfileWhales() {
       const starsSpent = u.stars_spent || 0;
       const tonSpent = u.ton_spent || 0;
       return `<div style="background:${isMe?'rgba(255,45,120,0.08)':'var(--bg2)'};border:1px solid ${isMe?'rgba(255,45,120,0.4)':'rgba(255,255,255,0.07)'};border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:10px;box-shadow:${rank<=3?`0 0 12px ${rankColor}22`:'none'}">
-        <div style="min-width:26px;text-align:center;font-size:${rank<=3?'17':'12'}px;font-weight:800;color:${rankColor};font-family:'Space Mono',monospace">${medal||'#'+rank}</div>
+        <div style="min-width:26px;text-align:center;font-size:${rank<=3?'17':'12'}px;font-weight:800;color:${rankColor};font-family:'Inter',sans-serif">${medal||'#'+rank}</div>
         <div style="width:32px;height:32px;border-radius:50%;background:var(--bg3);border:1px solid ${isMe?'rgba(255,45,120,0.4)':'rgba(255,255,255,0.08)'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">${(name[0]||'?').toUpperCase()}</div>
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}${isMe?` <span style="color:#ff2d78;font-size:10px">(${userLang==='ru'?'ты':'you'})</span>`:''}</div>
-          ${u.username?`<div style="font-size:10px;color:var(--text2);font-family:'Space Mono',monospace">@${u.username}</div>`:''}
+          ${u.username?`<div style="font-size:10px;color:var(--text2);font-family:'Inter',sans-serif">@${u.username}</div>`:''}
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0">
-          <div style="font-size:12px;font-weight:800;color:var(--star);font-family:'Space Mono',monospace">⭐ ${starsSpent.toLocaleString()}</div>
-          <div style="display:flex;align-items:center;gap:3px;font-size:12px;font-weight:800;color:#4ab0ff;font-family:'Space Mono',monospace"><img src="/static/icons/ton.png" style="width:12px;height:12px;object-fit:contain"> ${tonSpent===0?'0':((tonSpent/1e9).toFixed(2).replace(/\.?0+$/, ''))}</div>
+          <div style="font-size:12px;font-weight:800;color:var(--star);font-family:'Inter',sans-serif">⭐ ${starsSpent.toLocaleString()}</div>
+          <div style="display:flex;align-items:center;gap:3px;font-size:12px;font-weight:800;color:#4ab0ff;font-family:'Inter',sans-serif"><img src="/static/icons/ton.png" style="width:12px;height:12px;object-fit:contain"> ${tonSpent===0?'0':((tonSpent/1e9).toFixed(2).replace(/\.?0+$/, ''))}</div>
         </div>
       </div>`;
     };
@@ -1109,7 +1156,7 @@ async function loadProfileWhales() {
     let html = `
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
         <span style="font-size:16px;font-weight:800">🐳 ${userLang==='ru'?'Рейтинг китов':'Whale Rating'}</span>
-        <span style="font-size:11px;color:var(--text2);font-family:'Space Mono',monospace">${userLang==='ru'?'ТОП 100':'TOP 100'}</span>
+        <span style="font-size:11px;color:var(--text2);font-family:'Inter',sans-serif">${userLang==='ru'?'ТОП 100':'TOP 100'}</span>
       </div>
       <div style="display:flex;flex-direction:column;gap:6px">`;
 
@@ -1191,7 +1238,7 @@ async function openTonModal(){
         <span style="font-size:32px;font-weight:800;color:#4ab0ff">${tonFmt}</span>
         <span style="font-size:16px;color:var(--text2);font-weight:700">TON</span>
       </div>
-      ${userData?.wallet_address?`<div style="font-size:10px;color:var(--text3);margin-top:6px;font-family:'Space Mono',monospace">${userData.wallet_address.slice(0,8)}...${userData.wallet_address.slice(-6)}</div>`:''}
+      ${userData?.wallet_address?`<div style="font-size:10px;color:var(--text3);margin-top:6px;font-family:'Inter',sans-serif">${userData.wallet_address.slice(0,8)}...${userData.wallet_address.slice(-6)}</div>`:''}
     </div>
 
     <div style="display:flex;gap:8px;margin-bottom:12px">
@@ -1464,6 +1511,173 @@ async function declineOffer(offerId){
     toast(userLang==='ru'?'Отклонено':'Declined','');
     loadProfileOffers();
     loadOffersBadge();
+  }catch(e){toast(e.message,'err');}
+}
+
+async function loadAuctions(){
+  const el = document.getElementById('auction-list');
+  if(!el) return;
+  el.innerHTML = '<div class="spinner" style="margin:32px auto"></div>';
+  try {
+    const auctions = await api('/api/auctions');
+    if(auctions.length === 0){
+      el.innerHTML = `<div class="empty-state"><p>${userLang==='ru'?'Нет активных аукционов':'No active auctions'}</p></div>`;
+      return;
+    }
+    let html = `<div style="display:flex;flex-direction:column;gap:10px">`;
+    for(const a of auctions){
+      const isOwn = a.seller_id === userData?.id;
+      const isBidder = a.current_bidder_id === userData?.id;
+      const price = (a.current_price_nano/1e9).toFixed(2).replace(/\.?0+$/,'');
+      const minBid = ((a.current_price_nano + a.min_step_nano)/1e9).toFixed(2).replace(/\.?0+$/,'');
+      const endsAt = new Date(a.ends_at+'Z');
+      const now = new Date();
+      const diff = Math.max(0, endsAt - now);
+      const hrs = Math.floor(diff/3600000);
+      const mins = Math.floor((diff%3600000)/60000);
+      const secs = Math.floor((diff%60000)/1000);
+      const timeStr = hrs>0 ? `${hrs}ч ${mins}м` : `${mins}м ${secs}с`;
+      html += `<div style="background:var(--bg2);border:1px solid ${isOwn?'rgba(74,176,255,0.4)':isBidder?'rgba(74,255,138,0.3)':'rgba(255,255,255,0.07)'};border-radius:14px;overflow:hidden">
+        <div style="display:flex;gap:10px;padding:12px">
+          <div style="width:60px;height:60px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--bg3)">
+            <img src="${a.image_url}" style="width:100%;height:100%;object-fit:cover">
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14px;font-weight:700">Ponki · ${a.card_name} <span style="color:var(--text2);font-weight:400">#${a.serial_number}</span></div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px">${dropPct(a.drop_weight)}</div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
+              <img src="/static/icons/ton.png" style="width:14px;height:14px;object-fit:contain">
+              <span style="font-size:16px;font-weight:800;color:#4ab0ff">${price}</span>
+              <span style="font-size:11px;color:var(--text3)">${a.current_bidder_id?userLang==='ru'?'тек. ставка':'current bid':userLang==='ru'?'старт':'start'}</span>
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:11px;color:var(--danger);font-weight:700">⏱ ${timeStr}</div>
+            ${a.current_bidder_id?`<div style="font-size:10px;color:var(--text2);margin-top:2px">${a.bidder_name||'@'+a.bidder_username||'?'}</div>`:''}
+          </div>
+        </div>
+        ${!isOwn?`<div style="padding:0 12px 12px">
+          <button class="btn btn-primary btn-wide" onclick="openBidModal(${a.id},'${a.card_name}',${a.current_price_nano},${a.min_step_nano},'${price}','${minBid}')" style="font-size:13px;padding:10px">
+            ${userLang==='ru'?'Сделать ставку':'Place bid'} — от ${minBid} TON
+          </button>
+        </div>`:`<div style="padding:0 12px 12px;font-size:12px;color:var(--text2);text-align:center">${userLang==='ru'?'Ваш аукцион':'Your auction'}</div>`}
+      </div>`;
+    }
+    html += '</div>';
+    el.innerHTML = html;
+  } catch(e){ el.innerHTML=`<div class="empty-state"><p>${e.message}</p></div>`; }
+}
+
+function openBidModal(auctionId, cardName, currentNano, stepNano, currentTon, minBid){
+  haptic();
+  openModal(userLang==='ru'?'Сделать ставку':'Place bid', `
+    <div style="font-size:14px;font-weight:700;text-align:center;margin-bottom:4px">Ponki · ${cardName}</div>
+    <div style="font-size:12px;color:var(--text2);text-align:center;margin-bottom:12px">${userLang==='ru'?'Текущая ставка':'Current bid'}: <span style="color:#4ab0ff">${currentTon} TON</span></div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:8px">${userLang==='ru'?'Ваш баланс':'Balance'}: <span style="color:#4ab0ff">${fmtNano(userData?.ton_balance||0)} TON</span></div>
+    <div class="price-input-row">
+      <input type="number" id="bid-amount" placeholder="${minBid}" value="${minBid}" min="${minBid}" step="0.1">
+      <span class="cur" style="color:#4ab0ff">TON</span>
+    </div>
+    <button class="btn btn-primary btn-wide" onclick="submitBid(${auctionId})">${userLang==='ru'?'Поставить':'Bid'}</button>
+    <button class="btn btn-secondary btn-wide" onclick="closeModal()">${userLang==='ru'?'Отмена':'Cancel'}</button>
+  `);
+  setTimeout(()=>{ const i=document.getElementById('bid-amount'); if(i){i.focus();i.select();} }, 200);
+}
+
+async function submitBid(auctionId){
+  haptic('medium');
+  const amount = parseFloat(document.getElementById('bid-amount')?.value);
+  if(!amount||amount<=0){toast(userLang==='ru'?'Введите сумму':'Enter amount','err');return;}
+  try{
+    await api('/api/auction/bid','POST',{telegram_id:tgUser.id,auction_id:auctionId,amount_ton:amount});
+    closeModal();
+    toast(userLang==='ru'?'Ставка принята!':'Bid placed!','ok');
+    userData=await api(`/api/user/${tgUser.id}`);
+    updateBalances();
+    loadAuctions();
+  }catch(e){toast(e.message,'err');}
+}
+
+function openCreateAuctionModalForCard(cardId){
+  closeModal();
+  setTimeout(()=>{
+    openCreateAuctionModal();
+    setTimeout(()=>{
+      const el = document.querySelector(`[data-card-id="${cardId}"]`);
+      if(el){
+        const card = (userData?.cards||[]).find(c=>c.id===cardId);
+        if(card) selectAuctionCard(cardId, card.name, el);
+      }
+    }, 200);
+  }, 100);
+}
+
+function openCreateAuctionModal(){
+  haptic();
+  const myCards = (userData?.cards||[]).filter(c=>c.is_upgraded);
+  if(myCards.length===0){
+    toast(userLang==='ru'?'Нет улучшенных карточек для аукциона':'No upgraded cards for auction','err');
+    return;
+  }
+  let cardsHtml = `<div class="cards-grid">` + myCards.map(c=>`
+    <div onclick="selectAuctionCard(${c.id},'${c.name}',this)" class="card-item" style="border:2px solid var(--border)" data-card-id="${c.id}">
+      <div class="card-img"><img src="${c.image_url}" onerror="this.style.background='var(--bg3)'"><span class="pct-badge">${dropPct(c.drop_weight)}</span></div>
+      <div class="card-info"><div class="card-name">${c.name}</div><div class="card-meta">#${c.serial_number}</div></div>
+    </div>`).join('') + `</div>`;
+
+  openModal(userLang==='ru'?'Создать аукцион':'Create auction', `
+    <div style="max-height:200px;overflow-y:auto;margin-bottom:8px">${cardsHtml}</div>
+    <div id="auction-card-selected" style="font-size:12px;color:var(--text2);margin-bottom:8px"></div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:4px">${userLang==='ru'?'Стартовая цена (TON):':'Start price (TON):'}</div>
+    <div class="price-input-row" style="margin-bottom:8px">
+      <input type="number" id="auction-start-price" placeholder="0.1" min="0.01" step="0.1" value="0.1">
+      <span class="cur" style="color:#4ab0ff">TON</span>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:4px">${userLang==='ru'?'Длительность:':'Duration:'}</div>
+    <div style="display:flex;gap:6px;margin-bottom:12px">
+      ${[0.016,1,12,24].map(h=>`<button onclick="selectAuctionDuration(${h},this)" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer" data-hours="${h}">${h===0.016?'1м':h+'ч'}</button>`).join('')}
+    </div>
+    <input type="hidden" id="auction-card-id" value="">
+    <input type="hidden" id="auction-duration" value="24">
+    <button class="btn btn-primary btn-wide" onclick="createAuction()">${userLang==='ru'?'Запустить аукцион':'Start auction'}</button>
+    <button class="btn btn-secondary btn-wide" onclick="closeModal()">${userLang==='ru'?'Отмена':'Cancel'}</button>
+  `);
+  // Select first duration
+  setTimeout(()=>{
+    const btns = document.querySelectorAll('[data-hours]');
+    if(btns[3]) { btns[3].style.background='#ff2d78'; btns[3].style.color='#fff'; }
+  }, 100);
+}
+
+function selectAuctionCard(cardId, cardName, el){
+  haptic();
+  document.querySelectorAll('[data-card-id]').forEach(e=>{ e.style.border='2px solid var(--border)'; });
+  el.style.border='2px solid #ff2d78';
+  document.getElementById('auction-card-id').value = cardId;
+  document.getElementById('auction-card-selected').textContent = '✓ ' + cardName;
+}
+
+function selectAuctionDuration(hours, el){
+  haptic();
+  document.querySelectorAll('[data-hours]').forEach(e=>{ e.style.background='var(--bg3)'; e.style.color='var(--text)'; e.style.borderColor='var(--border)'; });
+  el.style.background='#ff2d78'; el.style.color='#fff';
+  document.getElementById('auction-duration').value = hours;
+}
+
+async function createAuction(){
+  haptic('medium');
+  const cardId = document.getElementById('auction-card-id')?.value;
+  const startPrice = parseFloat(document.getElementById('auction-start-price')?.value);
+  const duration = parseInt(document.getElementById('auction-duration')?.value||'24');
+  if(!cardId){toast(userLang==='ru'?'Выберите карточку':'Select a card','err');return;}
+  if(!startPrice||startPrice<0.01){toast(userLang==='ru'?'Минимум 0.01 TON':'Min 0.01 TON','err');return;}
+  try{
+    await api('/api/auction/create','POST',{telegram_id:tgUser.id,user_card_id:parseInt(cardId),start_price_ton:startPrice,duration_hours:duration});
+    closeModal();
+    toast(userLang==='ru'?'Аукцион создан!':'Auction created!','ok');
+    userData=await api(`/api/user/${tgUser.id}`);
+    loadAuctions();
+    loadProfile();
   }catch(e){toast(e.message,'err');}
 }
 

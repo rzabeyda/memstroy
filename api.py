@@ -84,10 +84,9 @@ app.mount("/webapp", StaticFiles(directory="webapp"), name="webapp")
 
 
 @app.on_event("startup")
-def startup():
+async def startup():
     init_db()
     os.makedirs("static/ponki", exist_ok=True)
-    # Rename Dress -> Model
     try:
         conn = get_db()
         conn.execute("UPDATE card_definitions SET name='Model' WHERE name='Dress'")
@@ -95,6 +94,54 @@ def startup():
         conn.close()
     except:
         pass
+    # Start background auction finisher
+    import asyncio
+    asyncio.create_task(_auction_background())
+
+async def _auction_background():
+    """Check and finish expired auctions every 30 seconds"""
+    import asyncio
+    from datetime import datetime
+    while True:
+        try:
+            await asyncio.sleep(30)
+            conn = get_db()
+            now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+            expired = conn.execute(
+                "SELECT * FROM auctions WHERE is_active=1 AND ends_at <= ?", (now,)
+            ).fetchall()
+            for auction in expired:
+                conn.execute("UPDATE auctions SET is_active=0 WHERE id=?", (auction["id"],))
+                conn.execute("UPDATE user_cards SET is_listed=0 WHERE id=?", (auction["user_card_id"],))
+                if auction["current_bidder_id"]:
+                    commission = int(auction["current_price_nano"] * 0.05)
+                    seller_gets = auction["current_price_nano"] - commission
+                    cashback = int(auction["current_price_nano"] * 0.01)
+                    conn.execute("UPDATE user_cards SET user_id=? WHERE id=?",
+                                (auction["current_bidder_id"], auction["user_card_id"]))
+                    conn.execute("UPDATE users SET ton_balance = ton_balance + ? WHERE id=?",
+                                (seller_gets, auction["seller_id"]))
+                    conn.execute("UPDATE users SET cashback_balance = COALESCE(cashback_balance,0) + ? WHERE id=?",
+                                (cashback, auction["current_bidder_id"]))
+                    winner = conn.execute("SELECT telegram_id FROM users WHERE id=?", (auction["current_bidder_id"],)).fetchone()
+                    seller = conn.execute("SELECT telegram_id FROM users WHERE id=?", (auction["seller_id"],)).fetchone()
+                    card = conn.execute("SELECT cd.name FROM user_cards uc JOIN card_definitions cd ON uc.card_def_id=cd.id WHERE uc.id=?", (auction["user_card_id"],)).fetchone()
+                    card_name = card["name"] if card else "карточка"
+                    price_ton = float(f"{auction['current_price_nano']/1e9:.10f}".rstrip("0").rstrip("."))
+                    if winner:
+                        await notify_user(winner["telegram_id"], f"🏆 Вы выиграли аукцион! {card_name} ваша за {price_ton} TON")
+                    if seller:
+                        await notify_user(seller["telegram_id"], f"✅ {card_name} продана за {price_ton} TON")
+                else:
+                    seller = conn.execute("SELECT telegram_id FROM users WHERE id=?", (auction["seller_id"],)).fetchone()
+                    card = conn.execute("SELECT cd.name FROM user_cards uc JOIN card_definitions cd ON uc.card_def_id=cd.id WHERE uc.id=?", (auction["user_card_id"],)).fetchone()
+                    if seller and card:
+                        await notify_user(seller["telegram_id"], f"Аукцион без ставок. {card['name']} возвращена")
+            if expired:
+                conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"Auction background error: {e}")
 
 
 @app.get("/")
@@ -783,8 +830,8 @@ async def accept_offer(data: dict):
                     (o["amount_nano"], o["from_user_id"]))
     conn.execute("UPDATE offers SET status='declined' WHERE user_card_id=? AND status='pending'", (offer["user_card_id"],))
     conn.execute("""
-        INSERT INTO transactions (from_user_id, to_user_id, user_card_id, type, stars_amount, payload)
-        VALUES (?, ?, ?, 'market_buy_ton', ?, 'offer')
+        INSERT INTO transactions (from_user_id, to_user_id, user_card_id, type, stars_amount)
+        VALUES (?, ?, ?, 'market_buy_offer', ?)
     """, (buyer["id"], owner["id"], offer["user_card_id"], offer["amount_nano"]))
     conn.commit()
     price_ton = round(offer["amount_nano"]/1e9, 10)
@@ -850,6 +897,187 @@ def get_offers(telegram_id: int):
         "received": [dict(r) for r in received],
         "sent": [dict(s) for s in sent]
     }
+
+
+# ── AUCTIONS ──
+
+@app.post("/api/auction/create")
+async def create_auction(data: dict):
+    telegram_id = data.get("telegram_id")
+    user_card_id = data.get("user_card_id")
+    start_price_ton = float(data.get("start_price_ton", 0.1))
+    duration_hours = int(data.get("duration_hours", 24))
+    min_step_ton = float(data.get("min_step_ton", 0.1))
+
+    if start_price_ton < 0.01:
+        raise HTTPException(400, "Минимальная цена 0.01 TON")
+
+    start_nano = int(start_price_ton * 1_000_000_000)
+    step_nano = int(min_step_ton * 1_000_000_000)
+
+    conn = get_db()
+    seller = require_user(conn, telegram_id)
+    card = conn.execute("SELECT * FROM user_cards WHERE id=? AND user_id=? AND is_listed=0",
+                       (user_card_id, seller["id"])).fetchone()
+    if not card:
+        conn.close()
+        raise HTTPException(404, "Card not found")
+
+    from datetime import datetime, timedelta
+    ends_at = (datetime.utcnow() + timedelta(hours=duration_hours)).strftime("%Y-%m-%d %H:%M:%S")
+
+    conn.execute("UPDATE user_cards SET is_listed=1 WHERE id=?", (user_card_id,))
+    conn.execute("""
+        INSERT INTO auctions (user_card_id, seller_id, start_price_nano, current_price_nano, min_step_nano, ends_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (user_card_id, seller["id"], start_nano, start_nano, step_nano, ends_at))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+
+@app.get("/api/auctions")
+def get_auctions():
+    from datetime import datetime
+    conn = get_db()
+    now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    auctions = conn.execute("""
+        SELECT a.*, uc.serial_number, cd.name as card_name, cd.image_url, cd.drop_weight,
+               u.username as seller_username, u.first_name as seller_name,
+               b.username as bidder_username, b.first_name as bidder_name
+        FROM auctions a
+        JOIN user_cards uc ON a.user_card_id = uc.id
+        JOIN card_definitions cd ON uc.card_def_id = cd.id
+        JOIN users u ON a.seller_id = u.id
+        LEFT JOIN users b ON a.current_bidder_id = b.id
+        WHERE a.is_active=1 AND a.ends_at > ?
+        ORDER BY a.ends_at ASC
+    """, (now,)).fetchall()
+    conn.close()
+    return [dict(a) for a in auctions]
+
+
+@app.post("/api/auction/bid")
+async def place_bid(data: dict):
+    telegram_id = data.get("telegram_id")
+    auction_id = data.get("auction_id")
+    amount_ton = float(data.get("amount_ton", 0))
+    amount_nano = int(amount_ton * 1_000_000_000)
+
+    from datetime import datetime, timedelta
+    conn = get_db()
+    bidder = require_user(conn, telegram_id)
+    auction = conn.execute("SELECT * FROM auctions WHERE id=? AND is_active=1", (auction_id,)).fetchone()
+
+    if not auction:
+        conn.close()
+        raise HTTPException(404, "Аукцион не найден")
+    if auction["seller_id"] == bidder["id"]:
+        conn.close()
+        raise HTTPException(400, "Нельзя ставить на свой аукцион")
+    if amount_nano < auction["current_price_nano"] + auction["min_step_nano"]:
+        min_needed = (auction["current_price_nano"] + auction["min_step_nano"]) / 1_000_000_000
+        conn.close()
+        raise HTTPException(400, f"Минимальная ставка: {min_needed} TON")
+    if (bidder["ton_balance"] or 0) < amount_nano:
+        conn.close()
+        raise HTTPException(400, "Недостаточно TON")
+
+    # Refund previous bidder
+    if auction["current_bidder_id"]:
+        conn.execute("UPDATE users SET ton_balance = ton_balance + ? WHERE id=?",
+                    (auction["current_price_nano"], auction["current_bidder_id"]))
+
+    # Reserve new bid
+    conn.execute("UPDATE users SET ton_balance = ton_balance - ? WHERE id=?",
+                (amount_nano, bidder["id"]))
+
+    conn.execute("""
+        UPDATE auctions SET current_price_nano=?, current_bidder_id=? WHERE id=?
+    """, (amount_nano, bidder["id"], auction_id))
+    conn.execute("""
+        INSERT INTO auction_bids (auction_id, user_id, amount_nano) VALUES (?,?,?)
+    """, (auction_id, bidder["id"], amount_nano))
+    conn.commit()
+
+    # Notify seller
+    seller = conn.execute("SELECT telegram_id, first_name FROM users WHERE id=?", (auction["seller_id"],)).fetchone()
+    card = conn.execute("SELECT cd.name FROM user_cards uc JOIN card_definitions cd ON uc.card_def_id=cd.id WHERE uc.id=?",
+                       (auction["user_card_id"],)).fetchone()
+    card_name = card["name"] if card else "карточка"
+    bidder_name = bidder["first_name"] or bidder["username"] or "Кто-то"
+    conn.close()
+
+    import asyncio
+    if seller:
+        asyncio.create_task(notify_user(seller["telegram_id"],
+            f"Новая ставка {amount_ton} TON на {card_name} от {bidder_name}"))
+    return {"ok": True}
+
+
+@app.post("/api/auction/finish")
+async def finish_auction(data: dict):
+    """Finish expired auctions - called periodically"""
+    from datetime import datetime
+    conn = get_db()
+    now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    expired = conn.execute("""
+        SELECT * FROM auctions WHERE is_active=1 AND ends_at <= ?
+    """, (now,)).fetchall()
+
+    for auction in expired:
+        conn.execute("UPDATE auctions SET is_active=0 WHERE id=?", (auction["id"],))
+        conn.execute("UPDATE user_cards SET is_listed=0 WHERE id=?", (auction["user_card_id"],))
+
+        if auction["current_bidder_id"]:
+            # Transfer card to winner
+            conn.execute("UPDATE user_cards SET user_id=? WHERE id=?",
+                        (auction["current_bidder_id"], auction["user_card_id"]))
+            # Pay seller (minus 5% commission)
+            commission = int(auction["current_price_nano"] * 0.05)
+            seller_gets = auction["current_price_nano"] - commission
+            cashback = int(auction["current_price_nano"] * 0.01)
+            conn.execute("UPDATE users SET ton_balance = ton_balance + ? WHERE id=?",
+                        (seller_gets, auction["seller_id"]))
+            conn.execute("UPDATE users SET cashback_balance = COALESCE(cashback_balance,0) + ? WHERE id=?",
+                        (cashback, auction["current_bidder_id"]))
+            conn.execute("""
+                INSERT INTO transactions (from_user_id, to_user_id, user_card_id, type, stars_amount)
+                VALUES (?, ?, ?, 'auction_won', ?)
+            """, (auction["current_bidder_id"], auction["seller_id"],
+                  auction["user_card_id"], auction["current_price_nano"]))
+
+            # Notify both
+            winner = conn.execute("SELECT telegram_id FROM users WHERE id=?",
+                                 (auction["current_bidder_id"],)).fetchone()
+            seller = conn.execute("SELECT telegram_id FROM users WHERE id=?",
+                                 (auction["seller_id"],)).fetchone()
+            card = conn.execute("SELECT cd.name FROM user_cards uc JOIN card_definitions cd ON uc.card_def_id=cd.id WHERE uc.id=?",
+                               (auction["user_card_id"],)).fetchone()
+            card_name = card["name"] if card else "карточка"
+            price_ton = round(auction["current_price_nano"]/1e9, 10)
+            price_ton = float(f"{price_ton:.10f}".rstrip("0").rstrip("."))
+
+            import asyncio
+            if winner:
+                asyncio.create_task(notify_user(winner["telegram_id"],
+                    f"🏆 Вы выиграли аукцион! {card_name} ваша за {price_ton} TON"))
+            if seller:
+                asyncio.create_task(notify_user(seller["telegram_id"],
+                    f"✅ Аукцион завершён. {card_name} продана за {price_ton} TON"))
+        else:
+            # No bids - return card to seller
+            conn.execute("UPDATE user_cards SET is_listed=0 WHERE id=?", (auction["user_card_id"],))
+            seller_row = conn.execute("SELECT telegram_id FROM users WHERE id=?", (auction["seller_id"],)).fetchone()
+            card_row = conn.execute("SELECT cd.name FROM user_cards uc JOIN card_definitions cd ON uc.card_def_id=cd.id WHERE uc.id=?", (auction["user_card_id"],)).fetchone()
+            if seller_row and card_row:
+                import asyncio
+                asyncio.create_task(notify_user(seller_row["telegram_id"],
+                    f"Аукцион завершён без ставок. {card_row['name']} возвращена вам"))
+
+    conn.commit()
+    conn.close()
+    return {"ok": True, "finished": len(expired)}
 
 
 @app.get("/api/stars_link")
@@ -1135,6 +1363,19 @@ async def ton_withdraw(data: dict):
     if bal < amount_nano:
         conn.close()
         raise HTTPException(400, f"Недостаточно TON. Баланс: {round(bal/TON_NANO,4)}")
+
+    # Daily withdrawal limit: 1000 TON
+    from datetime import datetime, timedelta
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    daily_withdrawn = conn.execute("""
+        SELECT COALESCE(SUM(amount_nano),0) as total FROM ton_withdrawals
+        WHERE user_id=? AND date(created_at)=? AND status!='cancelled'
+    """, (user["id"], today)).fetchone()["total"]
+    daily_limit_nano = 1000 * TON_NANO
+    if daily_withdrawn + amount_nano > daily_limit_nano:
+        remaining = (daily_limit_nano - daily_withdrawn) / TON_NANO
+        conn.close()
+        raise HTTPException(400, f"Дневной лимит вывода 1000 TON. Доступно: {remaining:.2f} TON")
     # Use bot's hot wallet for withdrawal
     bot_seed = BOT_WALLET_SEED
     print(f"DEBUG withdraw: seed={'YES' if bot_seed else 'NO'}, tonsdk={TON_WALLET_AVAILABLE}")
