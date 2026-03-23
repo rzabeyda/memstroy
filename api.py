@@ -73,7 +73,7 @@ def get_tg_id_from_init_data(init_data: str) -> int:
                 user = _json.loads(user_json)
                 return int(user.get("id", 0))
     except:
-        pass
+        pass  # silently ignored
     return 0
 
 import aiohttp as _aiohttp
@@ -100,7 +100,7 @@ async def notify_user(telegram_id: int, text: str):
                 json={"chat_id": telegram_id, "text": text}
             )
     except:
-        pass
+        pass  # silently ignored
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request as StarletteRequest
@@ -135,7 +135,7 @@ async def startup():
         conn.commit()
         conn.close()
     except:
-        pass
+        pass  # silently ignored
     # Start background auction finisher
     import asyncio
     asyncio.create_task(_auction_background())
@@ -149,6 +149,16 @@ async def _auction_background():
             await asyncio.sleep(30)
             conn = get_db()
             now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+            # Check expired giveaways
+            expired_giveaways = conn.execute(
+                "SELECT id FROM giveaways WHERE status='active' AND ends_at <= ?", (now,)
+            ).fetchall()
+            conn.close()
+            for g in expired_giveaways:
+                try:
+                    await finish_giveaway({"giveaway_id": g["id"]})
+                except: pass
+            conn = get_db()
             expired = conn.execute(
                 "SELECT * FROM auctions WHERE is_active=1 AND ends_at <= ?", (now,)
             ).fetchall()
@@ -173,7 +183,7 @@ async def _auction_background():
                     if winner:
                         await notify_user(winner["telegram_id"], f"🏆 Вы выиграли аукцион! {card_name} ваша за {price_ton} TON")
                     if seller:
-                        await notify_user(seller["telegram_id"], f"✅ {card_name} продана за {price_ton} TON")
+                        await notify_user(seller["telegram_id"], f"💰 {card_name} продана за {price_ton} TON")
                 else:
                     seller = conn.execute("SELECT telegram_id FROM users WHERE id=?", (auction["seller_id"],)).fetchone()
                     card = conn.execute("SELECT cd.name FROM user_cards uc JOIN card_definitions cd ON uc.card_def_id=cd.id WHERE uc.id=?", (auction["user_card_id"],)).fetchone()
@@ -333,6 +343,21 @@ def user_info(telegram_id: int):
     }
 
 
+@app.post("/api/check_user")
+def check_user(data: dict):
+    """Check if user exists in bot by username or telegram_id"""
+    query = str(data.get("query","")).strip().lstrip("@")
+    if not query:
+        raise HTTPException(400, "Query required")
+    conn = get_db()
+    if query.isdigit():
+        user = conn.execute("SELECT id FROM users WHERE telegram_id=?", (int(query),)).fetchone()
+    else:
+        user = conn.execute("SELECT id FROM users WHERE username=?", (query,)).fetchone()
+    conn.close()
+    return {"found": user is not None}
+
+
 @app.get("/api/collections")
 def collections():
     conn = get_db()
@@ -446,11 +471,17 @@ def _pay_referral_bonus(conn, user_id, amount):
 
 
 def _buy_card(conn, user_id, collection_id):
-    col = conn.execute("SELECT * FROM collections WHERE id=? AND remaining > 0", (collection_id,)).fetchone()
-    if not col:
+    # Atomic decrement - prevents overselling
+    updated = conn.execute(
+        "UPDATE collections SET remaining = remaining - 1 WHERE id=? AND remaining > 0",
+        (collection_id,)
+    ).rowcount
+    if not updated:
+        conn.close() if hasattr(conn, 'close') else None
         raise HTTPException(400, "Collection sold out")
-
-    serial = col["total_supply"] - col["remaining"] + 1
+    conn.commit()
+    col = conn.execute("SELECT * FROM collections WHERE id=?", (collection_id,)).fetchone()
+    serial = col["total_supply"] - col["remaining"]
 
     all_defs = conn.execute(
         "SELECT * FROM card_definitions WHERE collection_id=?", (collection_id,)
@@ -470,7 +501,7 @@ def _buy_card(conn, user_id, collection_id):
         INSERT INTO user_cards (user_id, card_def_id, collection_id, serial_number, is_upgraded)
         VALUES (?, ?, ?, ?, 0)
     """, (user_id, chosen["id"], collection_id, serial))
-    conn.execute("UPDATE collections SET remaining = remaining - 1 WHERE id=?", (collection_id,))
+    # remaining already decremented atomically above
     conn.execute("""
         INSERT INTO transactions (from_user_id, to_user_id, type, stars_amount)
         VALUES (?, ?, 'buy', ?)
@@ -488,11 +519,12 @@ def buy_card_gems(data: dict):
     conn = get_db()
     user = require_user(conn, telegram_id)
     gems = user["gems"] if "gems" in user.keys() else 0
-    if gems < qty:
+    cost = qty * 100
+    if gems < cost:
         conn.close()
-        raise HTTPException(400, f"Недостаточно гемов. Есть: {gems}")
+        raise HTTPException(400, f"Недостаточно гемов. Нужно: {cost}, есть: {gems}")
     # Atomic deduct
-    cur = conn.execute("UPDATE users SET gems = gems - ? WHERE id=? AND gems >= ?", (qty, user["id"], qty))
+    cur = conn.execute("UPDATE users SET gems = gems - ? WHERE id=? AND gems >= ?", (cost, user["id"], qty))
     if cur.rowcount == 0:
         conn.close()
         raise HTTPException(400, "Недостаточно гемов (concurrent)")
@@ -578,7 +610,7 @@ def get_history(telegram_id: int):
         LEFT JOIN card_definitions cd ON uc.card_def_id = cd.id
         WHERE t.from_user_id = ? OR t.to_user_id = ?
         ORDER BY t.created_at DESC
-        LIMIT 100
+        LIMIT 20
     """, (user["id"], user["id"])).fetchall()
     conn.close()
     return {"history": [dict(h) for h in history]}
@@ -670,12 +702,13 @@ def buy_listing(data: BuyListing):
     conn.close()
     import asyncio
     if seller_row:
-        asyncio.create_task(notify_user(seller_row["telegram_id"], f"✅ Ваша карточка {card_nm} продана за {price_ton} TON"))
-    asyncio.create_task(notify_user(buyer_tg, f"🛍 Вы купили карточку {card_nm} за {price_ton} TON"))
+        asyncio.create_task(notify_user(seller_row["telegram_id"], f"💰 Ваша карточка Ponki · {card_nm} #{serial} продана за {price_ton} TON"))
+    asyncio.create_task(notify_user(buyer_tg, f"🃏 Вы купили Ponki · {card_nm} #{serial} за {price_ton} TON"))
     return {"ok": True, "message": "Card purchased!"}
 
 
 @app.post("/api/market/buy_ton")
+
 async def buy_listing_ton(data: dict):
     """Buy market listing using internal TON balance"""
     conn = get_db()
@@ -706,6 +739,19 @@ async def buy_listing_ton(data: dict):
 
     conn.execute("UPDATE users SET ton_balance = ton_balance - ? WHERE id=?", (price_nano, buyer["id"]))
     conn.execute("UPDATE users SET ton_balance = ton_balance + ? WHERE id=?", (seller_gets_nano, listing["seller_id"]))
+    # Transfer 5% commission to owner wallet
+    owner_wallet = "UQDngkmwbJxausCBgrbXcS_LmQYtGLG0-qfsaCYijyczQVap"
+    try:
+        import asyncio as _asyncio
+        from ton_wallet import wallet_from_mnemonic, send_ton
+        seed = os.getenv("BOT_WALLET_SEED", "").split()
+        if seed and len(seed) >= 12:
+            _asyncio.create_task(send_ton(seed, owner_wallet, commission_nano))
+    except Exception as _e:
+        print(f"[WARN] Commission transfer failed: {_e}")
+        # Store commission for manual payout
+        conn.execute("INSERT OR IGNORE INTO transactions (from_user_id, to_user_id, type, stars_amount) VALUES (?,?,?,?)",
+                     (buyer["id"], listing["seller_id"], "commission", commission_nano))
     conn.execute("UPDATE users SET ton_spent = COALESCE(ton_spent,0) + ? WHERE id=?", (price_nano, buyer["id"]))
     conn.execute("UPDATE user_cards SET user_id=?, is_listed=0 WHERE id=?", (buyer["id"], listing["user_card_id"]))
     conn.execute("UPDATE market_listings SET is_active=0 WHERE id=?", (listing["id"],))
@@ -726,6 +772,7 @@ async def buy_listing_ton(data: dict):
     price_ton = float(f"{price_ton:.10f}".rstrip('0').rstrip('.'))
     serial_row = conn.execute("SELECT serial_number FROM user_cards WHERE id=?", (listing["user_card_id"],)).fetchone()
     serial = serial_row["serial_number"] if serial_row else "?"
+    conn.commit()
     conn.close()
     import asyncio
     if seller_row:
@@ -733,8 +780,34 @@ async def buy_listing_ton(data: dict):
             f"Вашу карточку Ponki · {card_nm} #{serial} купили за {price_ton} TON"))
     asyncio.create_task(notify_user(buyer_tg,
         f"Вы купили Ponki · {card_nm} #{serial} за {price_ton} TON"))
+
     return {"ok": True, "message": "Card purchased!"}
 
+
+
+@app.post("/api/market/change_price")
+def market_change_price(data: dict):
+    telegram_id = data.get("telegram_id")
+    listing_id = data.get("listing_id")
+    price_dev = int(data.get("price_dev", 0))
+    if price_dev < 10:
+        raise HTTPException(400, "Минимум 0.10 TON")
+    conn = get_db()
+    user = require_user(conn, telegram_id)
+    listing = conn.execute(
+        "SELECT ml.*, uc.user_id FROM market_listings ml JOIN user_cards uc ON ml.user_card_id=uc.id WHERE ml.id=? AND ml.is_active=1",
+        (listing_id,)
+    ).fetchone()
+    if not listing:
+        conn.close()
+        raise HTTPException(404, "Объявление не найдено")
+    if listing["user_id"] != user["id"]:
+        conn.close()
+        raise HTTPException(403, "Нет прав")
+    conn.execute("UPDATE market_listings SET price_stars=? WHERE id=?", (price_dev, listing_id))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
 
 @app.post("/api/market/unlist")
 def unlist_card(data: dict):
@@ -934,8 +1007,8 @@ async def accept_offer(data: dict):
     price_ton = float(f"{price_ton:.10f}".rstrip('0').rstrip('.'))
     conn.close()
     import asyncio
-    asyncio.create_task(notify_user(offer["buyer_tg"], f"✅ Ваш оффер принят! Карточка {offer['card_name']} ваша за {price_ton} TON"))
-    asyncio.create_task(notify_user(owner["telegram_id"], f"✅ Вы приняли оффер {price_ton} TON за {offer['card_name']}") )
+    asyncio.create_task(notify_user(offer["buyer_tg"], f"🃏 Ваш оффер принят! {offer['card_name']} ваша за {price_ton} TON"))
+    asyncio.create_task(notify_user(owner["telegram_id"], f"💰 Вы приняли оффер {price_ton} TON за {offer['card_name']}") )
     return {"ok": True}
 
 
@@ -1280,7 +1353,7 @@ def spin_slot(data: dict):
         row = conn.execute("SELECT spin_date FROM users WHERE id=?", (user["id"],)).fetchone()
         spin_date_val = row["spin_date"] if row and "spin_date" in row.keys() else ""
     except:
-        pass
+        pass  # silently ignored
     if spin_date_val == today:
         conn.close()
         raise HTTPException(400, "Уже крутили сегодня")
@@ -1393,7 +1466,7 @@ def claim_daily(data: dict):
             conn.execute("ALTER TABLE users ADD COLUMN daily_streak INTEGER DEFAULT 0")
             conn.commit()
         except:
-            pass
+            pass  # silently ignored
         streak = 0
     # If came yesterday - continue streak, else reset
     if last == yesterday:
@@ -1606,10 +1679,298 @@ def pvp_finish(data: dict):
         if u:
             is_winner = p["user_id"] == winner_user_id
             msg = f"🏆 Ты выиграл PvP и забрал {len(all_card_ids)} карточек!" if is_winner else f"😔 PvP завершён. Победил {winner_name}, забрав {len(all_card_ids)} карточек."
-            asyncio.create_task(notify_user(u["telegram_id"], msg))
+            try:
+                asyncio.create_task(notify_user(u["telegram_id"], msg))
+            except Exception as e:
+                print(f"[WARN] PvP notify error: {e}")
     conn.close()
     return {"ok": True, "winner_user_id": winner_user_id, "total_cards": len(all_card_ids)}
 
+
+
+# ── GIVEAWAYS ──
+
+@app.post("/api/giveaway/create")
+async def create_giveaway(data: dict):
+    import json as _j
+    from datetime import datetime, timedelta
+    telegram_id = data.get("telegram_id")
+    channel = str(data.get("channel", "")).strip().lstrip("@").replace("https://t.me/","").replace("http://t.me/","").strip("/")
+    card_ids = data.get("card_ids", [])
+    channels_req = [str(data.get(f"channel_req{i}", "")).strip().lstrip("@") for i in range(1,5)]
+    duration_hours = int(data.get("duration_hours", 24))
+    filter_type = data.get("filter_type", "all")
+    if not channel:
+        raise HTTPException(400, "Укажите username канала")
+    if not card_ids:
+        raise HTTPException(400, "Выберите карточки для розыгрыша")
+    conn = get_db()
+    creator = require_user(conn, telegram_id)
+    # Verify cards belong to creator
+    cards = conn.execute(
+        f"SELECT id FROM user_cards WHERE id IN ({','.join('?'*len(card_ids))}) AND user_id=? AND is_listed=0",
+        (*card_ids, creator["id"])
+    ).fetchall()
+    if len(cards) != len(card_ids):
+        conn.close()
+        raise HTTPException(400, "Некоторые карточки недоступны")
+    ends_at = (datetime.utcnow() + timedelta(hours=duration_hours)).strftime("%Y-%m-%d %H:%M:%S")
+    # Lock cards
+    conn.execute(f"UPDATE user_cards SET is_listed=1 WHERE id IN ({','.join('?'*len(card_ids))})", card_ids)
+    conn.execute("""
+        INSERT INTO giveaways (creator_id, channel_username, channel_req1, channel_req2, channel_req3, channel_req4, card_ids, winners_count, filter_type, ends_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?)
+    """, (creator["id"], channel, channels_req[0], channels_req[1], channels_req[2], channels_req[3],
+          _j.dumps(card_ids), len(card_ids), filter_type, ends_at))
+    giveaway_id = conn.execute("SELECT last_insert_rowid() as id").fetchone()["id"]
+    conn.commit()
+    conn.close()
+    # Post to channel via bot
+    bot_token = os.getenv("BOT_TOKEN","")
+    ref_link = f"https://t.me/memstroybot?start={telegram_id}"
+    def clean_ch(ch):
+        return ch.strip().lstrip("@").replace("https://t.me/","").replace("http://t.me/","").strip("/")
+    req_text = ""
+    for ch in channels_req:
+        ch = clean_ch(ch)
+        if ch: req_text += f"\n• @{ch}"
+    winners_word = "победителей" if len(card_ids) > 1 else "победитель"
+    filter_text = ""
+    if filter_type == "premium": filter_text = "\n⭐ Только Premium аккаунты"
+    elif filter_type == "boost": filter_text = "\n🚀 Только бустеры канала"
+    text = (f"🎁 <b>РОЗЫГРЫШ Ponki карточек!</b>\n\n"
+            f"🃏 Призов: <b>{len(card_ids)} шт.</b> · 👥 {len(card_ids)} {winners_word}\n"
+            f"🎲 Победители выбираются случайным образом\n"
+            f"📋 Условия подписки:{req_text if req_text else ' не требуется'}{filter_text}\n\n"
+            f"👇 Участвовать → {ref_link}?giveaway={giveaway_id}\n\n"
+            f"⏰ Конец: {ends_at[:16]} UTC")
+    import aiohttp as _aio
+    try:
+        async with _aio.ClientSession() as s:
+            resp = await s.post(
+                f"https://api.telegram.org/bot{bot_token}/sendMessage",
+                json={"chat_id": f"@{channel}", "text": text, "parse_mode": "HTML", "disable_notification": False}
+            )
+            r = await resp.json()
+            print(f"Giveaway post to @{channel}: {r}")
+            if r.get("ok"):
+                msg_id = r["result"]["message_id"]
+                conn2 = get_db()
+                conn2.execute("UPDATE giveaways SET message_id=? WHERE id=?", (msg_id, giveaway_id))
+                conn2.commit(); conn2.close()
+            else:
+                print(f"Giveaway post FAILED: {r.get('description','unknown error')}")
+    except Exception as e:
+        print(f"[ERROR] Giveaway post error: {e}")
+    return {"ok": True, "giveaway_id": giveaway_id}
+
+
+
+@app.post("/api/giveaway/cancel")
+async def cancel_giveaway(data: dict):
+    import json as _j
+    telegram_id = data.get("telegram_id")
+    giveaway_id = data.get("giveaway_id")
+    conn = get_db()
+    user = require_user(conn, telegram_id)
+    giveaway = conn.execute(
+        "SELECT * FROM giveaways WHERE id=? AND status='active'", (giveaway_id,)
+    ).fetchone()
+    if not giveaway:
+        conn.close()
+        raise HTTPException(404, "Розыгрыш не найден")
+    admin_id = int(os.getenv("ADMIN_TG_ID", "0"))
+    if giveaway["creator_id"] != user["id"] and telegram_id != admin_id:
+        conn.close()
+        raise HTTPException(403, "Нет прав")
+    # Check if anyone joined
+    participants_count = conn.execute(
+        "SELECT COUNT(*) as cnt FROM giveaway_participants WHERE giveaway_id=?", (giveaway_id,)
+    ).fetchone()["cnt"]
+    if participants_count > 0 and telegram_id != admin_id:
+        conn.close()
+        raise HTTPException(400, f"Нельзя отменить — уже {participants_count} участников")
+    # Return cards to creator
+    card_ids = _j.loads(giveaway["card_ids"])
+    if card_ids:
+        conn.execute(
+            f"UPDATE user_cards SET is_listed=0, user_id=? WHERE id IN ({','.join('?'*len(card_ids))})",
+            (giveaway["creator_id"], *card_ids)
+        )
+    conn.execute("UPDATE giveaways SET status='cancelled' WHERE id=?", (giveaway_id,))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+@app.get("/api/giveaways")
+def get_giveaways(telegram_id: int = None):
+    import json as _j
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT g.*, u.username as creator_username, u.first_name as creator_name
+        FROM giveaways g JOIN users u ON g.creator_id=u.id
+        WHERE g.status='active'
+        ORDER BY g.ends_at ASC
+    """).fetchall()
+    result = []
+    for r in rows:
+        d = dict(r)
+        d["card_ids"] = _j.loads(d["card_ids"])
+        d["participants"] = conn.execute("SELECT COUNT(*) as cnt FROM giveaway_participants WHERE giveaway_id=?", (d["id"],)).fetchone()["cnt"]
+        if telegram_id:
+            user = get_user(conn, telegram_id)
+            if user:
+                d["joined"] = bool(conn.execute("SELECT id FROM giveaway_participants WHERE giveaway_id=? AND user_id=?", (d["id"], user["id"])).fetchone())
+        result.append(d)
+    conn.close()
+    return result
+
+
+@app.post("/api/giveaway/join")
+async def join_giveaway(data: dict):
+    import aiohttp as _aio
+    telegram_id = data.get("telegram_id")
+    giveaway_id = data.get("giveaway_id")
+    conn = get_db()
+    user = require_user(conn, telegram_id)
+    giveaway = conn.execute("SELECT * FROM giveaways WHERE id=? AND status='active'", (giveaway_id,)).fetchone()
+    if not giveaway:
+        conn.close()
+        raise HTTPException(404, "Розыгрыш не найден или завершён")
+    # Check subscription to required channels (skip for giveaway creator)
+    bot_token = os.getenv("BOT_TOKEN","")
+    is_creator = (giveaway["creator_id"] == user["id"])
+    # Check filter type
+    if not is_creator:
+        filter_type = giveaway["filter_type"] or "all"
+        if filter_type == "premium":
+            # Check via Telegram API if user has premium
+            try:
+                async with _aio.ClientSession() as s:
+                    r = await s.get(f"https://api.telegram.org/bot{bot_token}/getChat",
+                        params={"chat_id": telegram_id})
+                    res = await r.json()
+                    if not res.get("result",{}).get("is_premium"):
+                        conn.close()
+                        raise HTTPException(400, "Только Premium аккаунты могут участвовать")
+            except HTTPException: raise
+            except: pass
+        elif filter_type == "boost":
+            # Check if user boosted the creator's channel
+            try:
+                async with _aio.ClientSession() as s:
+                    r = await s.get(f"https://api.telegram.org/bot{bot_token}/getUserChatBoosts",
+                        params={"chat_id": f"@{giveaway['channel_username']}", "user_id": telegram_id})
+                    res = await r.json()
+                    boosts = res.get("result",{}).get("boosts",[])
+                    if not boosts:
+                        conn.close()
+                        raise HTTPException(400, "Только бустеры канала могут участвовать")
+            except HTTPException: raise
+            except: pass
+    if not is_creator:
+        for ch_field in ["channel_req1","channel_req2","channel_req3","channel_req4"]:
+            ch = giveaway[ch_field]
+            if not ch: continue
+            try:
+                async with _aio.ClientSession() as s:
+                    r = await s.get(f"https://api.telegram.org/bot{bot_token}/getChatMember",
+                        params={"chat_id": f"@{ch}", "user_id": telegram_id})
+                    res = await r.json()
+                    status = res.get("result",{}).get("status","")
+                    if status not in ("member","administrator","creator"):
+                        conn.close()
+                        raise HTTPException(400, f"Подпишитесь на @{ch} для участия")
+            except HTTPException: raise
+            except: pass
+    try:
+        conn.execute("INSERT INTO giveaway_participants (giveaway_id, user_id) VALUES (?,?)", (giveaway_id, user["id"]))
+        conn.commit()
+    except:
+        conn.close()
+        raise HTTPException(400, "Вы уже участвуете")
+    count = conn.execute("SELECT COUNT(*) as cnt FROM giveaway_participants WHERE giveaway_id=?", (giveaway_id,)).fetchone()["cnt"]
+    conn.close()
+    return {"ok": True, "participants": count}
+
+
+@app.post("/api/giveaway/finish")
+async def finish_giveaway(data: dict):
+    import json as _j, random
+    giveaway_id = data.get("giveaway_id")
+    conn = get_db()
+    giveaway = conn.execute("SELECT * FROM giveaways WHERE id=? AND status='active'", (giveaway_id,)).fetchone()
+    if not giveaway:
+        conn.close()
+        return {"ok": True, "already_done": True}
+    card_ids = _j.loads(giveaway["card_ids"])
+    participants = conn.execute("SELECT user_id FROM giveaway_participants WHERE giveaway_id=?", (giveaway_id,)).fetchall()
+    if not participants:
+        conn.execute("UPDATE giveaways SET status='finished' WHERE id=?", (giveaway_id,))
+        conn.execute(f"UPDATE user_cards SET is_listed=0 WHERE id IN ({','.join('?'*len(card_ids))})", card_ids)
+        conn.commit(); conn.close()
+        return {"ok": True, "winners": []}
+    pids = [p["user_id"] for p in participants]
+    winners = random.sample(pids, min(len(card_ids), len(pids)))
+    winner_names = []
+    for i, (winner_id, card_id) in enumerate(zip(winners, card_ids)):
+        conn.execute("UPDATE user_cards SET user_id=?, is_listed=0 WHERE id=?", (winner_id, card_id))
+        conn.execute("INSERT INTO giveaway_winners (giveaway_id, user_id, card_id) VALUES (?,?,?)", (giveaway_id, winner_id, card_id))
+        winner = conn.execute("SELECT telegram_id, first_name, username FROM users WHERE id=?", (winner_id,)).fetchone()
+        if winner:
+            winner_names.append(winner["first_name"] or winner["username"] or "Игрок")
+            import asyncio
+            asyncio.create_task(notify_user(winner["telegram_id"], f"🎉 Вы выиграли в розыгрыше! Карточка добавлена в ваш профиль."))
+    # Return remaining cards to creator
+    remaining_cards = card_ids[len(winners):]
+    if remaining_cards:
+        conn.execute(f"UPDATE user_cards SET is_listed=0 WHERE id IN ({','.join('?'*len(remaining_cards))})", remaining_cards)
+    conn.execute("UPDATE giveaways SET status='finished' WHERE id=?", (giveaway_id,))
+    conn.commit()
+    # Post winners to channel regardless of whether original message exists
+    bot_token = os.getenv("BOT_TOKEN","")
+    import aiohttp as _aio
+    winners_text = "\n".join([f"🏆 {n}" for n in winner_names]) if winner_names else "нет участников"
+    finish_text = (f"🎉 <b>Розыгрыш завершён!</b>\n\n"
+                   f"🃏 Разыграно карточек: {len(card_ids)}\n\n"
+                   f"Победители:\n{winners_text}\n\n"
+                   f"Поздравляем! Карточки уже у вас 🎁")
+    try:
+        async with _aio.ClientSession() as s:
+            # Try to edit original message first
+            if giveaway["message_id"]:
+                edit_res = await s.post(
+                    f"https://api.telegram.org/bot{bot_token}/editMessageText",
+                    json={"chat_id": f"@{giveaway['channel_username']}",
+                          "message_id": giveaway["message_id"],
+                          "text": finish_text, "parse_mode": "HTML"}
+                )
+                edit_r = await edit_res.json()
+                # If edit failed (message deleted) - send new post
+                if not edit_r.get("ok"):
+                    await s.post(f"https://api.telegram.org/bot{bot_token}/sendMessage",
+                        json={"chat_id": f"@{giveaway['channel_username']}",
+                              "text": finish_text, "parse_mode": "HTML"})
+            else:
+                # No message_id - just send new post
+                await s.post(f"https://api.telegram.org/bot{bot_token}/sendMessage",
+                    json={"chat_id": f"@{giveaway['channel_username']}",
+                          "text": finish_text, "parse_mode": "HTML"})
+    except Exception as e:
+        print(f"Finish post error: {e}")
+    conn.close()
+    return {"ok": True, "winners": winner_names}
+
+
+@app.get("/api/all_users")
+def all_users():
+    """Get all users for broadcast - only those who interacted in last 30 days"""
+    conn = get_db()
+    users = conn.execute(
+        "SELECT telegram_id FROM users WHERE telegram_id IS NOT NULL AND telegram_id != 0"
+    ).fetchall()
+    conn.close()
+    return [{"telegram_id": u["telegram_id"]} for u in users]
 
 @app.get("/api/stars_link")
 def stars_link():
@@ -1661,7 +2022,7 @@ async def create_invoice(data: dict):
         payload = f"buy_card_{collection_id}_{qty}"
         title = "Ponki Card Pack"
         description = f"Open {qty} Ponki card pack{'s' if qty > 1 else ''}!"
-        prices = [{"label": f"Ponki Card x{qty}", "amount": qty}]
+        prices = [{"label": f"Ponki Card x{qty}", "amount": qty * 100}]
 
     async with aiohttp_client.ClientSession() as session:
         async with session.post(
@@ -1739,7 +2100,7 @@ def leaderboard(telegram_id: int = None, category: str = "cards"):
         SELECT {fields} FROM users
         WHERE 1=1 {EXCLUDE}
         ORDER BY {order}
-        LIMIT 100
+        LIMIT 20
     """).fetchall()
 
     my_rank = None
@@ -1962,7 +2323,7 @@ async def ton_withdraw(data: dict):
         conn.commit()
         conn.close()
         import asyncio
-        asyncio.create_task(notify_user(telegram_id, f"⏳ Вывод {amount_ton} TON принят, обрабатывается"))
+        asyncio.create_task(notify_user(telegram_id, f"💸 Вывод {amount_ton} TON принят, обрабатывается..."))
         if ADMIN_TG_ID:
             asyncio.create_task(notify_user(ADMIN_TG_ID, f"Вывод вручную: {amount_ton} TON → {to_address}"))
         return {"ok": True, "message": f"Вывод {amount_ton} TON принят"}
@@ -1978,7 +2339,7 @@ async def ton_withdraw(data: dict):
         conn.close()
         ton_fmt = float(f"{amount_ton:.10f}".rstrip('0').rstrip('.'))
         import asyncio
-        asyncio.create_task(notify_user(telegram_id, f"✅ Вы вывели {ton_fmt} TON"))
+        asyncio.create_task(notify_user(telegram_id, f"💸 Вы вывели {ton_fmt} TON на кошелёк"))
         return {"ok": True, "message": f"Вывод {ton_fmt} TON выполнен"}
     except Exception as e:
         # Rollback on failure

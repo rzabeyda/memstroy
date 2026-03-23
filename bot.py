@@ -25,6 +25,10 @@ async def start(message: types.Message):
         [
             InlineKeyboardButton(text="🦄 Open Memstroy", web_app=WebAppInfo(url=WEBAPP_URL)),
             InlineKeyboardButton(text="💬 Community", url="https://t.me/ponki_world"),
+        ],
+        [
+            InlineKeyboardButton(text="💬 Чат", url="https://t.me/ponki_world_chat"),
+            InlineKeyboardButton(text="🆘 Support", url="https://t.me/memstroy_support"),
         ]
     ])
 
@@ -120,7 +124,50 @@ async def successful_payment(message: types.Message):
             )
 
 
+async def send_daily_reminder():
+    """Send daily reminder to all users at 08:30 UTC (11:30 MSK)"""
+    import aiohttp, os
+    api_url = os.getenv("API_URL", "http://localhost:8000")
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{api_url}/api/all_users") as resp:
+                users = await resp.json()
+        for user in users:
+            tg_id = user.get("telegram_id")
+            if not tg_id:
+                continue
+            try:
+                await bot.send_message(
+                    tg_id,
+                    "☀️ Доброго дня!\n\n🎁 Твоя ежедневная награда ждёт тебя!\nЗаходи в Memstroy и забирай гемы 💎\n\nЧем дольше стрик — тем больше награда 🔥",
+                    reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+                        InlineKeyboardButton(text="🦄 Забрать награду", web_app=WebAppInfo(url=os.getenv("WEBAPP_URL","https://memstroy.app")))
+                    ]])
+                )
+                await asyncio.sleep(0.05)  # avoid flood
+            except Exception:
+                pass
+    except Exception as e:
+        logging.error(f"Daily reminder error: {e}")
+
+
+async def scheduler():
+    """Run daily reminder at 08:30 UTC every day"""
+    from datetime import datetime, timezone
+    while True:
+        now = datetime.now(timezone.utc)
+        # Next 08:30 UTC
+        target = now.replace(hour=8, minute=30, second=0, microsecond=0)
+        if now >= target:
+            target = target.replace(day=target.day+1)
+        wait_seconds = (target - now).total_seconds()
+        logging.info(f"Next daily reminder in {wait_seconds/3600:.1f} hours")
+        await asyncio.sleep(wait_seconds)
+        await send_daily_reminder()
+
+
 async def main():
+    asyncio.create_task(scheduler())
     await dp.start_polling(bot)
 
 

@@ -315,6 +315,44 @@ def init_db():
     except:
         pass
 
+    # Giveaways
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS giveaways (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            creator_id INTEGER REFERENCES users(id),
+            channel_username TEXT NOT NULL,
+            channel_req1 TEXT DEFAULT '',
+            channel_req2 TEXT DEFAULT '',
+            channel_req3 TEXT DEFAULT '',
+            channel_req4 TEXT DEFAULT '',
+            card_ids TEXT NOT NULL,
+            winners_count INTEGER DEFAULT 1,
+            filter_type TEXT DEFAULT 'all',
+            ends_at DATETIME NOT NULL,
+            status TEXT DEFAULT 'active',
+            message_id INTEGER DEFAULT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS giveaway_participants (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            giveaway_id INTEGER REFERENCES giveaways(id),
+            user_id INTEGER REFERENCES users(id),
+            joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(giveaway_id, user_id)
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS giveaway_winners (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            giveaway_id INTEGER REFERENCES giveaways(id),
+            user_id INTEGER REFERENCES users(id),
+            card_id INTEGER REFERENCES user_cards(id),
+            notified INTEGER DEFAULT 0
+        )
+    """)
+
     conn.commit()
     conn.close()
     print("✅ Database initialized")
