@@ -287,6 +287,34 @@ def init_db():
         )
     """)
 
+    # PvP lobby
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS pvp_lobby (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER REFERENCES users(id),
+            card_ids TEXT NOT NULL,
+            status TEXT DEFAULT 'waiting',
+            battle_id INTEGER DEFAULT NULL,
+            joined_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # PvP battles
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS pvp_battles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            status TEXT DEFAULT 'countdown',
+            winner_user_id INTEGER REFERENCES users(id),
+            started_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # daily_streak column
+    try:
+        cur.execute("ALTER TABLE users ADD COLUMN daily_streak INTEGER DEFAULT 0")
+    except:
+        pass
+
     conn.commit()
     conn.close()
     print("✅ Database initialized")

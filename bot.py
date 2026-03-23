@@ -8,7 +8,7 @@ import os
 import aiohttp
 from dotenv import load_dotenv
 
-load_dotenv(r"C:\memstroy\.env")
+load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 WEBAPP_URL = os.getenv("WEBAPP_URL", "https://yourdomain.com")
@@ -22,21 +22,33 @@ dp = Dispatcher()
 @dp.message(CommandStart())
 async def start(message: types.Message):
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(
-            text="Open",
-            web_app=WebAppInfo(url=WEBAPP_URL)
-        )]
+        [
+            InlineKeyboardButton(text="🦄 Open Memstroy", web_app=WebAppInfo(url=WEBAPP_URL)),
+            InlineKeyboardButton(text="💬 Community", url="https://t.me/ponki_world"),
+        ]
     ])
 
     ref_code = None
     if message.text and len(message.text.split()) > 1:
         ref_code = message.text.split()[1]
 
-    name = message.from_user.username or message.from_user.first_name or "friend"
-    await message.answer(
-        f"Hey, @{name} 👋",
-        reply_markup=kb
+    name = message.from_user.first_name or message.from_user.username or "friend"
+    text = (
+        f"Привет, {name}! 👋\n\n"
+        f"🎴 <b>Memstroy</b> — коллекционные карточки в Telegram\n\n"
+        f"Первая коллекция <b>Ponki</b> уже доступна:\n"
+        f"🃏 50 уникальных моделей · 10 000 карточек\n"
+        f"💎 Зарабатывай гемы за задания\n"
+        f"📈 Торгуй на рынке с другими игроками\n"
+        f"🎰 Испытай удачу в играх\n\n"
+        f"👇 Открывай и начинай собирать!"
     )
+    try:
+        from aiogram.types import FSInputFile
+        photo = FSInputFile("/root/memstroy/static/icons/ponki_and_pepe.png")
+        await message.answer_photo(photo=photo, caption=text, reply_markup=kb, parse_mode="HTML")
+    except Exception:
+        await message.answer(text, reply_markup=kb, parse_mode="HTML")
 
     async with aiohttp.ClientSession() as session:
         payload = {

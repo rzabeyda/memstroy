@@ -11,8 +11,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 :root{--bg:#0a0a0a;--bg2:#111;--bg3:#1a1a1a;--border:#222;--text:#fff;--text2:#888;--text3:#444;--star:#f0c040;--dev:#4aff8a;--success:#4aff8a;--danger:#ff4a4a;--tab-h:64px;--safe-b:env(safe-area-inset-bottom,0px)}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+#splash{position:fixed;inset:0;background:#0a0a0a;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;transition:opacity 0.4s ease}
+#splash.hide{opacity:0;pointer-events:none}
+@keyframes splashPulse{0%,100%{transform:scale(1);opacity:0.9}50%{transform:scale(1.08);opacity:1}}
+@keyframes splashDots{0%,80%,100%{transform:scale(0);opacity:0.3}40%{transform:scale(1);opacity:1}}
+.splash-logo{animation:splashPulse 1.8s ease-in-out infinite}
+.splash-dot{width:8px;height:8px;border-radius:50%;background:#ff2d78;display:inline-block;margin:0 3px}
+.splash-dot:nth-child(1){animation:splashDots 1.2s 0s infinite}
+.splash-dot:nth-child(2){animation:splashDots 1.2s 0.2s infinite}
+.splash-dot:nth-child(3){animation:splashDots 1.2s 0.4s infinite}
 body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;height:100vh;overflow:hidden;position:fixed;width:100%}
-.page{position:absolute;inset:0;bottom:calc(var(--tab-h) + var(--safe-b));overflow-y:auto;overflow-x:hidden;display:none;-webkit-overflow-scrolling:touch}
+.page{position:absolute;inset:0;bottom:calc(54px + 22px);overflow-y:auto;overflow-x:hidden;display:none;-webkit-overflow-scrolling:touch}
 .page.active{display:block}
 .page::-webkit-scrollbar{display:none}
 .page-header{padding:20px 20px 0;display:flex;align-items:center;justify-content:space-between}
@@ -21,7 +30,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;heigh
 .badge:active{transform:scale(0.93);opacity:0.8}
 .badge-star{background:#1a1500;border:1px solid #332800;color:var(--star)}
 .badge-dev{background:#0d1a0d;border:1px solid #1a3a1a;color:var(--dev)}
-.tabs{position:fixed;bottom:0;left:0;right:0;height:calc(var(--tab-h) + var(--safe-b));padding-bottom:var(--safe-b);background:var(--bg2);border-top:1px solid var(--border);display:flex;align-items:center;z-index:100}
+.tabs{position:fixed;bottom:10px;left:14px;right:14px;height:54px;padding-bottom:0;background:var(--bg2);border:1px solid var(--border);border-radius:27px;display:flex;align-items:center;z-index:100;box-shadow:0 4px 28px rgba(0,0,0,0.5)}
 .tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;height:100%;background:none;border:none;cursor:pointer;color:var(--text3);font-family:'Inter',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.5px;transition:color 0.2s}
 .tab-btn.active{color:#ff2d78}
 .tab-btn svg{width:24px;height:24px;transition:transform 0.2s,opacity 0.2s;opacity:0.4}
@@ -193,7 +202,11 @@ function applyLang() {
 
 async function api(path, method='GET', body=null) {
   const opts = {method, headers:{'Content-Type':'application/json'}};
-  if (body) opts.body = JSON.stringify(body);
+  if (method === 'POST' && body) {
+    // Always include initData for server-side Telegram signature verification
+    body._init_data = tg?.initData || '';
+    opts.body = JSON.stringify(body);
+  }
   const res = await fetch(path, opts);
   if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.detail||'Error'); }
   return res.json();
@@ -236,12 +249,11 @@ function updateBalances() {
   const tonFmt = tonBal > 0 ? (tonBal / tonNano).toFixed(2) : '0';
   const tv = document.getElementById('ton-val-trade');
   if (tv) tv.textContent = tonFmt;
-  // Cashback
   const cb = userData.cashback_balance || 0;
   const cbEl = document.getElementById('cashback-val');
-  if (cbEl) cbEl.textContent = (cb/1e9).toFixed(2);
-  const earnEl = document.getElementById('earned-val');
-  if (earnEl) earnEl.textContent = userData.referral_earnings || 0;
+  if (cbEl) cbEl.textContent = cb===0?'0':((cb/1e9).toFixed(2).replace(/\.?0+$/,''));
+  const gemsEl = document.getElementById('gems-val');
+  if (gemsEl) gemsEl.textContent = userData.gems || 0;
 }
 
 function switchTab(tab) {
@@ -286,13 +298,41 @@ async function init() {
   applyLang();
   try {
     const startParam = tg?.initDataUnsafe?.start_param || new URLSearchParams(location.search).get('ref') || null;
-    await api('/api/register','POST',{telegram_id:tgUser.id,username:tgUser.username||'',first_name:tgUser.first_name||'',last_name:tgUser.last_name||'',ref_code:startParam});
+    const regRes = await api('/api/register','POST',{telegram_id:tgUser.id,username:tgUser.username||'',first_name:tgUser.first_name||'',last_name:tgUser.last_name||'',ref_code:startParam});
     userData = await api(`/api/user/${tgUser.id}`);
     updateBalances(); loadBuy();
+    // Hide splash screen
+    setTimeout(()=>{
+      const splash = document.getElementById('splash');
+      if(splash){splash.classList.add('hide');setTimeout(()=>splash.remove(),400);}
+    }, 300);
+    if(regRes && regRes.new) {
+      setTimeout(()=>{
+        const wLang = userLang==='ru';
+        const wHtml = '<div style="text-align:center;padding:8px 0 16px">'
+          + '<div style="font-size:52px;margin-bottom:12px">🦄</div>'
+          + '<div style="font-size:20px;font-weight:900;margin-bottom:6px">Ponki</div>'
+          + '<div style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6">'+(wLang?'50 уникальных карточек · торгуй · зарабатывай · играй':'50 unique cards · trade · earn · play')+'</div>'
+          + '<div style="background:linear-gradient(135deg,rgba(167,139,250,0.15),rgba(167,139,250,0.05));border:1px solid rgba(167,139,250,0.3);border-radius:14px;padding:16px;margin-bottom:16px">'
+            + '<div style="font-size:13px;color:var(--text2);margin-bottom:4px">'+(wLang?'Стартовый подарок:':'Welcome gift:')+'</div>'
+            + '<div style="font-size:28px;font-weight:900;color:#a78bfa">+5 💎</div>'
+            + '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+(wLang?'гемов зачислено на баланс':'gems added to your balance')+'</div>'
+          + '</div>'
+          + '</div>'
+          + '<button class="btn btn-primary btn-wide" onclick="closeModal()">'+(wLang?'Начать собирать!':'Start collecting!')+'</button>';
+        openModal(wLang?'🎁 Добро пожаловать!':'🎁 Welcome!', wHtml);
+      }, 800);
+    }
   } catch(e) { toast('Connection error','err'); }
 }
 
 // ── SHOP ──
+function _gemBuyBtn(colId, qty) {
+  const label = (userLang==='ru'?'Купить за':'Buy for') + ' ' + qty;
+  const gem = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><path d="M6 3L3 9L12 21L21 9L18 3Z" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.2"/><path d="M3 9L12 12L21 9" stroke="#c4b5fd" stroke-width="1"/><path d="M12 3L9 9L12 12L15 9Z" fill="#c4b5fd" opacity="0.5"/><circle cx="12" cy="5.5" r="1" fill="#ede9fe" opacity="0.9"/></svg>';
+  return '<button class="btn btn-secondary btn-wide" id="buy-gems-btn" onclick="buyCardWithGems(' + colId + ')" style="border-color:rgba(167,139,250,0.4);color:#a78bfa;margin-top:6px">' + label + ' ' + gem + '</button>';
+}
+
 async function loadBuy() {
   if (!userData) return;
   const el = document.getElementById('buy-content');
@@ -304,35 +344,75 @@ async function loadBuy() {
     // Keep qty selection across tab switches
     const qty=_buyQty||1;
     const desc = userLang==='ru' ? t.descShop : t.descShop;
-    el.innerHTML = `
-      <div style="background:var(--bg2);border:1px solid rgba(255,45,120,0.55);border-radius:18px;padding:20px;text-align:center;box-shadow:0 0 28px rgba(255,45,120,0.18),0 0 60px rgba(255,45,120,0.07),inset 0 0 1px rgba(255,255,255,0.04)">
-        <div style="font-size:26px;font-weight:800;margin-bottom:4px">${col.name}</div>
-        <div style="font-size:13px;color:var(--text2);margin-bottom:16px">${desc}</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px">
-          <div style="background:var(--bg3);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 4px"><div style="font-size:16px;font-weight:800">${fmtNum(col.remaining)}</div><div style="font-size:9px;color:var(--text2);margin-top:2px">${t.left}</div></div>
-          <div style="background:var(--bg3);border:1px solid rgba(240,192,64,0.35);border-radius:10px;padding:10px 4px;box-shadow:0 0 10px rgba(240,192,64,0.08)"><div style="font-size:16px;font-weight:800;color:var(--star)">1⭐</div><div style="font-size:9px;color:var(--text2);margin-top:2px">${t.price}</div></div>
-          <div style="background:var(--bg3);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 4px"><div style="font-size:16px;font-weight:800">${fmtNum(col.total_supply)}</div><div style="font-size:9px;color:var(--text2);margin-top:2px">${t.supply}</div></div>
-        </div>
-        <div class="ponki-hero-wrap" style="max-width:220px;margin:0 auto 20px;aspect-ratio:1/1;overflow:hidden;border:1px solid rgba(255,45,120,0.3);background:var(--bg3)">
-          <img class="ponki-hero" src="/static/ponki/ponki.png" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <button class="btn btn-secondary" style="width:44px;height:44px;font-size:20px;flex-shrink:0;padding:0" onclick="changeQty(-1)">−</button>
-          <div style="flex:1;text-align:center"><span id="qty-val" style="font-size:22px;font-weight:800">${qty}</span> <span id="qty-word" style="font-size:13px;color:var(--text2)">${t.cardCount(qty)}</span></div>
-          <button class="btn btn-secondary" style="width:44px;height:44px;font-size:20px;flex-shrink:0;padding:0" onclick="changeQty(1)">+</button>
-        </div>
-        <button class="btn btn-primary" id="buy-btn" onclick="buyCard(${col.id})">${qty===1?`${t.buy} — 1 ⭐`:`${t.buy} ${qty} ⭐`}</button>
-      </div>`;
+    const modelsLabel = userLang==='ru'?'МОДЕЛЕЙ':'MODELS';
+    const buyLabel = userLang==='ru'?'Купить за':'Buy for';
+    const starSvg = '<svg width="14" height="14" viewBox="0 0 24 24" style="vertical-align:middle"><defs><linearGradient id="starG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffe566"/><stop offset="100%" stop-color="#f0a000"/></linearGradient></defs><polygon points="12,2 14.8,8.6 22,9.5 17,14.2 18.5,21.4 12,17.8 5.5,21.4 7,14.2 2,9.5 9.2,8.6" fill="url(#starG)" stroke="#c07800" stroke-width="0.5"/></svg>';
+    el.innerHTML = '<div style="background:var(--bg2);border:1px solid rgba(255,45,120,0.55);border-radius:18px;padding:20px;text-align:center;box-shadow:0 0 28px rgba(255,45,120,0.18)">'
+      + '<div style="font-size:26px;font-weight:800;margin-bottom:4px">'+(col.name==='Ponki'?'Ponki World':col.name)+'</div>'
+      + '<div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:2px">'+(userLang==="ru"?"Открывай · улучшай · торгуй":"Open · upgrade · trade")+'</div>'
+      + '<div style="font-size:13px;color:var(--text2);margin-bottom:4px">'+desc+'</div>'
+      + '<div style="font-size:12px;color:#ff4a4a;margin-bottom:12px;font-weight:700">🔥 Нераскупленные карты сгорят 30 апреля!</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px">'
+        + '<div style="background:var(--bg3);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 4px"><div style="font-size:16px;font-weight:800">'+fmtNum(col.remaining)+'</div><div style="font-size:9px;color:var(--text2);margin-top:2px">'+t.left+'</div></div>'
+        + '<div onclick="openPriceInfoModal()" style="cursor:pointer;background:var(--bg3);border:1px solid rgba(255,45,120,0.35);border-radius:10px;padding:10px 4px;box-shadow:0 0 10px rgba(255,45,120,0.08)"><div style="font-size:16px;font-weight:800;color:#ff2d78">50</div><div style="font-size:9px;color:var(--text2);margin-top:2px">'+modelsLabel+'</div></div>'
+        + '<div style="background:var(--bg3);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 4px"><div style="font-size:16px;font-weight:800">'+fmtNum(col.total_supply)+'</div><div style="font-size:9px;color:var(--text2);margin-top:2px">'+t.supply+'</div></div>'
+      + '</div>'
+      + '<div class="ponki-hero-wrap" style="max-width:220px;margin:0 auto 20px;aspect-ratio:1/1;overflow:hidden;border:1px solid rgba(255,45,120,0.3);background:var(--bg3)">'
+        + '<img class="ponki-hero" src="/static/ponki/ponki.png" style="width:100%;height:100%;object-fit:cover">'
+      + '</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:16px">'
+        + '<div style="background:rgba(255,255,255,0.05);border-radius:10px;padding:10px 6px;text-align:center">'
+          + '<div style="font-size:20px;margin-bottom:4px">🃏</div>'
+          + '<div style="font-size:10px;font-weight:700;color:#fff">'+( userLang==="ru"?"Купи":"Buy")+'</div>'
+          + '<div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:2px">'+(userLang==="ru"?"Открой карточку":"Open a card")+'</div>'
+        + '</div>'
+        + '<div style="background:rgba(255,255,255,0.05);border-radius:10px;padding:10px 6px;text-align:center">'
+          + '<div style="font-size:20px;margin-bottom:4px">✨</div>'
+          + '<div style="font-size:10px;font-weight:700;color:#fff">'+(userLang==="ru"?"Улучши":"Upgrade")+'</div>'
+          + '<div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:2px">'+(userLang==="ru"?"Узнай модель":"Reveal model")+'</div>'
+        + '</div>'
+        + '<div style="background:rgba(255,255,255,0.05);border-radius:10px;padding:10px 6px;text-align:center">'
+          + '<div style="font-size:20px;margin-bottom:4px">📈</div>'
+          + '<div style="font-size:10px;font-weight:700;color:#fff">'+(userLang==="ru"?"Торгуй":"Trade")+'</div>'
+          + '<div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:2px">'+(userLang==="ru"?"Продай на рынке":"Sell on market")+'</div>'
+        + '</div>'
+      + '</div>'
+      + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+        + '<button class="btn btn-secondary" style="width:44px;height:44px;font-size:20px;flex-shrink:0;padding:0" onclick="changeQty(-1)">−</button>'
+        + '<div style="flex:1;text-align:center"><span id="qty-val" style="font-size:22px;font-weight:800">'+qty+'</span> <span id="qty-word" style="font-size:13px;color:var(--text2)">'+t.cardCount(qty)+'</span></div>'
+        + '<button class="btn btn-secondary" style="width:44px;height:44px;font-size:20px;flex-shrink:0;padding:0" onclick="changeQty(1)">+</button>'
+      + '</div>'
+      + '<button class="btn btn-secondary btn-wide" id="buy-btn" onclick="buyCard('+col.id+')" style="border-color:rgba(240,192,64,0.4);color:#f0c040">'+buyLabel+' '+qty+' '+starSvg+'</button>'
+      + ((userData?.gems||0)>=qty ? _gemBuyBtn(col.id,qty) : '')
+      + '</div>';
   } catch(e) { el.innerHTML=`<div class="empty-state"><p>${e.message}</p></div>`; }
 }
 
 let _buyQty=1,_buyColId=null,_buyPrice=1;
+const _starSvg14 = '<svg width="14" height="14" viewBox="0 0 24 24" style="vertical-align:middle"><defs><linearGradient id="starG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffe566"/><stop offset="100%" stop-color="#f0a000"/></linearGradient></defs><polygon points="12,2 14.8,8.6 22,9.5 17,14.2 18.5,21.4 12,17.8 5.5,21.4 7,14.2 2,9.5 9.2,8.6" fill="url(#starG)" stroke="#c07800" stroke-width="0.5"/></svg>';
+const _gemSvg16 = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><path d="M6 3L3 9L12 21L21 9L18 3Z" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.2"/><path d="M3 9L12 12L21 9" stroke="#c4b5fd" stroke-width="1"/><path d="M12 3L9 9L12 12L15 9Z" fill="#c4b5fd" opacity="0.5"/><circle cx="12" cy="5.5" r="1" fill="#ede9fe" opacity="0.9"/></svg>';
 function changeQty(d) {
   haptic(); _buyQty=Math.max(1,Math.min(500,_buyQty+d));
-  const qv=document.getElementById('qty-val'), qw=document.getElementById('qty-word'), bb=document.getElementById('buy-btn');
+  const qv=document.getElementById('qty-val'), qw=document.getElementById('qty-word'), bb=document.getElementById('buy-btn'), bg=document.getElementById('buy-gems-btn');
+  const bl = userLang==='ru'?'Купить за':'Buy for';
   if(qv) qv.textContent=_buyQty;
   if(qw) qw.textContent=t.cardCount(_buyQty);
-  if(bb) bb.textContent=_buyQty===1?`${t.buy} — 1 ⭐`:`${t.buy} ${_buyQty} ⭐`;
+  if(bb) bb.innerHTML = bl+' '+_buyQty+' '+_starSvg14;
+  if(bg) bg.innerHTML = bl+' '+_buyQty+' '+_gemSvg16;
+}
+
+async function buyCardWithGems(colId) {
+  haptic('medium');
+  const qty=_buyQty||1;
+  const gems=userData?.gems||0;
+  if(gems<qty){toast(userLang==='ru'?'Недостаточно гемов':'Not enough gems','err');return;}
+  try{
+    const res=await api('/api/buy_card_gems','POST',{telegram_id:tgUser.id,collection_id:colId,qty});
+    toast(userLang==='ru'?`💎 Куплено!`:`💎 Purchased!`,'ok');
+    userData=await api(`/api/user/${tgUser.id}`);
+    updateBalances();
+    loadBuy();
+  }catch(e){toast(e.message,'err');}
 }
 
 async function buyCard(colId) {
@@ -361,7 +441,7 @@ async function buyCard(colId) {
 }
 
 // ── TRADE ──
-let allListings=[],tradeSortBy='serial_asc',selectedModels=new Set(),allModelDefs=[];
+let allListings=[],selectedModels=new Set(),allModelDefs=[];
 
 async function loadTrade() {
   if (!userData) return;
@@ -375,8 +455,9 @@ async function loadTrade() {
   } catch(e){el.innerHTML=`<div class="empty-state"><p>${e.message}</p></div>`;}
 }
 
-let tradeView = 'market'; // 'market' or 'history'
+let tradeView = 'market';
 let historySortBy = 'date';
+let tradeSortBy = 'price_asc';
 
 function renderTradeUI() {
   const el=document.getElementById('trade-content'); if(!el) return;
@@ -398,8 +479,8 @@ function renderTradeUI() {
     <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
       <button class="trade-filter-btn" style="font-size:12px" onclick="openCollectionFilter()">${t.collection} <span class="trade-filter-count">1</span></button>
       <button class="trade-filter-btn ${modCount>0?'has-filter':''}" style="font-size:12px" onclick="openModelFilter()">${t.model}${modCount>0?`<span class="trade-filter-count">${modCount}</span>`:''}</button>
-      <button class="trade-filter-btn ${tradeSortBy!=='serial_asc'?'has-filter':''}" style="font-size:12px" onclick="openSortFilter()">
-        ${tradeSortBy==='price_asc'?'◈ ↑':tradeSortBy==='price_desc'?'◈ ↓':tradeSortBy==='rarity_asc'?'% ↑':tradeSortBy==='rarity_desc'?'% ↓':tradeSortBy==='serial_desc'?'# ↓':'# ↑'}
+      <button class="trade-filter-btn ${tradeSortBy!=='price_asc'?'has-filter':''}" style="font-size:12px" onclick="openSortFilter()">
+        ${tradeSortBy==='price_asc'?'Цена ↑':tradeSortBy==='price_desc'?'Цена ↓':tradeSortBy==='rarity_asc'?'% ↑':tradeSortBy==='rarity_desc'?'% ↓':tradeSortBy==='serial_desc'?'# ↓':'# ↑'}
       </button>
     </div>
     <div id="trade-market-section" style="display:${tradeView==='market'?'flex':'none'};flex-direction:column;gap:8px">
@@ -450,26 +531,44 @@ function openCollectionFilter() {
 
 function openModelFilter() {
   haptic();
-  let html=`<div style="display:flex;flex-direction:column;gap:6px;max-height:52vh;overflow-y:auto;padding-bottom:4px">`;
-  for(const m of allModelDefs){
-    const sel=selectedModels.has(m.name);
-    html+=`<div onclick="toggleModelSelect('${m.name}',this)" style="background:${sel?'#ff2d78':'var(--bg3)'};border:1px solid ${sel?'#ff2d78':'var(--border)'};border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer">
-      <img src="${m.image_url}" style="width:34px;height:34px;border-radius:6px;object-fit:cover" onerror="this.style.background='var(--bg3)'">
-      <div style="flex:1"><div style="font-size:13px;font-weight:700">${m.name}</div><div style="font-size:11px;color:${sel?'rgba(255,255,255,0.7)':'var(--text2)'}">${dropPct(m.drop_weight)}</div></div>
-      <span style="font-size:16px;min-width:16px;text-align:right">${sel?'✓':''}</span>
+  const renderModels = (query='') => {
+    const q = query.toLowerCase();
+    const filtered = allModelDefs.filter(m=>m.name.toLowerCase().includes(q));
+    let html=`<div id="model-filter-list" style="display:flex;flex-direction:column;gap:6px">`;
+    for(const m of filtered){
+      const sel=selectedModels.has(m.name);
+      html+=`<div onclick="toggleModelSelect('${m.name}',this)" style="background:${sel?'#ff2d78':'var(--bg3)'};border:1px solid ${sel?'#ff2d78':'var(--border)'};border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer">
+        <img src="${m.image_url}" style="width:34px;height:34px;border-radius:6px;object-fit:cover" onerror="this.style.background='var(--bg3)'">
+        <div style="flex:1"><div style="font-size:13px;font-weight:700">${m.name}</div><div style="font-size:11px;color:${sel?'rgba(255,255,255,0.7)':'var(--text2)'}">${dropPct(m.drop_weight)}</div></div>
+        <span style="font-size:16px;min-width:16px;text-align:right">${sel?'✓':''}</span>
+      </div>`;
+    }
+    if(!q){
+      const bs=selectedModels.has('Base');
+      html+=`<div onclick="toggleModelSelect('Base',this)" style="background:${bs?'#ff2d78':'var(--bg3)'};border:1px solid ${bs?'#ff2d78':'var(--border)'};border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer">
+        <img src="/static/ponki/ponki.png" style="width:34px;height:34px;border-radius:6px;object-fit:cover">
+        <div style="flex:1"><div style="font-size:13px;font-weight:700">Base</div><div style="font-size:11px;color:var(--text2)">Unupgraded</div></div>
+        <span style="font-size:16px;min-width:16px;text-align:right">${bs?'✓':''}</span>
+      </div>`;
+    }
+    html+=`</div>`;
+    return html;
+  };
+
+  const html=`
+    <div style="position:sticky;top:0;background:var(--bg2);padding-bottom:8px;z-index:1">
+      <input id="model-search" type="text" placeholder="${userLang==='ru'?'Поиск модели...':'Search model...'}" 
+        style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none"
+        oninput="document.getElementById('model-filter-list').parentElement.innerHTML=renderModelList(this.value)">
+    </div>
+    <div style="max-height:48vh;overflow-y:auto;padding-bottom:4px" id="model-filter-scroll">${renderModels()}</div>
+    <div style="position:sticky;bottom:0;background:var(--bg2);padding:12px 0 0;margin-top:8px;display:flex;gap:8px;border-top:1px solid var(--border)">
+      <button class="btn btn-secondary" style="flex:1" onclick="selectedModels.clear();closeModal();renderTradeUI()">${t.clear}</button>
+      <button class="btn btn-primary" style="flex:1" onclick="closeModal();renderTradeUI()">${t.apply}</button>
     </div>`;
-  }
-  const bs=selectedModels.has('Base');
-  html+=`<div onclick="toggleModelSelect('Base',this)" style="background:${bs?'#ff2d78':'var(--bg3)'};border:1px solid ${bs?'#ff2d78':'var(--border)'};border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer">
-    <img src="/static/ponki/ponki.png" style="width:34px;height:34px;border-radius:6px;object-fit:cover">
-    <div style="flex:1"><div style="font-size:13px;font-weight:700">Base</div><div style="font-size:11px;color:var(--text2)">Unupgraded</div></div>
-    <span style="font-size:16px;min-width:16px;text-align:right">${bs?'✓':''}</span>
-  </div></div>
-  <div style="position:sticky;bottom:0;background:var(--bg2);padding:12px 0 0;margin-top:8px;display:flex;gap:8px;border-top:1px solid var(--border)">
-    <button class="btn btn-secondary" style="flex:1" onclick="selectedModels.clear();closeModal();renderTradeUI()">${t.clear}</button>
-    <button class="btn btn-primary" style="flex:1" onclick="closeModal();renderTradeUI()">${t.apply}</button>
-  </div>`;
-  openModal(t.model,html);
+  openModal(t.model, html);
+  window.renderModelList = renderModels;
+  setTimeout(()=>document.getElementById('model-search')?.focus(),200);
 }
 
 function toggleModelSelect(name,el) {
@@ -485,8 +584,8 @@ function toggleTradeRarity(){tradeSortBy=tradeSortBy==='rarity_asc'?'rarity_desc
 function openSortFilter(){
   haptic();
   const sorts=[
-    {key:'price_asc',label:'<img src="/static/icons/ton.png" style="width:12px;height:12px;vertical-align:middle"> ↑'},
-    {key:'price_desc',label:'<img src="/static/icons/ton.png" style="width:12px;height:12px;vertical-align:middle"> ↓'},
+    {key:'price_asc',label:userLang==='ru'?'Цена ↑':'Price ↑'},
+    {key:'price_desc',label:userLang==='ru'?'Цена ↓':'Price ↓'},
     {key:'rarity_asc',label:'% ↑'},
     {key:'rarity_desc',label:'% ↓'},
     {key:'serial_asc',label:'# ↑'},
@@ -505,7 +604,7 @@ async function loadHistory() {
   const el=document.getElementById('history-list'); if(!el) return;
   try {
     const data=await api(`/api/history/${tgUser.id}`);
-    let items=(data.history||[]).filter(i=>i.type==='market_buy'||i.type==='market_buy_ton');
+    let items=(data.history||[]).filter(i=>i.type==='market_buy'||i.type==='market_buy_ton'||i.type==='auction_won');
     // Sort
     if(historySortBy==='price_asc') items.sort((a,b)=>a.stars_amount-b.stars_amount);
     else if(historySortBy==='price_desc') items.sort((a,b)=>b.stars_amount-a.stars_amount);
@@ -520,7 +619,8 @@ async function loadHistory() {
     let html=`<div style="display:flex;flex-direction:column;gap:8px">`;
     for(const item of items){
       const isIncome=item.to_user_id===userData.id;
-      const label=isIncome?(userLang==='ru'?'Продано':'Sold'):(userLang==='ru'?'Куплено':'Bought');
+      const isAuction=item.type==='auction_won';
+      const label=isAuction?(isIncome?(userLang==='ru'?'🏆 Выиграл аукцион':'🏆 Auction won'):(userLang==='ru'?'🏆 Продано на аукционе':'🏆 Auction sold')):isIncome?(userLang==='ru'?'Продано':'Sold'):(userLang==='ru'?'Куплено':'Bought');
       html+=`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px">
         <div style="width:40px;height:40px;border-radius:8px;background:var(--bg3);overflow:hidden;flex-shrink:0">
           <img src="${item.image_url||'/static/ponki/ponki.png'}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.background='var(--bg3)'">
@@ -552,7 +652,7 @@ function renderListings() {
   let html=`<div class="cards-grid">`;
   for(const l of list){
     const isOwn=l.seller_id===userData.id;
-    html+=`<div class="card-item" onclick='openMarketModal(${JSON.stringify(l)},${isOwn})' style="${isOwn?'border:2px solid #4ab0ff;box-shadow:0 0 10px rgba(74,176,255,0.3)':''}">
+    html+=`<div class="card-item" onclick='openMarketModal(${JSON.stringify(l)},${isOwn})' style="${isOwn?'border:2px solid rgba(255,255,255,0.6);box-shadow:0 0 10px rgba(255,255,255,0.15)':''}">
       <div class="card-img">
         <img src="${l.image_url}" onerror="this.style.background='var(--bg3)'">
         <span class="pct-badge">${dropPct(l.drop_weight)}</span>
@@ -664,18 +764,21 @@ async function loadProfile() {
           <div style="font-size:18px;font-weight:800">${tgUser.first_name||'User'} ${tgUser.last_name||''}</div>
           <div style="font-size:12px;color:var(--text2);font-family:'Inter',sans-serif">${tgUser.username?'@'+tgUser.username:'ID '+tgUser.id}</div>
         </div>
+        <button onclick="shareRefLink(${userData.telegram_id})" style="background:rgba(255,45,120,0.1);border:1px solid rgba(255,45,120,0.3);border-radius:10px;padding:8px 10px;cursor:pointer;display:flex;align-items:center;justify-content:center" title="Поделиться">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ff2d78" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        </button>
       </div>
       <div class="stats-row" style="grid-template-columns:repeat(3,1fr)">
         <div class="stat-box" onclick="openTonModal()" style="cursor:pointer">
           <div class="val" style="color:#4ab0ff;display:flex;align-items:center;justify-content:center;gap:4px"><img src="/static/icons/ton.png" style="width:14px;height:14px;object-fit:contain" onerror="this.style.display='none'"><span>${userData.ton_balance>0?((userData.ton_balance/1000000000).toFixed(2)):'0'}</span></div>
           <div class="lbl">TON</div>
         </div>
-        <div class="stat-box" onclick="openEarnedModal()" style="cursor:pointer">
-          <div style="display:flex;align-items:center;justify-content:center;gap:3px"><span style="font-size:14px">⭐</span><span class="val" style="color:var(--star)" id="earned-val">${userData.referral_earnings||0}</span></div>
-          <div class="lbl">${userLang==='ru'?'Заработано':'Earned'}</div>
+        <div class="stat-box" onclick="openGemsModal()" style="cursor:pointer">
+          <div style="display:flex;align-items:center;justify-content:center;gap:3px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 3L3 9L12 21L21 9L18 3Z" fill="#a78bfa" stroke="#7c3aed" stroke-width="1"/><path d="M3 9L12 12L21 9" stroke="#c4b5fd" stroke-width="1"/><path d="M8 3L6 9L12 12L18 9L16 3" stroke="none"/><path d="M12 3L9 9L12 12L15 9Z" fill="#c4b5fd" opacity="0.5"/><path d="M6 3L9 9" stroke="#c4b5fd" stroke-width="0.8"/><path d="M18 3L15 9" stroke="#c4b5fd" stroke-width="0.8"/><circle cx="12" cy="5" r="1" fill="#ede9fe" opacity="0.8"/></svg><span class="val" style="color:#a78bfa" id="gems-val">${userData.gems||0}</span></div>
+          <div class="lbl">${userLang==='ru'?'ГЕМЫ':'GEMS'}</div>
         </div>
         <div class="stat-box" onclick="openCashbackModal()" style="cursor:pointer">
-          <div style="display:flex;align-items:center;justify-content:center;gap:3px"><img src="/static/icons/ton.png" style="width:14px;height:14px;object-fit:contain"><span class="val" style="color:#4ab0ff" id="cashback-val">${(userData.cashback_balance||0)===0?'0':((userData.cashback_balance||0)/1e9).toFixed(2)}</span></div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:3px"><img src="/static/icons/ton.png" style="width:14px;height:14px;object-fit:contain"><span class="val" style="color:#4ab0ff" id="cashback-val">${(userData.cashback_balance||0)===0?'0':((userData.cashback_balance||0)/1e9).toFixed(2).replace(/\.?0+$/,'')}</span></div>
           <div class="lbl">КЕШБЭК</div>
         </div>
       </div>
@@ -700,8 +803,8 @@ async function loadProfile() {
         ${cardsHtml}
 
         <div style="display:flex;flex-direction:column;gap:4px">
-          <div class="menu-item" onclick="openFriendsModal()">
-            <span class="menu-icon">👥</span>
+          <div class="menu-item" style="border:1px solid rgba(255,255,255,0.12);box-shadow:0 0 12px rgba(255,255,255,0.04)" onclick="openFriendsModal()">
+            <span class="menu-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="8" cy="7" r="3.5" stroke="#fff" stroke-width="1.5"/><path d="M2 20c0-3.31 2.69-5.5 6-5.5s6 2.19 6 5.5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><circle cx="17" cy="8" r="2.5" stroke="rgba(255,255,255,0.6)" stroke-width="1.3"/><path d="M20 20c0-2.5-1.5-4.5-3.5-4.5" stroke="rgba(255,255,255,0.6)" stroke-width="1.3" stroke-linecap="round"/><path d="M14.5 4.5 C14.5 3.5 15.5 3 16.5 3.5 C17 3.8 17.5 4.3 17.5 5 C17.5 5.7 17 6.2 16.5 6.5 L14.5 8 L12.5 6.5 C12 6.2 11.5 5.7 11.5 5 C11.5 4.3 12 3.8 12.5 3.5 C13.5 3 14.5 3.5 14.5 4.5Z" fill="#ff2d78" opacity="0.9"/></svg></span>
             <div class="menu-text"><div class="menu-label">${t.friends}</div></div>
             <span style="background:#fff;color:#000;border-radius:50%;width:20px;height:20px;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center" id="friends-menu-count">—</span>
           </div>
@@ -711,7 +814,7 @@ async function loadProfile() {
             <span style="color:var(--text3);font-size:16px">›</span>
           </div>
           <div class="menu-item" style="border:1px solid rgba(240,192,64,0.18);box-shadow:0 0 12px rgba(240,192,64,0.04)" onclick="openSplitLink()">
-            <span class="menu-icon">⭐</span>
+            <span class="menu-icon"><svg width="22" height="22" viewBox="0 0 24 24"><defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffe566"/><stop offset="100%" stop-color="#f0a000"/></linearGradient></defs><polygon points="12,2 14.8,8.6 22,9.5 17,14.2 18.5,21.4 12,17.8 5.5,21.4 7,14.2 2,9.5 9.2,8.6" fill="url(#sg)" stroke="#c07800" stroke-width="0.5"/><polygon points="12,5 14,9.8 19.2,10.4 15.6,13.8 16.6,19 12,16.4 7.4,19 8.4,13.8 4.8,10.4 10,9.8" fill="#ffe88a" opacity="0.5"/></svg></span>
             <div class="menu-text"><div class="menu-label">${t.buyCheapStars}</div></div>
             <span style="color:var(--text3);font-size:16px">›</span>
           </div>
@@ -723,9 +826,19 @@ async function loadProfile() {
             <span style="font-size:18px;font-weight:800" id="ton-arrow">${userData.ton_address?'✓':'›'}</span>
           </div>
         </div>
+        <div style="background:var(--bg2);border:1px solid rgba(167,139,250,0.25);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px">
+          <div style="font-size:15px;font-weight:700;margin-bottom:2px">⚡ ${userLang==='ru'?'Задания':'Tasks'}</div>
+          ${renderTaskItem('daily', userData)}
+          ${renderTaskItem('spin', userData)}
+          ${renderTaskItem('pvp', userData)}
+          ${renderTaskItem('redblack', userData)}
+          ${renderTaskItem('channel', userData)}
+          ${renderTaskItem('friends5', userData)}
+        </div>
+
         <div style="background:var(--bg2);border:1px solid rgba(255,45,120,0.3);border-radius:16px;padding:16px;box-shadow:0 0 24px rgba(255,45,120,0.06),inset 0 0 1px rgba(255,45,120,0.1)">
-          <h3 style="font-size:15px;font-weight:700;margin-bottom:6px">🎁 ${t.refEarn}</h3>
-          <p style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.5">${t.refText} <strong style="color:var(--star)">20%</strong> ${t.refOf} 🔥</p>
+          <h3 style="font-size:15px;font-weight:700;margin-bottom:6px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="vertical-align:middle;margin-right:6px"><rect x="3" y="8" width="18" height="13" rx="2" fill="#ff2d78" opacity="0.9"/><rect x="2" y="6" width="20" height="4" rx="1.5" fill="#ff5599"/><path d="M12 6V21" stroke="#fff" stroke-width="1.5" stroke-dasharray="2 1"/><path d="M12 6C12 6 9 4 8 2.5C7.2 1.2 8.5 0 10 1C11 1.7 12 3 12 3" stroke="#ff5599" stroke-width="1.5" stroke-linecap="round" fill="none"/><path d="M12 6C12 6 15 4 16 2.5C16.8 1.2 15.5 0 14 1C13 1.7 12 3 12 3" stroke="#ff5599" stroke-width="1.5" stroke-linecap="round" fill="none"/><circle cx="12" cy="6" r="1.5" fill="#fff"/></svg> ${t.refEarn}</h3>
+          <p style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.5">${t.refText} <strong style="color:var(--star)">10%</strong> ${t.refOf} 🔥</p>
           <div style="display:flex;gap:8px;align-items:center">
             <div style="flex:1;background:var(--bg3);border:1px solid rgba(255,45,120,0.2);border-radius:8px;padding:10px 12px;font-family:'Inter',sans-serif;font-size:11px;color:var(--star);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">t.me/memstroybot?start=${userData.telegram_id}</div>
             <button class="btn btn-secondary" style="white-space:nowrap;flex-shrink:0;border-color:rgba(255,45,120,0.25)" onclick="copyRef(${userData.telegram_id})">${userLang==='ru'?'Копировать':'Copy'}</button>
@@ -1119,44 +1232,56 @@ async function loadProfileSelling(){
   }catch(e){el.innerHTML=`<div class="empty-state"><p>${e.message}</p></div>`;}
 }
 
+let _whaleCategory = 'cards';
 async function loadProfileWhales() {
   const el = document.getElementById('profile-whales-list');
   if (!el) return;
   el.innerHTML = '<div class="spinner" style="margin:32px auto"></div>';
   try {
-    const data = await api(`/api/leaderboard?telegram_id=${tgUser.id}`);
+    const data = await api(`/api/leaderboard?telegram_id=${tgUser.id}&category=${_whaleCategory}`);
     const list = data.top || [];
     const myRank = data.my_rank;
     const myRow = data.my_entry;
     const medals = ['🥇','🥈','🥉'];
     const rankColors = ['#ffd700','#c0c0c0','#cd7f32'];
 
-    // Sort by stars_spent desc (using stars_balance as proxy since we track purchases)
-    // We show stars spent + ton spent
+    const cats = [
+      {key:'cards',    label:userLang==='ru'?'Карты':'Cards'},
+      {key:'cashback', label:userLang==='ru'?'Кешбэк':'Cashback'},
+      {key:'gems',     label:userLang==='ru'?'Гемы':'Gems'},
+      {key:'friends',  label:`<span style="display:inline-flex;align-items:center;gap:3px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="8" cy="7" r="3.5" stroke="#fff" stroke-width="1.5"/><path d="M2 20c0-3.31 2.69-5.5 6-5.5s6 2.19 6 5.5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><circle cx="17" cy="8" r="2.5" stroke="rgba(255,255,255,0.6)" stroke-width="1.3"/><path d="M20 20c0-2.5-1.5-4.5-3.5-4.5" stroke="rgba(255,255,255,0.6)" stroke-width="1.3" stroke-linecap="round"/><path d="M14.5 4.5 C14.5 3.5 15.5 3 16.5 3.5 C17 3.8 17.5 4.3 17.5 5 C17.5 5.7 17 6.2 16.5 6.5 L14.5 8 L12.5 6.5 C12 6.2 11.5 5.7 11.5 5 C11.5 4.3 12 3.8 12.5 3.5 C13.5 3 14.5 3.5 14.5 4.5Z" fill="#ff2d78" opacity="0.9"/></svg>${userLang==='ru'?'Друзья':'Friends'}</span>`},
+    ];
+
+    const getVal = (u) => {
+      if(_whaleCategory==='friends') return (u.friends_count||u.score||0) + ' <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><circle cx="8" cy="7" r="3.5" stroke="#fff" stroke-width="1.5"/><path d="M2 20c0-3.31 2.69-5.5 6-5.5s6 2.19 6 5.5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><circle cx="17" cy="8" r="2.5" stroke="rgba(255,255,255,0.6)" stroke-width="1.3"/><path d="M20 20c0-2.5-1.5-4.5-3.5-4.5" stroke="rgba(255,255,255,0.6)" stroke-width="1.3" stroke-linecap="round"/></svg>';
+      if(_whaleCategory==='cashback'){const v=(u.score||0)/1e9;return `${v===0?'0':v.toFixed(2).replace(/\.?0+$/,'')} <img src="/static/icons/ton.png" style="width:12px;height:12px;vertical-align:middle;object-fit:contain">`; }
+      if(_whaleCategory==='cards') return `<span style="display:inline-flex;align-items:center;gap:4px"><svg width="14" height="14" viewBox="0 0 24 24"><defs><linearGradient id="lcg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f0c040"/><stop offset="40%" stop-color="#fff8dc"/><stop offset="100%" stop-color="#d4900a"/></linearGradient></defs><rect x="3" y="2" width="18" height="20" rx="3" fill="url(#lcg)" stroke="#b07800" stroke-width="1"/><text x="12" y="15" text-anchor="middle" font-size="10" font-weight="900" fill="#7c4400" font-family="serif">★</text><rect x="3" y="2" width="18" height="20" rx="3" fill="none" stroke="#ffe88a" stroke-width="0.5" opacity="0.6"/></svg>${u.cards_count||u.score||0}</span>`;
+      if(_whaleCategory==='gems') return `${u.score||0} <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><path d="M6 3L3 9L12 21L21 9L18 3Z" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.2"/><path d="M3 9L12 12L21 9" stroke="#c4b5fd" stroke-width="1"/><path d="M12 3L9 9L12 12L15 9Z" fill="#c4b5fd" opacity="0.5"/></svg>`;
+      return `⭐${(u.stars_spent||0).toLocaleString()}`;
+    };
+
     const renderRow = (u, rank, isMe) => {
       const medal = medals[rank-1] || '';
       const rankColor = rankColors[rank-1] || 'var(--text2)';
       const name = u.first_name || u.username || 'User';
-      const starsSpent = u.stars_spent || 0;
-      const tonSpent = u.ton_spent || 0;
-      return `<div style="background:${isMe?'rgba(255,45,120,0.08)':'var(--bg2)'};border:1px solid ${isMe?'rgba(255,45,120,0.4)':'rgba(255,255,255,0.07)'};border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:10px;box-shadow:${rank<=3?`0 0 12px ${rankColor}22`:'none'}">
+      return `<div style="background:${isMe?'rgba(255,45,120,0.08)':'var(--bg2)'};border:1px solid ${isMe?'rgba(255,45,120,0.4)':'rgba(255,255,255,0.07)'};border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:10px">
         <div style="min-width:26px;text-align:center;font-size:${rank<=3?'17':'12'}px;font-weight:800;color:${rankColor};font-family:'Inter',sans-serif">${medal||'#'+rank}</div>
         <div style="width:32px;height:32px;border-radius:50%;background:var(--bg3);border:1px solid ${isMe?'rgba(255,45,120,0.4)':'rgba(255,255,255,0.08)'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">${(name[0]||'?').toUpperCase()}</div>
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}${isMe?` <span style="color:#ff2d78;font-size:10px">(${userLang==='ru'?'ты':'you'})</span>`:''}</div>
-          ${u.username?`<div style="font-size:10px;color:var(--text2);font-family:'Inter',sans-serif">@${u.username}</div>`:''}
+          ${u.username?`<div style="font-size:10px;color:var(--text2)">@${u.username}</div>`:''}
         </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0">
-          <div style="font-size:12px;font-weight:800;color:var(--star);font-family:'Inter',sans-serif">⭐ ${starsSpent.toLocaleString()}</div>
-          <div style="display:flex;align-items:center;gap:3px;font-size:12px;font-weight:800;color:#4ab0ff;font-family:'Inter',sans-serif"><img src="/static/icons/ton.png" style="width:12px;height:12px;object-fit:contain"> ${tonSpent===0?'0':((tonSpent/1e9).toFixed(2).replace(/\.?0+$/, ''))}</div>
-        </div>
+        <div style="font-size:12px;font-weight:800;color:var(--star);flex-shrink:0">${getVal(u)}</div>
       </div>`;
     };
 
     let html = `
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-        <span style="font-size:16px;font-weight:800">🐳 ${userLang==='ru'?'Рейтинг китов':'Whale Rating'}</span>
-        <span style="font-size:11px;color:var(--text2);font-family:'Inter',sans-serif">${userLang==='ru'?'ТОП 100':'TOP 100'}</span>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:16px;font-weight:800">🐳 ${userLang==='ru'?'Рейтинг':'Rating'}</span>
+        <span style="font-size:11px;color:var(--text2)">TOP 100</span>
+      </div>
+      <div style="display:flex;gap:4px;margin-bottom:10px;background:var(--bg3);border-radius:12px;padding:3px">
+        ${cats.map(c=>`<div onclick="setWhaleCategory('${c.key}')" style="flex:1;text-align:center;padding:6px 2px;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;background:${_whaleCategory===c.key?'#ff2d78':'transparent'};color:${_whaleCategory===c.key?'#fff':'var(--text3)'};transition:all 0.2s">${c.label}</div>`).join('')}
       </div>
       <div style="display:flex;flex-direction:column;gap:6px">`;
 
@@ -1168,16 +1293,20 @@ async function loadProfileWhales() {
         html += renderRow(u, i+1, isMe);
       });
     }
-
     if (myRow && myRank > 100) {
       html += `<div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px">${renderRow(myRow, myRank, true)}</div>`;
     }
-
     html += `</div>`;
     el.innerHTML = html;
   } catch(e) {
     el.innerHTML = `<div class="empty-state"><p>${e.message}</p></div>`;
   }
+}
+
+function setWhaleCategory(cat) {
+  haptic();
+  _whaleCategory = cat;
+  loadProfileWhales();
 }
 
 
@@ -1391,15 +1520,10 @@ async function doTonWithdraw(){
   }
   try {
     const res = await api('/api/ton/withdraw','POST',{telegram_id:tgUser.id,amount,to_address:addr});
-    // Deduct from local balance immediately
     userData.ton_balance = (userData.ton_balance||0) - amountNano;
     updateBalances();
-    const el = document.getElementById('ton-action-area');
-    if(el) el.innerHTML=`
-      <div style="background:var(--bg3);border:1px solid rgba(74,255,138,0.2);border-radius:12px;padding:14px;text-align:center">
-        <div style="font-size:14px;font-weight:700;color:var(--success);margin-bottom:4px">✅ ${userLang==='ru'?'Вывод обрабатывается':'Withdrawal processing'}</div>
-        <div style="font-size:12px;color:var(--text2)">${amount} TON → ${addr.slice(0,6)}...${addr.slice(-4)}</div>
-      </div>`;
+    toast(userLang==='ru'?`✅ Вывод ${amount} TON обрабатывается`:`✅ Withdrawal ${amount} TON processing`,'ok');
+    setTimeout(()=>closeModal(), 2000);
   } catch(e){ toast(e.message,'err'); }
 }
 
@@ -1530,7 +1654,7 @@ async function loadAuctions(){
       const isBidder = a.current_bidder_id === userData?.id;
       const price = (a.current_price_nano/1e9).toFixed(2).replace(/\.?0+$/,'');
       const minBid = ((a.current_price_nano + a.min_step_nano)/1e9).toFixed(2).replace(/\.?0+$/,'');
-      const endsAt = new Date(a.ends_at+'Z');
+      const endsAt = new Date(a.ends_at.replace(' ','T')+'Z');
       const now = new Date();
       const diff = Math.max(0, endsAt - now);
       const hrs = Math.floor(diff/3600000);
@@ -1560,7 +1684,10 @@ async function loadAuctions(){
           <button class="btn btn-primary btn-wide" onclick="openBidModal(${a.id},'${a.card_name}',${a.current_price_nano},${a.min_step_nano},'${price}','${minBid}')" style="font-size:13px;padding:10px">
             ${userLang==='ru'?'Сделать ставку':'Place bid'} — от ${minBid} TON
           </button>
-        </div>`:`<div style="padding:0 12px 12px;font-size:12px;color:var(--text2);text-align:center">${userLang==='ru'?'Ваш аукцион':'Your auction'}</div>`}
+        </div>`:`<div style="padding:0 12px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <div style="font-size:12px;color:var(--text2)">${userLang==='ru'?'Ваш аукцион':'Your auction'}</div>
+          ${!a.current_bidder_id?`<button class="btn btn-danger" style="padding:8px 14px;font-size:12px" onclick="cancelAuction(${a.id})">${userLang==='ru'?'Отменить':'Cancel'}</button>`:''}
+        </div>`}
       </div>`;
     }
     html += '</div>';
@@ -1635,7 +1762,7 @@ function openCreateAuctionModal(){
     </div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:4px">${userLang==='ru'?'Длительность:':'Duration:'}</div>
     <div style="display:flex;gap:6px;margin-bottom:12px">
-      ${[0.016,1,12,24].map(h=>`<button onclick="selectAuctionDuration(${h},this)" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer" data-hours="${h}">${h===0.016?'1м':h+'ч'}</button>`).join('')}
+      ${[1,2,4,6,12,24].map(h=>`<button onclick="selectAuctionDuration(${h},this)" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer" data-hours="${h}">${h}ч</button>`).join('')}
     </div>
     <input type="hidden" id="auction-card-id" value="">
     <input type="hidden" id="auction-duration" value="24">
@@ -1645,7 +1772,7 @@ function openCreateAuctionModal(){
   // Select first duration
   setTimeout(()=>{
     const btns = document.querySelectorAll('[data-hours]');
-    if(btns[3]) { btns[3].style.background='#ff2d78'; btns[3].style.color='#fff'; }
+    if(btns[5]) { btns[5].style.background='#ff2d78'; btns[5].style.color='#fff'; }
   }, 100);
 }
 
@@ -1678,6 +1805,521 @@ async function createAuction(){
     userData=await api(`/api/user/${tgUser.id}`);
     loadAuctions();
     loadProfile();
+  }catch(e){toast(e.message,'err');}
+}
+
+function shareRefLink(tgId){
+  haptic();
+  const url = `https://t.me/memstroybot?start=${tgId}`;
+  const text = userLang==='ru'
+    ?'🎁 Присоединяйся к Memstroy и получи 5 гемов бесплатно!\n\n🃏 Коллекционные карточки Ponki — торгуй, зарабатывай гемы, испытай удачу в играх!'
+    :'🎁 Join Memstroy and get 5 gems for free!\n\n🃏 Ponki collectible cards — trade, earn gems, try your luck in games!';
+  const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+  if(tg) tg.openTelegramLink(shareUrl);
+  else window.open(shareUrl,'_blank');
+}
+
+function openPriceInfoModal(){
+  haptic();
+  openModal(userLang==='ru'?'Цена карточки':'Card price',`
+    <div style="display:flex;flex-direction:column;gap:12px;padding:4px 0">
+      <div style="background:var(--bg3);border:1px solid rgba(240,192,64,0.3);border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" fill="#f0c040" stroke="#e0a800" stroke-width="0.5"/><polygon points="12,5 14,9.5 19,10.2 15.5,13.5 16.5,18.5 12,16 7.5,18.5 8.5,13.5 5,10.2 10,9.5" fill="#ffe066" opacity="0.6"/></svg>
+        <div><div style="font-size:14px;font-weight:700">1 Telegram Star</div><div style="font-size:11px;color:var(--text2);margin-top:2px">${userLang==='ru'?'Оплата через Telegram Stars':'Pay with Telegram Stars'}</div></div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid rgba(167,139,250,0.3);border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M12 3L6 8L4 14L12 21L20 14L18 8Z" fill="#a78bfa" stroke="#7c3aed" stroke-width="1"/><path d="M6 8L12 10L18 8" stroke="#c4b5fd" stroke-width="1" stroke-linejoin="round"/><path d="M12 10L12 21" stroke="#c4b5fd" stroke-width="0.8" opacity="0.6"/><path d="M8 5L12 3L16 5" stroke="#c4b5fd" stroke-width="1" stroke-linejoin="round"/><circle cx="12" cy="7" r="1.2" fill="#ede9fe"/></svg>
+        <div><div style="font-size:14px;font-weight:700"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><path d="M6 3L3 9L12 21L21 9L18 3Z" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.2"/><path d="M3 9L12 12L21 9" stroke="#c4b5fd" stroke-width="1"/><path d="M12 3L9 9L12 12L15 9Z" fill="#c4b5fd" opacity="0.5"/><path d="M6 3L9 9" stroke="#c4b5fd" stroke-width="0.8"/><path d="M18 3L15 9" stroke="#c4b5fd" stroke-width="0.8"/><circle cx="12" cy="5.5" r="1" fill="#ede9fe" opacity="0.9"/></svg> 100 = 100 Telegram Stars</div><div style="font-size:11px;color:var(--text2);margin-top:2px">${userLang==='ru'?'Зарабатывай гемы за задания и рефералов':'Earn gems from tasks and referrals'}</div></div>
+      </div>
+    </div>
+    <button class="btn btn-secondary btn-wide" onclick="closeModal()">${userLang==='ru'?'Понятно':'Got it'}</button>
+  `);
+}
+
+function openGemsModal(){
+  haptic();
+  openModal(userLang==='ru'?'Гемы':'Gems',`
+    <div style="text-align:center;padding:8px 0 16px">
+      <div style="margin-bottom:8px"><svg width="48" height="48" viewBox="0 0 24 24" fill="none"><path d="M6 3L3 9L12 21L21 9L18 3Z" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.2"/><path d="M3 9L12 12L21 9" stroke="#c4b5fd" stroke-width="1"/><path d="M12 3L9 9L12 12L15 9Z" fill="#c4b5fd" opacity="0.6"/><path d="M6 3L9 9" stroke="#c4b5fd" stroke-width="0.8"/><path d="M18 3L15 9" stroke="#c4b5fd" stroke-width="0.8"/><circle cx="12" cy="5.5" r="1.5" fill="#ede9fe" opacity="0.9"/></svg></div>
+      <div style="font-size:32px;font-weight:900;color:#a78bfa">${userData?.gems||0}</div>
+      <div style="font-size:13px;color:var(--text2);margin-top:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><path d="M6 3L3 9L12 21L21 9L18 3Z" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.2"/><path d="M3 9L12 12L21 9" stroke="#c4b5fd" stroke-width="1"/><path d="M12 3L9 9L12 12L15 9Z" fill="#c4b5fd" opacity="0.5"/><path d="M6 3L9 9" stroke="#c4b5fd" stroke-width="0.8"/><path d="M18 3L15 9" stroke="#c4b5fd" stroke-width="0.8"/><circle cx="12" cy="5.5" r="1" fill="#ede9fe" opacity="0.9"/></svg> 100 = 100 Telegram Stars</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:4px">${userLang==='ru'?'Зарабатывай гемы за задания и рефералов':'Earn gems from tasks and referrals'}</div>
+    </div>
+    <button class="btn btn-secondary btn-wide" onclick="closeModal()">${userLang==='ru'?'Закрыть':'Close'}</button>
+  `);
+}
+
+function renderTaskItem(type, ud){
+  const tasks = ud?.tasks_completed || 0;
+  const today = new Date().toISOString().slice(0,10);
+  const dailyDone = ud?.daily_reward_date === today;
+  const spinDone = ud?.spin_date === today;
+  let html = '';
+  if(type==='daily'){
+    const done = dailyDone;
+    const icon=`<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="3" stroke="#f0c040" stroke-width="1.5"/><path d="M3 10H21" stroke="#f0c040" stroke-width="1.5"/><line x1="8" y1="3" x2="8" y2="7" stroke="#f0c040" stroke-width="1.5" stroke-linecap="round"/><line x1="16" y1="3" x2="16" y2="7" stroke="#f0c040" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="16" r="2.5" fill="#f0c040" opacity="0.9"/><line x1="12" y1="12.5" x2="12" y2="11.5" stroke="#f0c040" stroke-width="1" stroke-linecap="round"/><line x1="12" y1="20.5" x2="12" y2="19.5" stroke="#f0c040" stroke-width="1" stroke-linecap="round"/><line x1="8.5" y1="16" x2="7.5" y2="16" stroke="#f0c040" stroke-width="1" stroke-linecap="round"/><line x1="16.5" y1="16" x2="15.5" y2="16" stroke="#f0c040" stroke-width="1" stroke-linecap="round"/></svg>`;
+    const streak = ud?.daily_streak||0;
+    const nextPrize = streak>=3?1:(streak+1);
+    const todayPrize = streak||1;
+    html = '<div style="background:var(--bg3);border:1px solid '+(done?'rgba(74,255,138,0.2)':'var(--border)')+';border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px">'
+      + '<span style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+icon+'</span>'
+      + '<div style="flex:1">'
+        + '<div style="font-size:13px;font-weight:700">'+(userLang==='ru'?'Ежедневный вход':'Daily login')+(streak>0?' <span style="font-size:11px;color:#f0c040">🔥'+streak+'</span>':'')+'</div>'
+        + '<div style="font-size:11px;color:var(--text2)">'+(done?'+'+todayPrize+' получено':'+'+nextPrize+' ')+' <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><path d="M6 3L3 9L12 21L21 9L18 3Z" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.2"/><path d="M3 9L12 12L21 9" stroke="#c4b5fd" stroke-width="1"/><path d="M12 3L9 9L12 12L15 9Z" fill="#c4b5fd" opacity="0.5"/></svg></div>'
+      + '</div>'
+      + (done?'<span style="font-size:12px;color:var(--success);font-weight:700">✓</span>':'<button class="btn btn-secondary" style="padding:7px 14px;font-size:12px;flex-shrink:0" onclick="claimTask(\'daily\')">'+(userLang==='ru'?'Забрать':'Claim')+'</button>')
+      + '</div>';
+  } else if(type==='pvp'){
+    const icon2=`<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M14.5 2.5L21.5 9.5M9.5 2.5L2.5 9.5M12 22V12M8 7L12 3L16 7" stroke="#ff2d78" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="#ff2d78" opacity="0.3" stroke="#ff2d78" stroke-width="1.5"/></svg>`;
+    html = '<div style="background:var(--bg3);border:1px solid rgba(255,45,120,0.25);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px">'
+      + '<span style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+icon2+'</span>'
+      + '<div style="flex:1"><div style="font-size:13px;font-weight:700">⚔️ PvP '+(userLang==='ru'?'Битва':'Battle')+'</div>'
+      + '<div style="font-size:11px;color:var(--text2)">'+(userLang==='ru'?'Победитель забирает все карты':'Winner takes all cards')+'</div></div>'
+      + '<button class="btn btn-secondary" style="padding:7px 14px;font-size:12px;flex-shrink:0;border-color:rgba(255,45,120,0.4);color:#ff2d78" onclick="openPvpModal()">'+(userLang==='ru'?'Играть':'Play')+'</button>'
+      + '</div>';
+  } else if(type==='spin'){
+    const done = spinDone;
+    const icon=`<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="3" stroke="#a78bfa" stroke-width="2"/><line x1="8" y1="6" x2="8" y2="20" stroke="#a78bfa" stroke-width="1.5"/><line x1="16" y1="6" x2="16" y2="20" stroke="#a78bfa" stroke-width="1.5"/><circle cx="5" cy="13" r="1.5" fill="#a78bfa"/><circle cx="12" cy="13" r="1.5" fill="#a78bfa"/><circle cx="19" cy="13" r="1.5" fill="#a78bfa"/></svg>`;
+    html = `<div style="background:var(--bg3);border:1px solid ${done?'rgba(74,255,138,0.2)':'rgba(167,139,250,0.25)'};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px"><span style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${icon}</span><div style="flex:1"><div style="font-size:13px;font-weight:700">${userLang==='ru'?'Крутить слот':'Spin slot'}</div><div style="font-size:11px;color:var(--text2)">${userLang==='ru'?'Испытай удачу раз в день':'Try your luck once a day'}</div></div>${done?'<span style="font-size:12px;color:var(--success);font-weight:700">✓</span>':`<button class="btn btn-secondary" style="padding:7px 14px;font-size:12px;flex-shrink:0;border-color:rgba(167,139,250,0.4);color:#a78bfa" onclick="openSpinModal()">${userLang==='ru'?'Крутить':'Spin'}</button>`}</div>`;
+  } else if(type==='redblack'){
+    const icon=`<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="8" height="11" rx="2" fill="#ff4a4a"/><rect x="13" y="4" width="8" height="11" rx="2" fill="#1a1a1a" stroke="#444" stroke-width="1"/><circle cx="7" cy="9.5" r="2" fill="#fff" opacity="0.3"/><circle cx="17" cy="9.5" r="2" fill="#fff" opacity="0.3"/></svg>`;
+    html = `<div style="background:var(--bg3);border:1px solid rgba(255,74,74,0.2);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px"><span style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${icon}</span><div style="flex:1"><div style="font-size:13px;font-weight:700">Red &amp; Black</div><div style="font-size:11px;color:var(--text2)">${userLang==='ru'?'Всё или ничего!':'All or nothing!'}</div></div><button class="btn btn-secondary" style="padding:7px 14px;font-size:12px;flex-shrink:0;border-color:rgba(255,74,74,0.4);color:#ff4a4a" onclick="openRedBlackModal()">${userLang==='ru'?'Играть':'Play'}</button></div>`;
+  } else if(type==='channel'){
+    const done = !!(tasks & 2);
+    const icon=`<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M22 3L2 10l7 3 3 7 3-8 7-9z" stroke="#4ab0ff" stroke-width="2" stroke-linejoin="round"/><line x1="9" y1="13" x2="13" y2="9" stroke="#4ab0ff" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+    html = `<div style="background:var(--bg3);border:1px solid ${done?'rgba(74,255,138,0.2)':'var(--border)'};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px"><span style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${icon}</span><div style="flex:1"><div style="font-size:13px;font-weight:700">${userLang==='ru'?'Подписаться на канал':'Subscribe to channel'}</div><div style="font-size:11px;color:var(--text2)">+5 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><path d="M6 3L3 9L12 21L21 9L18 3Z" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.2"/><path d="M3 9L12 12L21 9" stroke="#c4b5fd" stroke-width="1"/><path d="M12 3L9 9L12 12L15 9Z" fill="#c4b5fd" opacity="0.5"/></svg></div></div>${done?'<span style="font-size:12px;color:var(--success);font-weight:700">✓</span>':`<button class="btn btn-secondary" style="padding:7px 14px;font-size:12px;flex-shrink:0" onclick="claimTask('channel')">${userLang==='ru'?'Проверить':'Check'}</button>`}</div>`;
+  } else if(type==='friends5'){
+    const done = !!(tasks & 4);
+    const count = ud?.referrals_count || 0;
+    const icon=`<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="#4aff8a" stroke-width="2"/><path d="M3 20c0-3.31 2.69-6 6-6s6 2.69 6 6" stroke="#4aff8a" stroke-width="2" stroke-linecap="round"/><circle cx="17" cy="8" r="2.5" stroke="#4aff8a" stroke-width="1.5"/><path d="M21 19c0-2.76-1.79-5-4-5" stroke="#4aff8a" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+    html = `<div style="background:var(--bg3);border:1px solid ${done?'rgba(74,255,138,0.2)':'var(--border)'};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px"><span style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${icon}</span><div style="flex:1"><div style="font-size:13px;font-weight:700">${userLang==='ru'?'Пригласи 5 друзей':'Invite 5 friends'}</div><div style="font-size:11px;color:var(--text2)">+50 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><path d="M6 3L3 9L12 21L21 9L18 3Z" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.2"/><path d="M3 9L12 12L21 9" stroke="#c4b5fd" stroke-width="1"/><path d="M12 3L9 9L12 12L15 9Z" fill="#c4b5fd" opacity="0.5"/></svg> · ${count}/5</div></div>${done?'<span style="font-size:12px;color:var(--success);font-weight:700">✓</span>':count>=5?`<button class="btn btn-secondary" style="padding:7px 14px;font-size:12px;flex-shrink:0" onclick="claimTask('friends5')">${userLang==='ru'?'Забрать':'Claim'}</button>`:`<span style="font-size:11px;color:var(--text3)">${count}/5</span>`}</div>`;
+  }
+  return html;
+}
+
+function openRedBlackModal(){
+  haptic();
+  const gems = userData?.gems || 0;
+  openModal('Red & Black', `
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:4px">${userLang==='ru'?'Ваши гемы':'Your gems'}: <span style="color:#a78bfa;font-weight:700">${gems} <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><path d="M6 3L3 9L12 21L21 9L18 3Z" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.2"/><path d="M3 9L12 12L21 9" stroke="#c4b5fd" stroke-width="1"/><path d="M12 3L9 9L12 12L15 9Z" fill="#c4b5fd" opacity="0.5"/></svg></span></div>
+      <div style="font-size:12px;color:var(--text2)">${userLang==='ru'?'Угадай цвет — выиграй x2':'Guess the color — win x2'}</div>
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:6px">${userLang==='ru'?'Ставка (1–100 гемов):':'Bet (1–100 gems):'}</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        ${[1,5,10,25,50,100].map(v=>`<button onclick="setRBBet(${v},this)" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:7px 2px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text)" data-bet="${v}">${v}</button>`).join('')}
+      </div>
+      <div class="price-input-row">
+        <input type="number" id="rb-bet" min="1" max="100" value="1" style="font-size:16px;font-weight:700">
+        <span class="cur" style="color:#a78bfa"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><path d="M6 3L3 9L12 21L21 9L18 3Z" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.2"/><path d="M3 9L12 12L21 9" stroke="#c4b5fd" stroke-width="1"/><path d="M12 3L9 9L12 12L15 9Z" fill="#c4b5fd" opacity="0.5"/><path d="M6 3L9 9" stroke="#c4b5fd" stroke-width="0.8"/><path d="M18 3L15 9" stroke="#c4b5fd" stroke-width="0.8"/><circle cx="12" cy="5.5" r="1" fill="#ede9fe" opacity="0.9"/></svg></span>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button id="rb-red" onclick="selectRBColor('red',this)" style="flex:1;background:rgba(255,74,74,0.15);border:2px solid rgba(255,74,74,0.5);border-radius:12px;padding:14px;cursor:pointer;font-size:15px;font-weight:800;color:#ff4a4a;transition:all 0.15s">🔴 RED</button>
+      <button id="rb-black" onclick="selectRBColor('black',this)" style="flex:1;background:rgba(255,255,255,0.05);border:2px solid rgba(255,255,255,0.15);border-radius:12px;padding:14px;cursor:pointer;font-size:15px;font-weight:800;color:var(--text);transition:all 0.15s">⚫ BLACK</button>
+    </div>
+    <div id="rb-result" style="min-height:32px;text-align:center;margin-bottom:12px"></div>
+    <button id="rb-play-btn" class="btn btn-primary btn-wide" onclick="playRedBlack()" style="background:linear-gradient(135deg,#ff4a4a,#7c1c1c)" disabled>${userLang==='ru'?'Выберите цвет':'Choose a color'}</button>
+    <button class="btn btn-secondary btn-wide" onclick="closeModal()" style="margin-top:6px">${userLang==='ru'?'Закрыть':'Close'}</button>
+  `);
+  window._rbChoice = null;
+}
+
+function setRBBet(val, el){
+  haptic();
+  document.querySelectorAll('[data-bet]').forEach(b=>{b.style.background='var(--bg3)';b.style.borderColor='var(--border)';b.style.color='var(--text)';});
+  el.style.background='rgba(167,139,250,0.2)'; el.style.borderColor='#a78bfa'; el.style.color='#a78bfa';
+  const inp = document.getElementById('rb-bet');
+  if(inp) inp.value = val;
+}
+
+function selectRBColor(color, el){
+  haptic();
+  window._rbChoice = color;
+  const red = document.getElementById('rb-red');
+  const black = document.getElementById('rb-black');
+  if(color==='red'){
+    if(red){red.style.background='rgba(255,74,74,0.35)';red.style.borderColor='#ff4a4a';}
+    if(black){black.style.background='rgba(255,255,255,0.05)';black.style.borderColor='rgba(255,255,255,0.15)';}
+  } else {
+    if(black){black.style.background='rgba(255,255,255,0.15)';black.style.borderColor='rgba(255,255,255,0.6)';}
+    if(red){red.style.background='rgba(255,74,74,0.15)';red.style.borderColor='rgba(255,74,74,0.5)';}
+  }
+  const btn = document.getElementById('rb-play-btn');
+  if(btn){btn.disabled=false;btn.textContent=userLang==='ru'?'🎲 Играть!':'🎲 Play!';}
+}
+
+async function playRedBlack(){
+  haptic('heavy');
+  const bet = parseInt(document.getElementById('rb-bet')?.value||'1');
+  const choice = window._rbChoice;
+  if(!choice){toast(userLang==='ru'?'Выберите цвет':'Choose a color','err');return;}
+  if(!bet||bet<1||bet>100){toast(userLang==='ru'?'Ставка 1–100':'Bet 1–100','err');return;}
+  const btn = document.getElementById('rb-play-btn');
+  if(btn) btn.disabled=true;
+  const resultEl = document.getElementById('rb-result');
+
+  // Card flip animation
+  if(resultEl) resultEl.innerHTML=`
+    <div id="rb-card" style="width:70px;height:100px;margin:0 auto;perspective:600px;cursor:default">
+      <div id="rb-card-inner" style="width:100%;height:100%;position:relative;transform-style:preserve-3d;transition:transform 0.7s cubic-bezier(0.4,0.2,0.2,1)">
+        <div style="position:absolute;inset:0;backface-visibility:hidden;background:linear-gradient(135deg,#1a1a2e,#16213e);border:2px solid #333;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:28px">🂠</div>
+        <div id="rb-card-front" style="position:absolute;inset:0;backface-visibility:hidden;transform:rotateY(180deg);border-radius:10px;border:2px solid #555;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:900"></div>
+      </div>
+    </div>`;
+
+  try{
+    await new Promise(r=>setTimeout(r,400));
+    const res = await api('/api/games/redblack','POST',{telegram_id:tgUser.id,bet,choice});
+
+    // Flip card
+    const inner = document.getElementById('rb-card-inner');
+    const front = document.getElementById('rb-card-front');
+    if(inner && front){
+      const isRed = res.result==='red';
+      const isZero = res.result==='zero';
+      front.style.background = isZero?'linear-gradient(135deg,#1a3a1a,#0d1f0d)':isRed?'linear-gradient(135deg,#4a0000,#800000)':'linear-gradient(135deg,#0a0a0a,#1a1a1a)';
+      front.style.borderColor = isZero?'#4aff8a':isRed?'#ff4a4a':'#666';
+      front.textContent = isZero?'0':isRed?'♥':'♠';
+      inner.style.transform='rotateY(180deg)';
+    }
+
+    await new Promise(r=>setTimeout(r,800));
+
+    const won = res.won;
+    if(resultEl){
+      const existing = resultEl.querySelector('#rb-card');
+      const cardHtml = existing ? existing.outerHTML : '';
+      resultEl.innerHTML=`${cardHtml}
+        <div style="margin-top:10px;font-size:20px;font-weight:900;color:${won?'var(--success)':'var(--danger)'}">${won?'+'+res.delta:''+res.delta} <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><path d="M6 3L3 9L12 21L21 9L18 3Z" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.2"/><path d="M3 9L12 12L21 9" stroke="#c4b5fd" stroke-width="1"/><path d="M12 3L9 9L12 12L15 9Z" fill="#c4b5fd" opacity="0.5"/></svg></div>
+        <div style="font-size:11px;color:var(--text2);margin-top:2px">${userLang==='ru'?'Баланс':'Balance'}: ${res.gems} <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><path d="M6 3L3 9L12 21L21 9L18 3Z" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.2"/><path d="M3 9L12 12L21 9" stroke="#c4b5fd" stroke-width="1"/><path d="M12 3L9 9L12 12L15 9Z" fill="#c4b5fd" opacity="0.5"/></svg></div>`;
+    }
+    userData.gems = res.gems;
+    updateBalances();
+    const gemsEl = document.getElementById('gems-val');
+    if(gemsEl) gemsEl.textContent = res.gems;
+    if(btn){btn.disabled=false;btn.textContent=userLang==='ru'?'🎲 Ещё раз!':'🎲 Again!';}
+    window._rbChoice=null;
+    const red=document.getElementById('rb-red'),black=document.getElementById('rb-black');
+    if(red){red.style.background='rgba(255,74,74,0.15)';red.style.borderColor='rgba(255,74,74,0.5)';}
+    if(black){black.style.background='rgba(255,255,255,0.05)';black.style.borderColor='rgba(255,255,255,0.15)';}
+  }catch(e){
+    toast(e.message,'err');
+    if(btn){btn.disabled=false;btn.textContent=userLang==='ru'?'🎲 Играть!':'🎲 Play!';}
+    if(resultEl) resultEl.innerHTML='';
+  }
+}
+
+function openSpinModal(){
+  haptic();
+  const symbols = ['💎','⭐','🎰','🃏','🌟','💫','✨','🔮'];
+  openModal(userLang==='ru'?'Крутить слот':'Spin slot', `
+    <div style="text-align:center;padding:8px 0">
+      <div style="display:flex;justify-content:center;gap:8px;margin-bottom:20px">
+        ${[0,1,2].map(i=>`
+          <div id="slot-reel-${i}" style="width:72px;height:72px;background:var(--bg3);border:2px solid rgba(167,139,250,0.3);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:32px;overflow:hidden">
+            💎
+          </div>`).join('')}
+      </div>
+      <div id="slot-result" style="font-size:14px;color:var(--text2);min-height:20px;margin-bottom:16px"></div>
+      <button id="spin-btn" class="btn btn-primary btn-wide" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none" onclick="doSpin()">
+        ${userLang==='ru'?'🎰 Крутить!':'🎰 Spin!'}
+      </button>
+    </div>
+  `);
+}
+
+async function doSpin(){
+  haptic('medium');
+  const btn = document.getElementById('spin-btn');
+  if(btn) btn.disabled = true;
+  const spinSymbols = ['⭐','🍒','7️⃣','💎','🔮','🌟','🃏','💫'];
+  const reels = [0,1,2].map(i=>document.getElementById(`slot-reel-${i}`));
+
+  // Animate reels
+  let ticks = 0;
+  const interval = setInterval(()=>{
+    reels.forEach(r=>{ if(r) r.textContent = spinSymbols[Math.floor(Math.random()*spinSymbols.length)]; });
+    ticks++;
+    if(ticks > 20) clearInterval(interval);
+  }, 80);
+
+  try{
+    await new Promise(r=>setTimeout(r,300));
+    const res = await api('/api/tasks/spin','POST',{telegram_id:tgUser.id});
+    await new Promise(r=>setTimeout(r,1400));
+    clearInterval(interval);
+
+    const comboMap = {
+      '777':   { syms:['7️⃣','7️⃣','7️⃣'], color:'rgba(240,192,64,0.6)',  label:'7 7 7' },
+      'cherry':{ syms:['🍒','🍒','🍒'], color:'rgba(74,255,138,0.6)',  label:'🍒🍒🍒' },
+      'star':  { syms:['⭐','⭐','⭐'], color:'rgba(167,139,250,0.4)', label:'⭐⭐⭐' },
+    };
+    const combo = comboMap[res.combo] || comboMap['star'];
+    reels.forEach((r,i)=>{ if(r){ r.textContent=combo.syms[i]; r.style.borderColor=combo.color; }});
+
+    const resultEl = document.getElementById('slot-result');
+    if(resultEl){
+      const prize = res.prize;
+      resultEl.innerHTML = `<div style="font-size:18px;margin-bottom:2px">${combo.label}</div>
+        <div style="font-size:20px;font-weight:900;color:${prize>=100?'#f0c040':prize>=10?'var(--success)':'#a78bfa'}">+${prize} <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><path d="M6 3L3 9L12 21L21 9L18 3Z" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.2"/><path d="M3 9L12 12L21 9" stroke="#c4b5fd" stroke-width="1"/><path d="M12 3L9 9L12 12L15 9Z" fill="#c4b5fd" opacity="0.5"/></svg></div>`;
+    }
+    if(btn){ btn.textContent='✓'; btn.style.background='var(--bg3)'; }
+    haptic('heavy');
+    userData = await api(`/api/user/${tgUser.id}`);
+    updateBalances();
+    setTimeout(()=>{ closeModal(); loadProfile(); }, 1800);
+  }catch(e){
+    clearInterval(interval);
+    toast(e.message,'err');
+    if(btn){ btn.disabled=false; }
+  }
+}
+
+async function claimTask(type){
+  haptic('medium');
+  try{
+    const res = await api(`/api/tasks/${type}`,'POST',{telegram_id:tgUser.id});
+    userData = await api(`/api/user/${tgUser.id}`);
+    updateBalances();
+    loadProfile();
+    toast(`+${type==='daily'?1:type==='channel'?5:50} 💎`,'ok');
+  }catch(e){toast(e.message,'err');}
+}
+
+
+// ── PvP BATTLE ──
+let _pvpInterval = null;
+
+async function openPvpModal(){
+  haptic();
+  const cards = (userData?.cards||[]).filter(c=>!c.is_listed);
+  if(cards.length===0){toast(userLang==='ru'?'Нет доступных карточек':'No cards available','err');return;}
+
+  let selectedPvp = new Set();
+  const renderPvpCards = () => {
+    return cards.map(card=>{
+      const sel = selectedPvp.has(card.id);
+      return '<div onclick="togglePvpCard('+card.id+',this)" style="background:'+(sel?'rgba(255,45,120,0.2)':'var(--bg3)')+';border:2px solid '+(sel?'#ff2d78':'var(--border)')+';border-radius:10px;overflow:hidden;cursor:pointer" data-pvp-card="'+card.id+'">'
+        + '<div style="aspect-ratio:1/1;background:var(--bg3)"><img src="'+(card.is_upgraded?card.image_url:'/static/ponki/ponki.png')+'" style="width:100%;height:100%;object-fit:cover"></div>'
+        + '<div style="padding:4px 6px;font-size:10px;font-weight:700">'+(card.is_upgraded?card.name:'Base')+'</div>'
+        + '</div>';
+    }).join('');
+  };
+
+  window._pvpCards = cards;
+  window._pvpSelected = selectedPvp;
+
+  openModal('⚔️ PvP '+(userLang==='ru'?'Битва':'Battle'),
+    '<div style="font-size:12px;color:var(--text2);margin-bottom:10px">'+(userLang==='ru'?'Выбери карты для ставки (чем больше — тем выше шанс победить):':'Select cards to bet (more cards = higher win chance:')+'</div>'
+    + '<div style="display:flex;gap:6px;margin-bottom:10px">'
+      + '<button onclick="selectAllPvp()" class="btn btn-secondary" style="flex:1;font-size:12px;padding:8px">'+(userLang==='ru'?'Все':'All')+'</button>'
+      + '<button onclick="clearPvp()" class="btn btn-secondary" style="flex:1;font-size:12px;padding:8px">'+(userLang==='ru'?'Сбросить':'Clear')+'</button>'
+    + '</div>'
+    + '<div id="pvp-cards-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-height:200px;overflow-y:auto;margin-bottom:12px">'
+      + renderPvpCards()
+    + '</div>'
+    + '<div id="pvp-selected-count" style="font-size:13px;color:var(--text2);text-align:center;margin-bottom:10px">'+(userLang==='ru'?'Выбрано: 0':'Selected: 0')+'</div>'
+    + '<button id="pvp-join-btn" class="btn btn-primary btn-wide" onclick="joinPvp()" disabled>'+(userLang==='ru'?'Войти в лобби':'Join lobby')+'</button>'
+    + '<button class="btn btn-secondary btn-wide" onclick="closeModal()" style="margin-top:6px">'+(userLang==='ru'?'Отмена':'Cancel')+'</button>'
+  );
+}
+
+function togglePvpCard(cardId, el){
+  haptic();
+  const sel = window._pvpSelected;
+  if(sel.has(cardId)){sel.delete(cardId);el.style.background='var(--bg3)';el.style.borderColor='var(--border)';}
+  else{sel.add(cardId);el.style.background='rgba(255,45,120,0.2)';el.style.borderColor='#ff2d78';}
+  const cnt = document.getElementById('pvp-selected-count');
+  if(cnt) cnt.textContent=(userLang==='ru'?'Выбрано: ':'Selected: ')+sel.size;
+  const btn = document.getElementById('pvp-join-btn');
+  if(btn) btn.disabled = sel.size===0;
+}
+
+function selectAllPvp(){
+  haptic();
+  const cards = window._pvpCards||[];
+  const sel = window._pvpSelected;
+  cards.forEach(c=>{sel.add(c.id);});
+  document.querySelectorAll('[data-pvp-card]').forEach(el=>{el.style.background='rgba(255,45,120,0.2)';el.style.borderColor='#ff2d78';});
+  const cnt = document.getElementById('pvp-selected-count');
+  if(cnt) cnt.textContent=(userLang==='ru'?'Выбрано: ':'Selected: ')+sel.size;
+  const btn = document.getElementById('pvp-join-btn');
+  if(btn) btn.disabled = false;
+}
+
+function clearPvp(){
+  haptic();
+  window._pvpSelected.clear();
+  document.querySelectorAll('[data-pvp-card]').forEach(el=>{el.style.background='var(--bg3)';el.style.borderColor='var(--border)';});
+  const cnt = document.getElementById('pvp-selected-count');
+  if(cnt) cnt.textContent=(userLang==='ru'?'Выбрано: 0':'Selected: 0');
+  const btn = document.getElementById('pvp-join-btn');
+  if(btn) btn.disabled = true;
+}
+
+async function joinPvp(){
+  haptic('medium');
+  const cardIds = Array.from(window._pvpSelected);
+  if(!cardIds.length){toast(userLang==='ru'?'Выбери карточки':'Select cards','err');return;}
+  try{
+    const res = await api('/api/pvp/join','POST',{telegram_id:tgUser.id,card_ids:cardIds});
+    closeModal();
+    userData = await api(`/api/user/${tgUser.id}`);
+    // Always open wait modal - battle_id may be null until 2nd player joins
+    openPvpWaitModal(res.battle_id);
+  }catch(e){
+    // If already in lobby - just open the wait modal
+    if(e.message && e.message.includes('уже в лобби')){
+      closeModal();
+      openPvpWaitModal(null);
+    } else {
+      toast(e.message,'err');
+    }
+  }
+}
+
+const _pvpColors = ['#ff2d78','#4ab0ff','#f0c040','#4aff8a','#a78bfa','#ff6b35','#00d2ff','#ff9f1c'];
+
+function openPvpWaitModal(battleId){
+  const myCards = window._pvpSelected ? Array.from(window._pvpSelected).length : 1;
+  openModal('⚔️ PvP '+(userLang==='ru'?'Битва':'Battle'),
+    '<div style="padding:4px 0 8px">'
+    // Roulette wheel canvas
+    + '<div style="position:relative;width:240px;height:240px;margin:0 auto 12px">'
+      + '<canvas id="pvp-wheel" width="240" height="240" style="border-radius:50%"></canvas>'
+      + '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:90px;height:90px;background:#0a0a0a;border-radius:50%;border:3px solid #222;display:flex;flex-direction:column;align-items:center;justify-content:center">'
+        + '<div id="pvp-countdown" style="font-size:26px;font-weight:900;color:#fff">⏳</div>'
+        + '<div id="pvp-timer-label" style="font-size:9px;color:var(--text2)">ожидание</div>'
+      + '</div>'
+      // Arrow pointer
+      + '<div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-top:20px solid #fff"></div>'
+    + '</div>'
+    // Stats row
+    + '<div style="display:flex;justify-content:center;gap:20px;margin-bottom:12px">'
+      + '<div style="text-align:center"><div style="font-size:18px;font-weight:900;color:#ff2d78" id="pvp-my-chance">100%</div><div style="font-size:10px;color:var(--text2)">'+(userLang==='ru'?'Твой шанс':'Your chance')+'</div></div>'
+      + '<div style="text-align:center"><div style="font-size:18px;font-weight:900;color:#fff" id="pvp-players-count">1</div><div style="font-size:10px;color:var(--text2)">'+(userLang==='ru'?'Игроков':'Players')+'</div></div>'
+      + '<div style="text-align:center"><div style="font-size:18px;font-weight:900;color:#f0c040" id="pvp-cards-count">'+myCards+'</div><div style="font-size:10px;color:var(--text2)">'+(userLang==='ru'?'Карт на кону':'Cards at stake')+'</div></div>'
+    + '</div>'
+    + '<div id="pvp-status-text" style="text-align:center;font-size:13px;color:var(--text2);margin-bottom:12px">'+(userLang==='ru'?'Ждём соперника...':'Waiting for opponent...')+'</div>'
+    + '</div>'
+    + '<button id="pvp-leave-btn" class="btn btn-secondary btn-wide" onclick="leavePvp()">'+(userLang==='ru'?'Покинуть лобби':'Leave lobby')+'</button>'
+  );
+  // Draw initial wheel (just me)
+  setTimeout(()=>drawPvpWheel([{cards: myCards, color:'#ff2d78', name:'Ты'}]), 100);
+  if(_pvpInterval) clearInterval(_pvpInterval);
+  _pvpInterval = setInterval(()=>pollPvpStatus(battleId), 1500);
+}
+
+function drawPvpWheel(players){
+  const canvas = document.getElementById('pvp-wheel');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const cx=120, cy=120, r=115, ir=50;
+  ctx.clearRect(0,0,240,240);
+  const total = players.reduce((s,p)=>s+p.cards,0)||1;
+  let startAngle = -Math.PI/2;
+  players.forEach((p,i)=>{
+    const slice = (p.cards/total)*Math.PI*2;
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,startAngle,startAngle+slice);
+    ctx.closePath();
+    ctx.fillStyle = p.color||_pvpColors[i%_pvpColors.length];
+    ctx.fill();
+    // Label in sector
+    const midAngle = startAngle + slice/2;
+    const lx = cx + (r*0.65)*Math.cos(midAngle);
+    const ly = cy + (r*0.65)*Math.sin(midAngle);
+    ctx.fillStyle='rgba(0,0,0,0.5)';
+    ctx.beginPath(); ctx.arc(lx,ly,18,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#fff';
+    ctx.font='bold 10px Inter,sans-serif';
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillText(Math.round(p.cards/total*100)+'%', lx, ly);
+    startAngle += slice;
+  });
+  // Inner circle
+  ctx.beginPath(); ctx.arc(cx,cy,ir,0,Math.PI*2);
+  ctx.fillStyle='#0a0a0a'; ctx.fill();
+}
+
+async function pollPvpStatus(battleId){
+  try{
+    const s = await api(`/api/pvp/status/${tgUser.id}`);
+    if(s.status==='idle'){
+      clearInterval(_pvpInterval); _pvpInterval=null;
+      return;
+    }
+    const waitContent = document.getElementById('pvp-wait-content');
+    const cdEl = document.getElementById('pvp-countdown');
+    const partEl = document.getElementById('pvp-participants');
+    const leaveBtn = document.getElementById('pvp-leave-btn');
+    if(s.status==='countdown'||s.status==='in_battle'){
+      if(cdEl){cdEl.textContent=s.countdown;}
+      const timerLabel = document.getElementById('pvp-timer-label');
+      if(timerLabel) timerLabel.textContent=s.countdown>0?'сек':'старт!';
+      const myChance = document.getElementById('pvp-my-chance');
+      const playersCount = document.getElementById('pvp-players-count');
+      const cardsCount = document.getElementById('pvp-cards-count');
+      const statusText = document.getElementById('pvp-status-text');
+      if(myChance) myChance.textContent=Math.round(s.my_cards/s.total_cards*100)+'%';
+      if(playersCount) playersCount.textContent=s.participants;
+      if(cardsCount) cardsCount.textContent=s.total_cards;
+      if(statusText) statusText.textContent=(userLang==='ru'?'Игра началась! Осталось: ':'Game started! Time left: ')+s.countdown+'s';
+      // Update wheel with participants data
+      if(s.players) drawPvpWheel(s.players);
+      if(leaveBtn) leaveBtn.style.display='none';
+      // Finish when countdown reaches 0
+      if(s.countdown<=0){
+        clearInterval(_pvpInterval); _pvpInterval=null;
+        await api('/api/pvp/finish','POST',{battle_id:s.battle_id});
+        const finalStatus = await api(`/api/pvp/status/${tgUser.id}`);
+        closeModal();
+        const won = finalStatus.winner_user_id === userData?.id;
+        userData = await api(`/api/user/${tgUser.id}`);
+        updateBalances();
+        loadProfile();
+        openModal('⚔️ PvP',
+          '<div style="text-align:center;padding:16px 0">'
+          + '<div style="font-size:52px;margin-bottom:12px">'+(won?'🏆':'😔')+'</div>'
+          + '<div style="font-size:18px;font-weight:900;color:'+(won?'var(--success)':'var(--danger)')+'">'
+          + (won?(userLang==='ru'?'Ты победил!':'You won!'):(userLang==='ru'?'Ты проиграл':'You lost'))
+          + '</div>'
+          + (won?'<div style="font-size:13px;color:var(--text2);margin-top:8px">+'+(finalStatus.total_cards||'?')+' '+(userLang==='ru'?'карточек':'cards')+'</div>':'')
+          + '</div>'
+          + '<button class="btn btn-primary btn-wide" onclick="closeModal()">'+(userLang==='ru'?'OK':'OK')+'</button>'
+        );
+      }
+    }
+    if(s.status==='waiting'){
+      if(leaveBtn) leaveBtn.style.display='block';
+    }
+  }catch(e){ clearInterval(_pvpInterval); _pvpInterval=null; }
+}
+
+async function leavePvp(){
+  haptic();
+  try{
+    await api('/api/pvp/leave','POST',{telegram_id:tgUser.id});
+    clearInterval(_pvpInterval); _pvpInterval=null;
+    closeModal();
+    toast(userLang==='ru'?'Ты покинул лобби':'Left lobby','ok');
+    userData = await api(`/api/user/${tgUser.id}`);
+    updateBalances();
+  }catch(e){toast(e.message,'err');}
+}
+
+async function cancelAuction(auctionId){
+  haptic('medium');
+  try{
+    await api('/api/auction/cancel','POST',{telegram_id:tgUser.id,auction_id:auctionId});
+    toast(userLang==='ru'?'Аукцион отменён':'Auction cancelled','ok');
+    userData=await api(`/api/user/${tgUser.id}`);
+    updateBalances();
+    loadAuctions();
   }catch(e){toast(e.message,'err');}
 }
 

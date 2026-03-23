@@ -7,9 +7,32 @@ import sqlite3
 import random
 import string
 import os
+import time
+from collections import defaultdict
 from database import get_db, init_db
 
 app = FastAPI(title="MemStroy API")
+
+# ── RATE LIMITER ──
+_rate_store = defaultdict(list)  # ip -> [timestamps]
+_blocked_ips = set()
+
+def _check_rate_limit(ip: str, limit: int = 60, window: int = 60) -> bool:
+    """Returns True if request is allowed. Blocks IPs with >200 req/min."""
+    now = time.time()
+    # Hard block check
+    if ip in _blocked_ips:
+        return False
+    # Clean old entries
+    _rate_store[ip] = [t for t in _rate_store[ip] if now - t < window]
+    _rate_store[ip].append(now)
+    count = len(_rate_store[ip])
+    # Auto-block if >200 req/min (bot/attack)
+    if count > 200:
+        _blocked_ips.add(ip)
+        print(f"🚫 Blocked IP: {ip} ({count} req/min)")
+        return False
+    return count <= limit
 
 try:
     from ton_wallet import generate_wallet, send_ton, get_wallet_balance
@@ -55,6 +78,17 @@ def get_tg_id_from_init_data(init_data: str) -> int:
 
 import aiohttp as _aiohttp
 
+def _validate_telegram_id(telegram_id) -> int:
+    """Basic telegram_id validation - must be positive integer"""
+    try:
+        tid = int(telegram_id)
+        if tid <= 0:
+            raise ValueError
+        return tid
+    except (TypeError, ValueError):
+        raise HTTPException(400, "Invalid telegram_id")
+
+
 async def notify_user(telegram_id: int, text: str):
     """Send Telegram notification to user"""
     bot_token = os.getenv("BOT_TOKEN","")
@@ -73,11 +107,19 @@ from starlette.requests import Request as StarletteRequest
 
 class NgrokMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: StarletteRequest, call_next):
+        # Rate limiting
+        client_ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else "unknown").split(",")[0].strip()
+        if not _check_rate_limit(client_ip):
+            from starlette.responses import JSONResponse
+            return JSONResponse({"detail": "Too many requests"}, status_code=429)
         response = await call_next(request)
         response.headers["ngrok-skip-browser-warning"] = "true"
         return response
 
 app.add_middleware(NgrokMiddleware)
+
+
+# initData middleware removed - handled per-endpoint where critical
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/webapp", StaticFiles(directory="webapp"), name="webapp")
@@ -136,7 +178,7 @@ async def _auction_background():
                     seller = conn.execute("SELECT telegram_id FROM users WHERE id=?", (auction["seller_id"],)).fetchone()
                     card = conn.execute("SELECT cd.name FROM user_cards uc JOIN card_definitions cd ON uc.card_def_id=cd.id WHERE uc.id=?", (auction["user_card_id"],)).fetchone()
                     if seller and card:
-                        await notify_user(seller["telegram_id"], f"Аукцион без ставок. {card['name']} возвращена")
+                        await notify_user(seller["telegram_id"], f"↩️ Аукцион без ставок. {card['name']} возвращена")
             if expired:
                 conn.commit()
             conn.close()
@@ -228,8 +270,14 @@ def register(data: RegisterUser):
     """, (data.telegram_id, data.username, data.first_name, data.last_name, ref_code, referred_by, wallet_address, wallet_mnemonic))
     conn.commit()
     user_id = conn.execute("SELECT id FROM users WHERE telegram_id=?", (data.telegram_id,)).fetchone()["id"]
+    # Welcome bonus: 5 gems on first registration
+    conn.execute("UPDATE users SET gems = COALESCE(gems,0) + 5 WHERE id=?", (user_id,))
+    conn.commit()
     conn.close()
-    return {"ok": True, "user_id": user_id, "new": True}
+    import asyncio
+    asyncio.create_task(notify_user(data.telegram_id,
+        "🎁 Добро пожаловать в Ponki! Вам начислено 5 💎 гемов в подарок!"))
+    return {"ok": True, "user_id": user_id, "new": True, "welcome_bonus": 5}
 
 
 @app.get("/api/user/{telegram_id}")
@@ -277,6 +325,10 @@ def user_info(telegram_id: int):
         "ton_balance": user["ton_balance"] if "ton_balance" in user.keys() else 0,
         "wallet_address": user["wallet_address"] if "wallet_address" in user.keys() else "",
         "cashback_balance": user["cashback_balance"] if "cashback_balance" in user.keys() else 0,
+        "gems": user["gems"] if "gems" in user.keys() else 0,
+        "daily_reward_date": user["daily_reward_date"] if "daily_reward_date" in user.keys() else "",
+        "spin_date": user["spin_date"] if "spin_date" in user.keys() else "",
+        "tasks_completed": user["tasks_completed"] if "tasks_completed" in user.keys() else 0,
         "cards": [dict(c) for c in cards]
     }
 
@@ -306,6 +358,18 @@ def collection_detail(collection_id: int):
 def payment_confirm(data: PaymentConfirm):
     conn = get_db()
     user = require_user(conn, data.telegram_id)
+    # Replay attack protection: check if this payload was already processed
+    existing = conn.execute(
+        "SELECT id FROM transactions WHERE payload=? AND from_user_id=? AND type='payment'",
+        (data.payload, user["id"])
+    ).fetchone()
+    if existing and not data.payload.startswith("addstars"):
+        conn.close()
+        raise HTTPException(400, "Платёж уже обработан")
+    # Log this payment immediately
+    conn.execute("INSERT OR IGNORE INTO transactions (from_user_id, to_user_id, type, payload) VALUES (?,?,'payment',?)",
+                 (user["id"], user["id"], data.payload))
+    conn.commit()
     parts = data.payload.split("_")
     action = parts[0]
 
@@ -367,12 +431,12 @@ def payment_confirm(data: PaymentConfirm):
 
 
 def _pay_referral_bonus(conn, user_id, amount):
-    """10% referral bonus"""
+    """10% referral bonus in gems"""
     user = conn.execute("SELECT referred_by FROM users WHERE id=?", (user_id,)).fetchone()
     if not user or not user["referred_by"]:
         return
-    bonus = max(1, int(amount * 0.20))
-    conn.execute("UPDATE users SET stars_balance = stars_balance + ? WHERE id=?",
+    bonus = max(1, int(amount * 0.10))
+    conn.execute("UPDATE users SET gems = COALESCE(gems,0) + ? WHERE id=?",
                  (bonus, user["referred_by"]))
     conn.execute("""
         INSERT INTO referral_bonuses (referrer_id, referred_id, bonus_stars)
@@ -413,6 +477,34 @@ def _buy_card(conn, user_id, collection_id):
     """, (user_id, user_id, col["base_price"]))
     conn.commit()
     return dict(chosen)
+
+
+@app.post("/api/buy_card_gems")
+def buy_card_gems(data: dict):
+    """Buy cards using gems (1 gem = 1 card)"""
+    telegram_id = _validate_telegram_id(data.get("telegram_id"))
+    collection_id = data.get("collection_id", 1)
+    qty = max(1, min(500, int(data.get("qty", 1))))  # cap at 500
+    conn = get_db()
+    user = require_user(conn, telegram_id)
+    gems = user["gems"] if "gems" in user.keys() else 0
+    if gems < qty:
+        conn.close()
+        raise HTTPException(400, f"Недостаточно гемов. Есть: {gems}")
+    # Atomic deduct
+    cur = conn.execute("UPDATE users SET gems = gems - ? WHERE id=? AND gems >= ?", (qty, user["id"], qty))
+    if cur.rowcount == 0:
+        conn.close()
+        raise HTTPException(400, "Недостаточно гемов (concurrent)")
+    cards = []
+    for _ in range(qty):
+        chosen = _buy_card(conn, user["id"], collection_id)
+        cards.append(chosen)
+    conn.commit()
+    conn.close()
+    if qty == 1:
+        return {"ok": True, "message": f"💎 Куплено: {cards[0]['name']}!", "card": cards[0]}
+    return {"ok": True, "message": f"💎 Куплено {qty} карточек!", "cards": cards}
 
 
 @app.post("/api/buy_card_internal")
@@ -578,8 +670,8 @@ def buy_listing(data: BuyListing):
     conn.close()
     import asyncio
     if seller_row:
-        asyncio.create_task(notify_user(seller_row["telegram_id"], f"Ваша карточка {card_nm} продана за {price_ton} TON"))
-    asyncio.create_task(notify_user(buyer_tg, f"Вы купили карточку {card_nm} за {price_ton} TON"))
+        asyncio.create_task(notify_user(seller_row["telegram_id"], f"✅ Ваша карточка {card_nm} продана за {price_ton} TON"))
+    asyncio.create_task(notify_user(buyer_tg, f"🛍 Вы купили карточку {card_nm} за {price_ton} TON"))
     return {"ok": True, "message": "Card purchased!"}
 
 
@@ -701,8 +793,8 @@ def transfer_card(data: TransferCard):
     card_name = card_row["name"] if card_row else "карточка"
     conn.close()
     import asyncio
-    asyncio.create_task(notify_user(to_tg_id, f"{from_name} передал вам карточку {card_name}"))
-    asyncio.create_task(notify_user(data.from_telegram_id, f"Карточка {card_name} отправлена"))
+    asyncio.create_task(notify_user(to_tg_id, f"🎁 {from_name} передал вам карточку {card_name}"))
+    asyncio.create_task(notify_user(data.from_telegram_id, f"✅ Карточка {card_name} отправлена"))
     return {"ok": True, "message": "Card transferred!"}
 
 
@@ -750,8 +842,12 @@ async def make_offer(data: dict):
     if (from_user["ton_balance"] or 0) < amount_nano:
         conn.close()
         raise HTTPException(400, "Insufficient TON balance")
-    # Reserve (lock) the amount
-    conn.execute("UPDATE users SET ton_balance = ton_balance - ? WHERE id=?", (amount_nano, from_user["id"]))
+    # Reserve (lock) the amount - atomic
+    cur = conn.execute("UPDATE users SET ton_balance = ton_balance - ? WHERE id=? AND ton_balance >= ?",
+                       (amount_nano, from_user["id"], amount_nano))
+    if cur.rowcount == 0:
+        conn.close()
+        raise HTTPException(400, "Недостаточно TON (concurrent)")
     # Get card and owner
     card = conn.execute("""
         SELECT uc.*, cd.name as card_name, u.telegram_id as owner_tg, u.first_name as owner_name
@@ -838,8 +934,8 @@ async def accept_offer(data: dict):
     price_ton = float(f"{price_ton:.10f}".rstrip('0').rstrip('.'))
     conn.close()
     import asyncio
-    asyncio.create_task(notify_user(offer["buyer_tg"], f"Ваш оффер принят! Карточка {offer['card_name']} ваша за {price_ton} TON"))
-    asyncio.create_task(notify_user(owner["telegram_id"], f"Вы приняли оффер {price_ton} TON за {offer['card_name']}"))
+    asyncio.create_task(notify_user(offer["buyer_tg"], f"✅ Ваш оффер принят! Карточка {offer['card_name']} ваша за {price_ton} TON"))
+    asyncio.create_task(notify_user(owner["telegram_id"], f"✅ Вы приняли оффер {price_ton} TON за {offer['card_name']}") )
     return {"ok": True}
 
 
@@ -988,9 +1084,21 @@ async def place_bid(data: dict):
         conn.execute("UPDATE users SET ton_balance = ton_balance + ? WHERE id=?",
                     (auction["current_price_nano"], auction["current_bidder_id"]))
 
-    # Reserve new bid
-    conn.execute("UPDATE users SET ton_balance = ton_balance - ? WHERE id=?",
-                (amount_nano, bidder["id"]))
+    # Reserve new bid - atomic to prevent double-spend
+    cur = conn.execute("UPDATE users SET ton_balance = ton_balance - ? WHERE id=? AND ton_balance >= ?",
+                (amount_nano, bidder["id"], amount_nano))
+    if cur.rowcount == 0:
+        conn.close()
+        raise HTTPException(400, "Недостаточно TON (concurrent)")
+
+    # Extend by 5 minutes if bid placed in last 5 minutes
+    ends_at = auction["ends_at"]
+    now_dt = datetime.utcnow()
+    ends_dt = datetime.strptime(ends_at, "%Y-%m-%d %H:%M:%S")
+    if (ends_dt - now_dt).total_seconds() < 300:
+        ends_dt = now_dt + timedelta(minutes=5)
+        ends_at = ends_dt.strftime("%Y-%m-%d %H:%M:%S")
+        conn.execute("UPDATE auctions SET ends_at=? WHERE id=?", (ends_at, auction_id))
 
     conn.execute("""
         UPDATE auctions SET current_price_nano=?, current_bidder_id=? WHERE id=?
@@ -1011,7 +1119,7 @@ async def place_bid(data: dict):
     import asyncio
     if seller:
         asyncio.create_task(notify_user(seller["telegram_id"],
-            f"Новая ставка {amount_ton} TON на {card_name} от {bidder_name}"))
+            f"🔔 Новая ставка {amount_ton} TON на {card_name} от {bidder_name}"))
     return {"ok": True}
 
 
@@ -1078,6 +1186,429 @@ async def finish_auction(data: dict):
     conn.commit()
     conn.close()
     return {"ok": True, "finished": len(expired)}
+
+
+@app.post("/api/auction/cancel")
+async def cancel_auction(data: dict):
+    """Cancel auction if no bids yet — only seller can do this"""
+    telegram_id = data.get("telegram_id")
+    auction_id = data.get("auction_id")
+    conn = get_db()
+    seller = require_user(conn, telegram_id)
+    auction = conn.execute(
+        "SELECT * FROM auctions WHERE id=? AND is_active=1 AND seller_id=?",
+        (auction_id, seller["id"])
+    ).fetchone()
+    if not auction:
+        conn.close()
+        raise HTTPException(404, "Аукцион не найден")
+    if auction["current_bidder_id"]:
+        conn.close()
+        raise HTTPException(400, "Нельзя отменить — уже есть ставки")
+    conn.execute("UPDATE auctions SET is_active=0 WHERE id=?", (auction_id,))
+    conn.execute("UPDATE user_cards SET is_listed=0 WHERE id=?", (auction["user_card_id"],))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+
+@app.post("/api/games/redblack")
+def play_redblack(data: dict):
+    """Red & Black game. Bet 1-100 gems, pick red/black. Zero=lose, correct color=x2"""
+    import random
+    telegram_id = _validate_telegram_id(data.get("telegram_id"))
+    bet = int(data.get("bet", 1))
+    choice = data.get("choice", "").lower()  # "red" or "black"
+    if bet < 1 or bet > 100:
+        raise HTTPException(400, "Ставка от 1 до 100 гемов")
+    if choice not in ("red", "black"):
+        raise HTTPException(400, "Выберите red или black")
+    conn = get_db()
+    user = require_user(conn, telegram_id)
+    gems = user["gems"] if "gems" in user.keys() else 0
+    if gems < bet:
+        conn.close()
+        raise HTTPException(400, f"Недостаточно гемов. Есть: {gems}")
+    # Roll: 1=zero, 2-51=red, 52-101=black
+    roll = random.randint(1, 101)
+    if roll == 1:
+        result = "zero"
+    elif roll <= 51:
+        result = "red"
+    else:
+        result = "black"
+    if result == "zero":
+        # Atomic deduct - only succeeds if gems still sufficient
+        cur = conn.execute("UPDATE users SET gems = gems - ? WHERE id=? AND gems >= ?", (bet, user["id"], bet))
+        won = False
+        delta = -bet
+    elif result == choice:
+        cur = conn.execute("UPDATE users SET gems = gems + ? WHERE id=?", (bet, user["id"]))
+        won = True
+        delta = bet
+    else:
+        cur = conn.execute("UPDATE users SET gems = gems - ? WHERE id=? AND gems >= ?", (bet, user["id"], bet))
+        won = False
+        delta = -bet
+    if cur.rowcount == 0:
+        conn.close()
+        raise HTTPException(400, "Недостаточно гемов (concurrent)")
+    conn.commit()
+    new_gems = conn.execute("SELECT gems FROM users WHERE id=?", (user["id"],)).fetchone()["gems"]
+    conn.close()
+    return {"ok": True, "result": result, "won": won, "delta": delta, "gems": new_gems}
+
+
+@app.post("/api/tasks/spin")
+def spin_slot(data: dict):
+    """Daily slot spin — 1x per day, prizes: 1gem=97%, 10gem=2%, 100gem=1%"""
+    import random
+    from datetime import datetime
+    telegram_id = _validate_telegram_id(data.get("telegram_id"))
+    conn = get_db()
+    user = require_user(conn, telegram_id)
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    spin_date = user["daily_reward_date"] if "daily_reward_date" in user.keys() else ""
+    # Reuse daily_reward_date field but store spin separately via tasks_completed bit3
+    tasks = user["tasks_completed"] if "tasks_completed" in user.keys() else 0
+    spin_key = user.get("spin_date", "") if hasattr(user, "get") else ""
+    # Use bit3 of tasks_completed for today's spin, reset daily
+    # Store spin date in a new approach: encode in tasks as date string
+    # Simplest: add spin_date column check
+    spin_date_val = ""
+    try:
+        row = conn.execute("SELECT spin_date FROM users WHERE id=?", (user["id"],)).fetchone()
+        spin_date_val = row["spin_date"] if row and "spin_date" in row.keys() else ""
+    except:
+        pass
+    if spin_date_val == today:
+        conn.close()
+        raise HTTPException(400, "Уже крутили сегодня")
+    roll = random.randint(1, 100)
+    if roll == 1:
+        prize = 100
+        combo = "777"
+    elif roll <= 3:
+        prize = 10
+        combo = "cherry"
+    else:
+        prize = 1
+        combo = "star"
+    try:
+        conn.execute("UPDATE users SET gems = COALESCE(gems,0) + ?, spin_date = ? WHERE id=?",
+                     (prize, today, user["id"]))
+    except:
+        # spin_date column might not exist yet
+        conn.execute("ALTER TABLE users ADD COLUMN spin_date TEXT DEFAULT ''")
+        conn.execute("UPDATE users SET gems = COALESCE(gems,0) + ?, spin_date = ? WHERE id=?",
+                     (prize, today, user["id"]))
+    conn.commit()
+    gems = conn.execute("SELECT gems FROM users WHERE id=?", (user["id"],)).fetchone()["gems"]
+    conn.close()
+    return {"ok": True, "prize": prize, "combo": combo, "gems": gems}
+
+
+
+
+@app.post("/api/tasks/channel")
+async def claim_channel(data: dict):
+    """Check Telegram channel subscription and give 5 gems — one time only"""
+    import aiohttp as _aio
+    telegram_id = data.get("telegram_id")
+    conn = get_db()
+    user = require_user(conn, telegram_id)
+    tasks = user["tasks_completed"] if "tasks_completed" in user.keys() else 0
+    if tasks & 2:  # bit1 already set
+        conn.close()
+        raise HTTPException(400, "Уже выполнено")
+    bot_token = os.getenv("BOT_TOKEN", "")
+    channel = "@ponki_world"
+    try:
+        async with _aio.ClientSession() as s:
+            async with s.get(
+                f"https://api.telegram.org/bot{bot_token}/getChatMember",
+                params={"chat_id": channel, "user_id": telegram_id}
+            ) as r:
+                res = await r.json()
+                status = res.get("result", {}).get("status", "")
+                if status not in ("member", "administrator", "creator"):
+                    conn.close()
+                    raise HTTPException(400, "Вы не подписаны на канал")
+    except HTTPException:
+        conn.close()
+        raise
+    except Exception as e:
+        conn.close()
+        raise HTTPException(500, f"Ошибка проверки: {e}")
+    conn.execute("UPDATE users SET gems = COALESCE(gems,0) + 5, tasks_completed = COALESCE(tasks_completed,0) | 2 WHERE id=?",
+                 (user["id"],))
+    conn.commit()
+    gems = conn.execute("SELECT gems FROM users WHERE id=?", (user["id"],)).fetchone()["gems"]
+    conn.close()
+    return {"ok": True, "gems": gems}
+
+
+@app.post("/api/tasks/friends5")
+def claim_friends5(data: dict):
+    """Give 50 gems for inviting 5 friends — one time only"""
+    telegram_id = data.get("telegram_id")
+    conn = get_db()
+    user = require_user(conn, telegram_id)
+    tasks = user["tasks_completed"] if "tasks_completed" in user.keys() else 0
+    if tasks & 4:  # bit2 already set
+        conn.close()
+        raise HTTPException(400, "Уже выполнено")
+    count = conn.execute("SELECT COUNT(*) as cnt FROM users WHERE referred_by=?", (user["id"],)).fetchone()["cnt"]
+    if count < 5:
+        conn.close()
+        raise HTTPException(400, f"Нужно 5 друзей, у вас {count}")
+    conn.execute("UPDATE users SET gems = COALESCE(gems,0) + 50, tasks_completed = COALESCE(tasks_completed,0) | 4 WHERE id=?",
+                 (user["id"],))
+    conn.commit()
+    gems = conn.execute("SELECT gems FROM users WHERE id=?", (user["id"],)).fetchone()["gems"]
+    conn.close()
+    return {"ok": True, "gems": gems}
+
+
+@app.post("/api/tasks/daily")
+def claim_daily(data: dict):
+    """Daily reward with streak: day1=1gem, day2=2gems, day3=3gems, then reset"""
+    from datetime import datetime, timedelta
+    telegram_id = data.get("telegram_id")
+    conn = get_db()
+    user = require_user(conn, telegram_id)
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    yesterday = (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%d")
+    last = user["daily_reward_date"] if "daily_reward_date" in user.keys() else ""
+    if last == today:
+        conn.close()
+        raise HTTPException(400, "Уже получено сегодня")
+    # Calculate streak
+    streak = 0
+    try:
+        row = conn.execute("SELECT daily_streak FROM users WHERE id=?", (user["id"],)).fetchone()
+        streak = row["daily_streak"] if row and "daily_streak" in row.keys() else 0
+    except:
+        try:
+            conn.execute("ALTER TABLE users ADD COLUMN daily_streak INTEGER DEFAULT 0")
+            conn.commit()
+        except:
+            pass
+        streak = 0
+    # If came yesterday - continue streak, else reset
+    if last == yesterday:
+        streak = (streak % 3) + 1
+    else:
+        streak = 1
+    prize = streak  # day1=1, day2=2, day3=3
+    try:
+        conn.execute("UPDATE users SET gems = COALESCE(gems,0) + ?, daily_reward_date = ?, daily_streak = ? WHERE id=?",
+                     (prize, today, streak, user["id"]))
+    except:
+        conn.execute("ALTER TABLE users ADD COLUMN daily_streak INTEGER DEFAULT 0")
+        conn.execute("UPDATE users SET gems = COALESCE(gems,0) + ?, daily_reward_date = ?, daily_streak = ? WHERE id=?",
+                     (prize, today, streak, user["id"]))
+    conn.commit()
+    gems = conn.execute("SELECT gems FROM users WHERE id=?", (user["id"],)).fetchone()["gems"]
+    conn.close()
+    return {"ok": True, "prize": prize, "streak": streak, "gems": gems}
+
+
+# ── PvP BATTLE ──
+
+@app.post("/api/pvp/join")
+def pvp_join(data: dict):
+    """Join PvP lobby with selected cards"""
+    telegram_id = data.get("telegram_id")
+    card_ids = data.get("card_ids", [])
+    if not card_ids:
+        raise HTTPException(400, "Выбери хотя бы одну карточку")
+    if len(card_ids) > 50:
+        raise HTTPException(400, "Максимум 50 карточек")
+    conn = get_db()
+    user = require_user(conn, telegram_id)
+    # Check user not already in lobby or battle
+    existing = conn.execute(
+        "SELECT * FROM pvp_lobby WHERE user_id=? AND status IN ('waiting','in_battle')", (user["id"],)
+    ).fetchone()
+    if existing:
+        import json as _j
+        conn.close()
+        # Return existing lobby info instead of error
+        return {"ok": True, "battle_id": existing["battle_id"], "already_in": True}
+    # Verify cards belong to user and not listed
+    cards = conn.execute(
+        f"SELECT id FROM user_cards WHERE id IN ({','.join('?'*len(card_ids))}) AND user_id=? AND is_listed=0",
+        (*card_ids, user["id"])
+    ).fetchall()
+    if len(cards) != len(card_ids):
+        conn.close()
+        raise HTTPException(400, "Некоторые карточки недоступны")
+    import json as _json
+    # Lock cards
+    conn.execute(
+        f"UPDATE user_cards SET is_listed=1 WHERE id IN ({','.join('?'*len(card_ids))})",
+        card_ids
+    )
+    conn.execute(
+        "INSERT INTO pvp_lobby (user_id, card_ids, status, joined_at) VALUES (?,?,'waiting',CURRENT_TIMESTAMP)",
+        (user["id"], _json.dumps(card_ids))
+    )
+    conn.commit()
+    # Check if we can start a battle (2+ players waiting)
+    waiting = conn.execute(
+        "SELECT * FROM pvp_lobby WHERE status='waiting' ORDER BY joined_at ASC"
+    ).fetchall()
+    battle_id = None
+    if len(waiting) >= 2:
+        # Create battle
+        import random
+        battle_users = [dict(w) for w in waiting]
+        conn.execute(
+            "INSERT INTO pvp_battles (status, started_at) VALUES ('countdown', CURRENT_TIMESTAMP)"
+        )
+        battle_id = conn.execute("SELECT last_insert_rowid() as id").fetchone()["id"]
+        for w in battle_users:
+            conn.execute(
+                "UPDATE pvp_lobby SET status='in_battle', battle_id=? WHERE id=?",
+                (battle_id, w["id"])
+            )
+        conn.commit()
+    conn.close()
+    return {"ok": True, "battle_id": battle_id}
+
+
+@app.get("/api/pvp/status/{telegram_id}")
+def pvp_status(telegram_id: int):
+    """Get current PvP status for user"""
+    import json as _json
+    conn = get_db()
+    user = require_user(conn, telegram_id)
+    lobby = conn.execute(
+        "SELECT * FROM pvp_lobby WHERE user_id=? AND status IN ('waiting','in_battle') ORDER BY joined_at DESC LIMIT 1",
+        (user["id"],)
+    ).fetchone()
+    if not lobby:
+        conn.close()
+        return {"status": "idle"}
+    lobby = dict(lobby)
+    if lobby["status"] == "waiting":
+        conn.close()
+        return {"status": "waiting", "card_ids": _json.loads(lobby["card_ids"])}
+    # In battle
+    battle_id = lobby["battle_id"]
+    battle = conn.execute("SELECT * FROM pvp_battles WHERE id=?", (battle_id,)).fetchone()
+    if not battle:
+        conn.close()
+        return {"status": "idle"}
+    battle = dict(battle)
+    # Get all participants
+    participants = conn.execute(
+        "SELECT pl.*, u.first_name, u.username FROM pvp_lobby pl JOIN users u ON pl.user_id=u.id WHERE pl.battle_id=?",
+        (battle_id,)
+    ).fetchall()
+    total_cards = sum(len(_json.loads(p["card_ids"])) for p in participants)
+    my_cards = len(_json.loads(lobby["card_ids"]))
+    conn.close()
+    from datetime import datetime
+    import json as _json2
+    started = datetime.strptime(battle["started_at"].replace("T"," ").split(".")[0], "%Y-%m-%d %H:%M:%S")
+    elapsed = (datetime.utcnow() - started).total_seconds()
+    countdown = max(0, 60 - int(elapsed))
+    colors = ['#ff2d78','#4ab0ff','#f0c040','#4aff8a','#a78bfa','#ff6b35','#00d2ff','#ff9f1c']
+    players_data = []
+    for i, p in enumerate(participants):
+        cards_count = len(_json2.loads(p["card_ids"]))
+        players_data.append({
+            "user_id": p["user_id"],
+            "name": p.get("first_name") or p.get("username") or "Игрок",
+            "cards": cards_count,
+            "color": colors[i % len(colors)],
+        })
+    return {
+        "status": battle["status"],
+        "battle_id": battle_id,
+        "countdown": countdown,
+        "participants": len(participants),
+        "total_cards": total_cards,
+        "my_cards": my_cards,
+        "players": players_data,
+        "winner_user_id": battle["winner_user_id"] if "winner_user_id" in battle.keys() else None,
+    }
+
+
+@app.post("/api/pvp/leave")
+def pvp_leave(data: dict):
+    """Leave PvP lobby if not yet in battle"""
+    import json as _json
+    telegram_id = data.get("telegram_id")
+    conn = get_db()
+    user = require_user(conn, telegram_id)
+    lobby = conn.execute(
+        "SELECT * FROM pvp_lobby WHERE user_id=? AND status='waiting'", (user["id"],)
+    ).fetchone()
+    if not lobby:
+        conn.close()
+        raise HTTPException(400, "Ты не в лобби или игра уже началась")
+    card_ids = _json.loads(lobby["card_ids"])
+    # Unlock cards
+    if card_ids:
+        conn.execute(
+            f"UPDATE user_cards SET is_listed=0 WHERE id IN ({','.join('?'*len(card_ids))})",
+            card_ids
+        )
+    conn.execute("DELETE FROM pvp_lobby WHERE id=?", (lobby["id"],))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+
+@app.post("/api/pvp/finish")
+def pvp_finish(data: dict):
+    """Finish battle after countdown - pick winner by weighted random"""
+    import json as _json, random
+    battle_id = data.get("battle_id")
+    conn = get_db()
+    battle = conn.execute("SELECT * FROM pvp_battles WHERE id=? AND status='countdown'", (battle_id,)).fetchone()
+    if not battle:
+        conn.close()
+        return {"ok": True, "already_done": True}
+    participants = conn.execute(
+        "SELECT * FROM pvp_lobby WHERE battle_id=?", (battle_id,)
+    ).fetchall()
+    if len(participants) < 2:
+        conn.close()
+        return {"ok": False, "error": "Not enough players"}
+    # Weighted random: more cards = higher chance
+    weights = [len(_json.loads(p["card_ids"])) for p in participants]
+    winner = random.choices(participants, weights=weights, k=1)[0]
+    winner_user_id = winner["user_id"]
+    # Collect all cards
+    all_card_ids = []
+    for p in participants:
+        all_card_ids.extend(_json.loads(p["card_ids"]))
+    # Transfer all cards to winner
+    if all_card_ids:
+        conn.execute(
+            f"UPDATE user_cards SET user_id=?, is_listed=0 WHERE id IN ({','.join('?'*len(all_card_ids))})",
+            (winner_user_id, *all_card_ids)
+        )
+    conn.execute("UPDATE pvp_battles SET status='finished', winner_user_id=? WHERE id=?",
+                 (winner_user_id, battle_id))
+    conn.execute("UPDATE pvp_lobby SET status='finished' WHERE battle_id=?", (battle_id,))
+    conn.commit()
+    # Notify all participants
+    import asyncio
+    winner_user = conn.execute("SELECT telegram_id, first_name FROM users WHERE id=?", (winner_user_id,)).fetchone()
+    winner_name = winner_user["first_name"] if winner_user else "Игрок"
+    for p in participants:
+        u = conn.execute("SELECT telegram_id FROM users WHERE id=?", (p["user_id"],)).fetchone()
+        if u:
+            is_winner = p["user_id"] == winner_user_id
+            msg = f"🏆 Ты выиграл PvP и забрал {len(all_card_ids)} карточек!" if is_winner else f"😔 PvP завершён. Победил {winner_name}, забрав {len(all_card_ids)} карточек."
+            asyncio.create_task(notify_user(u["telegram_id"], msg))
+    conn.close()
+    return {"ok": True, "winner_user_id": winner_user_id, "total_cards": len(all_card_ids)}
 
 
 @app.get("/api/stars_link")
@@ -1172,31 +1703,68 @@ async def buy_stars_invoice(data: dict):
 
 
 @app.get("/api/leaderboard")
-def leaderboard(telegram_id: int = None):
+def leaderboard(telegram_id: int = None, category: str = "cards"):
+    """
+    Categories: spent (stars+ton), cashback, cards, gems
+    Excludes test accounts (username=test or no activity)
+    """
     conn = get_db()
-    top = conn.execute("""
-        SELECT telegram_id, username, first_name,
-               COALESCE(stars_spent, 0) as stars_spent,
-               COALESCE(ton_spent, 0) as ton_spent
-        FROM users
-        ORDER BY (COALESCE(stars_spent, 0) + COALESCE(ton_spent, 0)/1000000000) DESC
+
+    EXCLUDE = "AND (username IS NULL OR username NOT IN ('test','rzabeyda','dzabeida','zzabeyda'))"
+
+    if category == "friends":
+        order = "friends_count DESC"
+        fields = """telegram_id, username, first_name,
+                    (SELECT COUNT(*) FROM users u2 WHERE u2.referred_by=users.id) as friends_count,
+                    (SELECT COUNT(*) FROM users u2 WHERE u2.referred_by=users.id) as score"""
+    elif category == "cashback":
+        order = "COALESCE(cashback_balance, 0) DESC"
+        fields = "telegram_id, username, first_name, COALESCE(cashback_balance,0) as score"
+    elif category == "cards":
+        order = "cards_count DESC"
+        fields = """telegram_id, username, first_name,
+                    (SELECT COUNT(*) FROM user_cards uc WHERE uc.user_id=users.id) as cards_count,
+                    (SELECT COUNT(*) FROM user_cards uc WHERE uc.user_id=users.id) as score"""
+    elif category == "gems":
+        order = "COALESCE(gems, 0) DESC"
+        fields = "telegram_id, username, first_name, COALESCE(gems,0) as score"
+    else:  # spent
+        order = "(COALESCE(stars_spent,0) + COALESCE(ton_spent,0)/1000000000) DESC"
+        fields = """telegram_id, username, first_name,
+                    COALESCE(stars_spent,0) as stars_spent,
+                    COALESCE(ton_spent,0) as ton_spent,
+                    (COALESCE(stars_spent,0) + COALESCE(ton_spent,0)/1000000000) as score"""
+
+    top = conn.execute(f"""
+        SELECT {fields} FROM users
+        WHERE 1=1 {EXCLUDE}
+        ORDER BY {order}
         LIMIT 100
     """).fetchall()
 
     my_rank = None
     my_entry = None
     if telegram_id:
-        rank_row = conn.execute("""
+        if category == "cashback":
+            score_expr = "COALESCE(cashback_balance,0)"
+        elif category == "cards":
+            score_expr = "(SELECT COUNT(*) FROM user_cards uc WHERE uc.user_id=users.id)"
+        elif category == "gems":
+            score_expr = "COALESCE(gems,0)"
+        elif category == "friends":
+            score_expr = "(SELECT COUNT(*) FROM users u2 WHERE u2.referred_by=users.id)"
+        else:
+            score_expr = "(COALESCE(stars_spent,0) + COALESCE(ton_spent,0)/1000000000)"
+
+        rank_row = conn.execute(f"""
             SELECT COUNT(*) as cnt FROM users
-            WHERE (COALESCE(stars_spent, 0) + COALESCE(ton_spent, 0)/1000000000) > (
-                SELECT (COALESCE(stars_spent, 0) + COALESCE(ton_spent, 0)/1000000000)
-                FROM users WHERE telegram_id=?
-            )
+            WHERE {EXCLUDE.replace('AND ','')}
+            AND {score_expr} > (SELECT {score_expr} FROM users WHERE telegram_id=?)
         """, (telegram_id,)).fetchone()
         if rank_row:
             my_rank = rank_row["cnt"] + 1
         user_row = conn.execute(
-            "SELECT telegram_id, username, first_name, stars_spent, ton_spent FROM users WHERE telegram_id=?",
+            f"SELECT telegram_id, username, first_name, stars_spent, ton_spent, gems, cashback_balance, (SELECT COUNT(*) FROM user_cards uc WHERE uc.user_id=users.id) as cards_count FROM users WHERE telegram_id=?",
             (telegram_id,)
         ).fetchone()
         if user_row:
@@ -1206,7 +1774,8 @@ def leaderboard(telegram_id: int = None):
     return {
         "top": [dict(r) for r in top],
         "my_rank": my_rank,
-        "my_entry": my_entry
+        "my_entry": my_entry,
+        "category": category
     }
 
 
@@ -1248,7 +1817,7 @@ async def ton_deposit_confirm(data: dict):
     conn.close()
     ton_fmt = float(f"{amount_nano/1e9:.10f}".rstrip('0').rstrip('.'))
     import asyncio
-    asyncio.create_task(notify_user(telegram_id, f"Пополнение {ton_fmt} TON зачислено"))
+    asyncio.create_task(notify_user(telegram_id, f"💰 Пополнение {ton_fmt} TON зачислено"))
     return {"ok": True, "ton_balance": ton_balance}
 
 
@@ -1363,6 +1932,12 @@ async def ton_withdraw(data: dict):
     if bal < amount_nano:
         conn.close()
         raise HTTPException(400, f"Недостаточно TON. Баланс: {round(bal/TON_NANO,4)}")
+    # Atomic deduct - prevents race condition double-spend
+    cur = conn.execute("UPDATE users SET ton_balance = ton_balance - ? WHERE id=? AND ton_balance >= ?",
+                       (amount_nano, user["id"], amount_nano))
+    if cur.rowcount == 0:
+        conn.close()
+        raise HTTPException(400, "Недостаточно TON (concurrent)")
 
     # Daily withdrawal limit: 1000 TON
     from datetime import datetime, timedelta
@@ -1387,12 +1962,11 @@ async def ton_withdraw(data: dict):
         conn.commit()
         conn.close()
         import asyncio
-        asyncio.create_task(notify_user(telegram_id, f"Вывод {amount_ton} TON принят, обрабатывается"))
+        asyncio.create_task(notify_user(telegram_id, f"⏳ Вывод {amount_ton} TON принят, обрабатывается"))
         if ADMIN_TG_ID:
             asyncio.create_task(notify_user(ADMIN_TG_ID, f"Вывод вручную: {amount_ton} TON → {to_address}"))
         return {"ok": True, "message": f"Вывод {amount_ton} TON принят"}
     # Deduct from balance first
-    conn.execute("UPDATE users SET ton_balance = ton_balance - ? WHERE id=?", (amount_nano, user["id"]))
     conn.commit()
     try:
         mnemonics = bot_seed.split()
@@ -1404,7 +1978,7 @@ async def ton_withdraw(data: dict):
         conn.close()
         ton_fmt = float(f"{amount_ton:.10f}".rstrip('0').rstrip('.'))
         import asyncio
-        asyncio.create_task(notify_user(telegram_id, f"Вы вывели {ton_fmt} TON"))
+        asyncio.create_task(notify_user(telegram_id, f"✅ Вы вывели {ton_fmt} TON"))
         return {"ok": True, "message": f"Вывод {ton_fmt} TON выполнен"}
     except Exception as e:
         # Rollback on failure
