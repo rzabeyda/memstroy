@@ -14,25 +14,15 @@ from database import get_db, init_db
 app = FastAPI(title="MemStroy API")
 
 # ── RATE LIMITER ──
-_rate_store = defaultdict(list)  # ip -> [timestamps]
-_blocked_ips = set()
+_endpoint_rate_store = defaultdict(list)  # "user_id:endpoint" -> [timestamps]
 
-def _check_rate_limit(ip: str, limit: int = 60, window: int = 60) -> bool:
-    """Returns True if request is allowed. Blocks IPs with >200 req/min."""
+def _check_endpoint_rate_limit(user_id: int, endpoint: str, limit: int = 5, window: int = 10) -> bool:
+    """Per-user per-endpoint rate limit. Default: max 5 requests per 10 seconds."""
     now = time.time()
-    # Hard block check
-    if ip in _blocked_ips:
-        return False
-    # Clean old entries
-    _rate_store[ip] = [t for t in _rate_store[ip] if now - t < window]
-    _rate_store[ip].append(now)
-    count = len(_rate_store[ip])
-    # Auto-block if >200 req/min (bot/attack)
-    if count > 200:
-        _blocked_ips.add(ip)
-        print(f"🚫 Blocked IP: {ip} ({count} req/min)")
-        return False
-    return count <= limit
+    key = f"{user_id}:{endpoint}"
+    _endpoint_rate_store[key] = [t for t in _endpoint_rate_store[key] if now - t < window]
+    _endpoint_rate_store[key].append(now)
+    return len(_endpoint_rate_store[key]) <= limit
 
 try:
     from ton_wallet import generate_wallet, send_ton, get_wallet_balance
@@ -95,23 +85,27 @@ async def notify_user(telegram_id: int, text: str):
     if not bot_token: return
     try:
         async with _aiohttp.ClientSession() as s:
-            await s.post(
+            resp = await s.post(
                 f"https://api.telegram.org/bot{bot_token}/sendMessage",
                 json={"chat_id": telegram_id, "text": text}
             )
-    except:
-        pass  # silently ignored
+            if resp.status == 429:
+                import asyncio as _aio2
+                data = await resp.json()
+                retry = data.get("parameters",{}).get("retry_after",5)
+                await _aio2.sleep(retry)
+                await s.post(
+                    f"https://api.telegram.org/bot{bot_token}/sendMessage",
+                    json={"chat_id": telegram_id, "text": text}
+                )
+    except Exception as e:
+        print(f"[WARN] notify error: {e}")
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request as StarletteRequest
 
 class NgrokMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: StarletteRequest, call_next):
-        # Rate limiting
-        client_ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else "unknown").split(",")[0].strip()
-        if not _check_rate_limit(client_ip):
-            from starlette.responses import JSONResponse
-            return JSONResponse({"detail": "Too many requests"}, status_code=429)
         response = await call_next(request)
         response.headers["ngrok-skip-browser-warning"] = "true"
         return response
@@ -259,7 +253,14 @@ def register(data: RegisterUser):
     referred_by = None
 
     if data.ref_code:
+        # Сначала ищем по ref_code (CD-XXXXXX)
         referrer = conn.execute("SELECT * FROM users WHERE ref_code=?", (data.ref_code,)).fetchone()
+        # Если не нашли — ищем по telegram_id (старый формат ссылки ?start=123456)
+        if not referrer:
+            try:
+                referrer = conn.execute("SELECT * FROM users WHERE telegram_id=?", (int(data.ref_code),)).fetchone()
+            except (ValueError, TypeError):
+                pass
         if referrer:
             referred_by = referrer["id"]
 
@@ -338,6 +339,7 @@ def user_info(telegram_id: int):
         "gems": user["gems"] if "gems" in user.keys() else 0,
         "daily_reward_date": user["daily_reward_date"] if "daily_reward_date" in user.keys() else "",
         "spin_date": user["spin_date"] if "spin_date" in user.keys() else "",
+        "buy_card_date": user["buy_card_date"] if "buy_card_date" in user.keys() else "",
         "tasks_completed": user["tasks_completed"] if "tasks_completed" in user.keys() else 0,
         "cards": [dict(c) for c in cards]
     }
@@ -587,8 +589,8 @@ def upgrade_card_internal(data: dict):
     conn.execute("UPDATE user_cards SET is_upgraded=1 WHERE id=?", (user_card_id,))
     conn.execute("""
         INSERT INTO transactions (from_user_id, to_user_id, user_card_id, type, stars_amount)
-        VALUES (?, ?, ?, 'upgrade', 0)
-    """, (user["id"], user["id"], user_card_id))
+        VALUES (?, NULL, ?, 'upgrade', 0)
+    """, (user["id"], user_card_id))
     conn.commit()
 
     card_def = conn.execute(
@@ -616,6 +618,28 @@ def get_history(telegram_id: int):
     return {"history": [dict(h) for h in history]}
 
 
+@app.get("/api/market/history")
+def get_market_history():
+    """Global market trade history — all completed deals"""
+    conn = get_db()
+    history = conn.execute("""
+        SELECT t.*,
+               cd.name as card_name, cd.image_url, uc.serial_number,
+               ub.username as buyer_username, ub.first_name as buyer_name,
+               us.username as seller_username, us.first_name as seller_name
+        FROM transactions t
+        LEFT JOIN user_cards uc ON t.user_card_id = uc.id
+        LEFT JOIN card_definitions cd ON uc.card_def_id = cd.id
+        LEFT JOIN users ub ON t.from_user_id = ub.id
+        LEFT JOIN users us ON t.to_user_id = us.id
+        WHERE t.type IN ('market_buy', 'market_buy_ton', 'auction_won')
+        ORDER BY t.created_at DESC
+        LIMIT 50
+    """).fetchall()
+    conn.close()
+    return {"history": [dict(h) for h in history]}
+
+
 @app.get("/api/market")
 def market_listings():
     conn = get_db()
@@ -638,6 +662,10 @@ def market_listings():
 def list_card(data: ListCard):
     conn = get_db()
     user = require_user(conn, data.telegram_id)
+    # Rate limit: max 3 listings per 15 seconds per user
+    if not _check_endpoint_rate_limit(user["id"], "market/list", limit=3, window=15):
+        conn.close()
+        raise HTTPException(429, "Слишком много запросов. Подождите немного.")
     card = conn.execute("""
         SELECT * FROM user_cards WHERE id=? AND user_id=? AND is_listed=0
     """, (data.user_card_id, user["id"])).fetchone()
@@ -658,6 +686,10 @@ def list_card(data: ListCard):
 def buy_listing(data: BuyListing):
     conn = get_db()
     buyer = require_user(conn, data.telegram_id)
+    # Rate limit: max 5 buys per 10 seconds per user
+    if not _check_endpoint_rate_limit(buyer["id"], "market/buy", limit=5, window=10):
+        conn.close()
+        raise HTTPException(429, "Слишком много запросов. Подождите немного.")
 
     listing = conn.execute("""
         SELECT ml.*, uc.user_id as card_owner_id
@@ -1292,7 +1324,7 @@ def play_redblack(data: dict):
     telegram_id = _validate_telegram_id(data.get("telegram_id"))
     bet = int(data.get("bet", 1))
     choice = data.get("choice", "").lower()  # "red" or "black"
-    if bet < 1 or bet > 100:
+    if bet < 1 or bet > 128:
         raise HTTPException(400, "Ставка от 1 до 100 гемов")
     if choice not in ("red", "black"):
         raise HTTPException(400, "Выберите red или black")
@@ -1441,6 +1473,40 @@ def claim_friends5(data: dict):
     gems = conn.execute("SELECT gems FROM users WHERE id=?", (user["id"],)).fetchone()["gems"]
     conn.close()
     return {"ok": True, "gems": gems}
+
+
+@app.post("/api/tasks/buy_card")
+def claim_buy_card_task(data: dict):
+    """Daily task: buy a card today — 10 gems reward"""
+    from datetime import datetime
+    telegram_id = data.get("telegram_id")
+    conn = get_db()
+    user = require_user(conn, telegram_id)
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    # Миграция колонки если нет
+    try:
+        conn.execute("ALTER TABLE users ADD COLUMN buy_card_date TEXT DEFAULT ''")
+        conn.commit()
+    except:
+        pass
+    row = conn.execute("SELECT buy_card_date FROM users WHERE id=?", (user["id"],)).fetchone()
+    last = row["buy_card_date"] if row and "buy_card_date" in row.keys() else ""
+    if last == today:
+        conn.close()
+        raise HTTPException(400, "Уже получено сегодня")
+    # Проверяем что юзер действительно купил карту сегодня
+    bought_today = conn.execute("""
+        SELECT COUNT(*) as cnt FROM transactions
+        WHERE from_user_id=? AND type IN ('buy','payment') AND date(created_at)=?
+    """, (user["id"], today)).fetchone()["cnt"]
+    if not bought_today:
+        conn.close()
+        raise HTTPException(400, "Сначала купи карту сегодня")
+    conn.execute("UPDATE users SET gems = COALESCE(gems,0) + 10, buy_card_date=? WHERE id=?", (today, user["id"]))
+    conn.commit()
+    gems = conn.execute("SELECT gems FROM users WHERE id=?", (user["id"],)).fetchone()["gems"]
+    conn.close()
+    return {"ok": True, "prize": 10, "gems": gems}
 
 
 @app.post("/api/tasks/daily")
@@ -1728,6 +1794,7 @@ async def create_giveaway(data: dict):
     # Post to channel via bot
     bot_token = os.getenv("BOT_TOKEN","")
     ref_link = f"https://t.me/memstroybot?start={telegram_id}"
+    miniapp_link = f"https://t.me/memstroybot/app"
     def clean_ch(ch):
         return ch.strip().lstrip("@").replace("https://t.me/","").replace("http://t.me/","").strip("/")
     req_text = ""
@@ -1742,7 +1809,7 @@ async def create_giveaway(data: dict):
             f"🃏 Призов: <b>{len(card_ids)} шт.</b> · 👥 {len(card_ids)} {winners_word}\n"
             f"🎲 Победители выбираются случайным образом\n"
             f"📋 Условия подписки:{req_text if req_text else ' не требуется'}{filter_text}\n\n"
-            f"👇 Участвовать → {ref_link}?giveaway={giveaway_id}\n\n"
+            f"👇 Участвовать → {miniapp_link}?startapp={telegram_id}_giveaway_{giveaway_id}\n\n"
             f"⏰ Конец: {ends_at[:16]} UTC")
     import aiohttp as _aio
     try:
@@ -1844,17 +1911,10 @@ async def join_giveaway(data: dict):
     if not is_creator:
         filter_type = giveaway["filter_type"] or "all"
         if filter_type == "premium":
-            # Check via Telegram API if user has premium
-            try:
-                async with _aio.ClientSession() as s:
-                    r = await s.get(f"https://api.telegram.org/bot{bot_token}/getChat",
-                        params={"chat_id": telegram_id})
-                    res = await r.json()
-                    if not res.get("result",{}).get("is_premium"):
-                        conn.close()
-                        raise HTTPException(400, "Только Premium аккаунты могут участвовать")
-            except HTTPException: raise
-            except: pass
+            is_premium = data.get("is_premium", False)
+            if not is_premium:
+                conn.close()
+                raise HTTPException(400, "Только Premium аккаунты могут участвовать")
         elif filter_type == "boost":
             # Check if user boosted the creator's channel
             try:

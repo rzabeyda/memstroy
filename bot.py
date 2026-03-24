@@ -21,22 +21,39 @@ dp = Dispatcher()
 
 @dp.message(CommandStart())
 async def start(message: types.Message):
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="🦄 Open Memstroy", web_app=WebAppInfo(url=WEBAPP_URL)),
-            InlineKeyboardButton(text="💬 Community", url="https://t.me/ponki_world"),
-        ],
-        [
-            InlineKeyboardButton(text="💬 Чат", url="https://t.me/ponki_world_chat"),
-            InlineKeyboardButton(text="🆘 Support", url="https://t.me/memstroy_support"),
-        ]
-    ])
-
     ref_code = None
     if message.text and len(message.text.split()) > 1:
         ref_code = message.text.split()[1]
 
     name = message.from_user.first_name or message.from_user.username or "friend"
+
+    # Парсим giveaway из start_param
+    giveaway_id = None
+    actual_ref = ref_code
+    if ref_code and '_giveaway_' in ref_code:
+        parts = ref_code.split('_giveaway_')
+        actual_ref = parts[0]
+        giveaway_id = parts[1]
+
+    # URL с giveaway через hash — читается фронтом
+    webapp_url_giveaway = f"{WEBAPP_URL}#giveaway={giveaway_id}" if giveaway_id else WEBAPP_URL
+
+    if giveaway_id:
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🎁 Участвовать в розыгрыше", web_app=WebAppInfo(url=webapp_url_giveaway))],
+            [InlineKeyboardButton(text="🦄 Open Memstroy", web_app=WebAppInfo(url=WEBAPP_URL))],
+        ])
+    else:
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text="🦄 Open Memstroy", web_app=WebAppInfo(url=WEBAPP_URL)),
+                InlineKeyboardButton(text="💬 Community", url="https://t.me/ponki_world"),
+            ],
+            [
+                InlineKeyboardButton(text="💬 Чат", url="https://t.me/ponki_world_chat"),
+                InlineKeyboardButton(text="🆘 Support", url="https://t.me/memstroy_support"),
+            ]
+        ])
     text = (
         f"Привет, {name}! 👋\n\n"
         f"🎴 <b>Memstroy</b> — коллекционные карточки в Telegram\n\n"

@@ -130,7 +130,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;heigh
 
 <div id="page-buy" class="page active">
   <div class="page-header">
-    <span class="page-title" id="t-shop" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.18);border-radius:20px;padding:4px 14px;font-size:14px">Магазин</span>
+    <span class="page-title" id="t-shop" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.18);border-radius:20px;padding:7px 20px;font-size:17px;font-weight:800">Магазин</span>
     <div class="badge badge-star" onclick="openSplitLink()" style="cursor:pointer;background:linear-gradient(135deg,rgba(240,192,64,0.2),rgba(240,192,64,0.05));border:1px solid rgba(240,192,64,0.5);box-shadow:0 0 12px rgba(240,192,64,0.3),0 0 4px rgba(240,192,64,0.2)"><svg width="14" height="14" viewBox="0 0 24 24" style="vertical-align:middle"><defs><linearGradient id="sbg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffe566"/><stop offset="100%" stop-color="#f0a000"/></linearGradient></defs><polygon points="12,2 14.8,8.6 22,9.5 17,14.2 18.5,21.4 12,17.8 5.5,21.4 7,14.2 2,9.5 9.2,8.6" fill="url(#sbg)"/></svg><span id="buy-stars-btn" style="color:#f0c040">Купить звёзды</span></div>
   </div>
   <div class="content" id="buy-content"><div class="loading-page"><div class="spinner"></div></div></div>
@@ -138,7 +138,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;heigh
 
 <div id="page-sell" class="page">
   <div class="page-header">
-    <span class="page-title" id="t-trade" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.18);border-radius:20px;padding:4px 14px;font-size:14px">Рынок</span>
+    <span class="page-title" id="t-trade" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.18);border-radius:20px;padding:7px 20px;font-size:17px;font-weight:800">Рынок</span>
+    <span id="tab-whales" onclick="openWhalesModal()" style="background:rgba(240,192,64,0.1);border:1px solid rgba(240,192,64,0.35);border-radius:20px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer;color:#f0c040;white-space:nowrap">🐳 Рейтинг китов</span>
     <div class="badge" style="background:#0a1a2a;border:1px solid rgba(74,176,255,0.3);color:#4ab0ff;gap:5px;display:flex;align-items:center;border-radius:20px;padding:6px 12px;font-size:13px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer" onclick="openTonModal()"><img src="/static/icons/ton.png" style="width:16px;height:16px;object-fit:contain" onerror="this.outerHTML='💎'"><span id="ton-val-trade">0</span></div>
   </div>
   <div class="content" id="trade-content"><div class="loading-page"><div class="spinner"></div></div></div>
@@ -177,11 +178,12 @@ const tg = window.Telegram?.WebApp;
 if (tg) { tg.expand(); tg.setHeaderColor('#0a0a0a'); tg.setBackgroundColor('#0a0a0a'); }
 const tgUser = tg?.initDataUnsafe?.user || {id:12345678,username:'dev',first_name:'Dev'};
 let userData = null, selectedCard = null;
+let tonUI = null;
 
 const userLang = ((tg?.initDataUnsafe?.user?.language_code || navigator.language || 'en')+'').toLowerCase().startsWith('ru') ? 'ru' : 'en';
 const T = {
-  en:{shop:'Shop',trade:'Market',profile:'Profile',whales:'Whales',left:'LEFT',price:'PRICE',supply:'SUPPLY',buy:'Buy',cardCount:(n)=>n===1?'card':`cards`,upgrade:'UPGRADE',sell:'Sell',transfer:'Transfer',serial:'Serial',drop:'Drop %',status:'Status',supplyLbl:'Supply',listSale:'List for Sale',cancel:'Cancel',close:'Close',send:'Send',remove:'Remove listing',noListings:'No listings yet',collection:'Collection',model:'Model',refEarn:'Refer & Earn',refText:'Invite friends — earn',refOf:'of their spending in 💎 gems',buyCheapStars:'Buy Stars',connectTon:'Connect TON Wallet',myCards:'My Cards',friends:'Friends',noCards:'No cards yet',noFriends:'No friends yet',showAll:'Show all',showLess:'Show less',clear:'Clear',apply:'Apply',notInPonki:'User not in Ponki',notJoined:"This person hasn't joined yet.",invite:'Invite',purchased:'Purchased!',listed:'Listed!',removed:'Removed',cardSent:'Card sent!',linkCopied:'Link copied!',notEnoughDev:'Not enough DEV',notEnoughStars:'Not enough stars',enterPrice:'Enter price',enterTgId:'Enter Telegram ID',commission:'Commission: 5%',rarity:'Rarity',descShop:'50 unique models · upgrade free',historyTitle:'History'},
-  ru:{shop:'Магазин',trade:'Рынок',profile:'Профиль',whales:'Киты',left:'ОСТАЛОСЬ',price:'ЦЕНА',supply:'ТИРАЖ',buy:'Купить',cardCount:(n)=>{if(n%10===1&&n%100!==11)return'карта';if([2,3,4].includes(n%10)&&![12,13,14].includes(n%100))return'карты';return'карт';},upgrade:'УЛУЧШИТЬ',sell:'Продать',transfer:'Передать',serial:'Номер',drop:'Редкость',status:'Статус',supplyLbl:'Тираж',listSale:'Выставить',cancel:'Отмена',close:'Закрыть',send:'Отправить',remove:'Снять',noListings:'Нет объявлений',collection:'Коллекция',model:'Модель',refEarn:'Приглашай и зарабатывай',refText:'Приглашай друзей — получай',refOf:'от их трат в виде 💎 гемов',buyCheapStars:'Купить звёзды',connectTon:'Подключить TON кошелёк',myCards:'Мои карточки',friends:'Друзья',noCards:'Карточек пока нет',noFriends:'Нет друзей — поделись ссылкой!',showAll:'Показать все',showLess:'Скрыть',clear:'Сбросить',apply:'Применить',notInPonki:'Пользователь не в Ponki',notJoined:'Этот человек ещё не вступил.',invite:'Пригласить',purchased:'Куплено!',listed:'Выставлено!',removed:'Снято',cardSent:'Карточка отправлена!',linkCopied:'Ссылка скопирована!',notEnoughDev:'Недостаточно DEV',notEnoughStars:'Недостаточно звёзд',enterPrice:'Введите цену',enterTgId:'Введите Telegram ID',commission:'Комиссия: 5%',rarity:'Редкость',descShop:'50 уникальных моделей · улучшение бесплатно',historyTitle:'История'}
+  en:{shop:'Shop',trade:'Market',profile:'Profile',whales:'Whales',left:'LEFT',price:'PRICE',supply:'SUPPLY',buy:'Buy',cardCount:(n)=>n===1?'card':`cards`,upgrade:'UPGRADE',sell:'Sell',transfer:'Transfer',serial:'Serial',drop:'Drop %',status:'Status',supplyLbl:'Supply',listSale:'List for Sale',cancel:'Cancel',close:'Close',send:'Send',remove:'Remove listing',noListings:'No listings yet',collection:'Collection',model:'Model',refEarn:'Refer & Earn',refText:'Invite friends — earn',refOf:'of their spending in gems',buyCheapStars:'Buy Stars',connectTon:'Connect TON Wallet',myCards:'My Cards',friends:'Friends',noCards:'No cards yet',noFriends:'No friends yet',showAll:'Show all',showLess:'Show less',clear:'Clear',apply:'Apply',notInPonki:'User not in Ponki',notJoined:"This person hasn't joined yet.",invite:'Invite',purchased:'Purchased!',listed:'Listed!',removed:'Removed',cardSent:'Card sent!',linkCopied:'Link copied!',notEnoughDev:'Not enough DEV',notEnoughStars:'Not enough stars',enterPrice:'Enter price',enterTgId:'Enter Telegram ID',commission:'Commission: 5%',rarity:'Rarity',descShop:'50 unique models · upgrade free',historyTitle:'History'},
+  ru:{shop:'Магазин',trade:'Рынок',profile:'Профиль',whales:'Киты',left:'ОСТАЛОСЬ',price:'ЦЕНА',supply:'ТИРАЖ',buy:'Купить',cardCount:(n)=>{if(n%10===1&&n%100!==11)return'карта';if([2,3,4].includes(n%10)&&![12,13,14].includes(n%100))return'карты';return'карт';},upgrade:'УЛУЧШИТЬ',sell:'Продать',transfer:'Передать',serial:'Номер',drop:'Редкость',status:'Статус',supplyLbl:'Тираж',listSale:'Выставить',cancel:'Отмена',close:'Закрыть',send:'Отправить',remove:'Снять',noListings:'Нет объявлений',collection:'Коллекция',model:'Модель',refEarn:'Приглашай и зарабатывай',refText:'Приглашай друзей — получай',refOf:'от их трат в виде гемов',buyCheapStars:'Купить звёзды',connectTon:'Подключить TON кошелёк',myCards:'Мои карточки',friends:'Друзья',noCards:'Карточек пока нет',noFriends:'Нет друзей — поделись ссылкой!',showAll:'Показать все',showLess:'Скрыть',clear:'Сбросить',apply:'Применить',notInPonki:'Пользователь не в Ponki',notJoined:'Этот человек ещё не вступил.',invite:'Пригласить',purchased:'Куплено!',listed:'Выставлено!',removed:'Снято',cardSent:'Карточка отправлена!',linkCopied:'Ссылка скопирована!',notEnoughDev:'Недостаточно DEV',notEnoughStars:'Недостаточно звёзд',enterPrice:'Введите цену',enterTgId:'Введите Telegram ID',commission:'Комиссия: 5%',rarity:'Редкость',descShop:'50 уникальных моделей · улучшение бесплатно',historyTitle:'История'}
 };
 const t = T[userLang];
 
@@ -199,7 +201,7 @@ function applyLang() {
   document.getElementById('t-trade').textContent = t.trade;
   document.getElementById('tab-shop').textContent = t.shop;
   document.getElementById('tab-trade').textContent = t.trade;
-  document.getElementById('tab-whales') && (document.getElementById('tab-whales').textContent = t.whales);
+  document.getElementById('tab-trade') && (document.getElementById('tab-trade').textContent = t.trade);
   document.getElementById('tab-profile').textContent = t.profile;
   const bsb = document.getElementById('buy-stars-btn');
   if(bsb) bsb.textContent = t.buyCheapStars;
@@ -285,25 +287,48 @@ document.getElementById('modal').addEventListener('click', e=>{
 
 // Swipe cards in modal
 let _swipeStartX=0;
+let _currentMarketListing=null;
 document.getElementById('modal').addEventListener('touchstart', e=>{
   _swipeStartX = e.touches[0].clientX;
 }, {passive:true});
 document.getElementById('modal').addEventListener('touchend', e=>{
   const dx = e.changedTouches[0].clientX - _swipeStartX;
   if(Math.abs(dx) < 50) return;
+  // Profile cards swipe
   const cards = window._profileCards||[];
   const cur = selectedCard;
-  if(!cur||!cards.length) return;
-  const idx = cards.findIndex(c=>c.id===cur.id);
-  if(dx < 0 && idx < cards.length-1) swipeCard(idx, 1);
-  else if(dx > 0 && idx > 0) swipeCard(idx, -1);
+  if(cur && cards.length) {
+    const idx = cards.findIndex(c=>c.id===cur.id);
+    if(dx < 0 && idx < cards.length-1) swipeCard(idx, 1);
+    else if(dx > 0 && idx > 0) swipeCard(idx, -1);
+    return;
+  }
+  // Market listings swipe
+  const mlist = window._marketListings||[];
+  const ml = _currentMarketListing;
+  if(ml && mlist.length) {
+    const midx = mlist.findIndex(l=>l.id===ml.id);
+    if(dx < 0 && midx < mlist.length-1) swipeMarketCard(midx, 1);
+    else if(dx > 0 && midx > 0) swipeMarketCard(midx, -1);
+  }
 }, {passive:true});
 
 async function init() {
   applyLang();
   try {
-    const startParam = tg?.initDataUnsafe?.start_param || new URLSearchParams(location.search).get('ref') || null;
-    const regRes = await api('/api/register','POST',{telegram_id:tgUser.id,username:tgUser.username||'',first_name:tgUser.first_name||'',last_name:tgUser.last_name||'',ref_code:startParam});
+    const startParam = tg?.initDataUnsafe?.start_param || new URLSearchParams(location.search).get('startapp') || new URLSearchParams(location.search).get('ref') || null;
+    // Парсим giveaway из deep link: "123456_giveaway_7" или из hash "#giveaway=7"
+    let refCode = startParam;
+    let giveawayDeepId = null;
+    const hashGiveaway = location.hash.match(/giveaway=(\d+)/);
+    if(hashGiveaway) {
+      giveawayDeepId = parseInt(hashGiveaway[1]);
+    } else if(startParam && startParam.includes('_giveaway_')) {
+      const parts = startParam.split('_giveaway_');
+      refCode = parts[0];
+      giveawayDeepId = parseInt(parts[1]);
+    }
+    const regRes = await api('/api/register','POST',{telegram_id:tgUser.id,username:tgUser.username||'',first_name:tgUser.first_name||'',last_name:tgUser.last_name||'',ref_code:refCode});
     userData = await api(`/api/user/${tgUser.id}`);
     updateBalances(); loadBuy();
     // Hide splash screen
@@ -311,6 +336,36 @@ async function init() {
       const splash = document.getElementById('splash');
       if(splash){splash.classList.add('hide');setTimeout(()=>splash.remove(),400);}
     }, 300);
+    // Автооткрытие розыгрыша по deep link
+    if(giveawayDeepId) {
+      setTimeout(async()=>{
+        try {
+          const glist = await api(`/api/giveaways?telegram_id=${tgUser.id}`);
+          const g = (glist||[]).find(x=>x.id===giveawayDeepId);
+          if(g) {
+            const ends = new Date(g.ends_at.replace(' ','T')+'Z');
+            const diff = Math.max(0, ends - new Date());
+            const hrs = Math.floor(diff/3600000);
+            const mins = Math.floor((diff%3600000)/60000);
+            const timeStr = hrs>0?hrs+'ч '+mins+'м':mins+'м';
+            openModal('🎁 ' + (userLang==='ru'?'Розыгрыш':'Giveaway'),
+              '<div style="text-align:center;padding:8px 0">'
+              +'<div style="font-size:13px;font-weight:700;margin-bottom:4px">@'+g.channel_username+'</div>'
+              +'<div style="font-size:12px;color:var(--danger);margin-bottom:8px">⏱ '+timeStr+'</div>'
+              +'<div style="font-size:12px;color:var(--text2);margin-bottom:16px">🎁 '+g.card_ids.length+' '+(userLang==='ru'?'карточек · ':'cards · ')+g.participants+' '+(userLang==='ru'?'участников':'participants')+'</div>'
+              +(g.joined
+                ?'<div style="font-size:13px;color:var(--success);font-weight:700;margin-bottom:12px">✓ '+(userLang==='ru'?'Вы уже участвуете':'You already joined')+'</div>'
+                :'<button class="btn btn-primary btn-wide" onclick="joinGiveaway('+g.id+');closeModal()">🎁 '+(userLang==='ru'?'Участвовать':'Join')+'</button>'
+              )
+              +'<button class="btn btn-secondary btn-wide" style="margin-top:8px" onclick="closeModal()">'+(userLang==='ru'?'Закрыть':'Close')+'</button>'
+              +'</div>'
+            );
+          } else {
+            toast(userLang==='ru'?'Розыгрыш не найден или завершён':'Giveaway not found or ended','err');
+          }
+        } catch(e){}
+      }, 800);
+    }
     if(regRes && regRes.new) {
       setTimeout(()=>{
         const wLang = userLang==='ru';
@@ -417,7 +472,8 @@ async function loadGiveaways(){
 async function joinGiveaway(id){
   haptic('medium');
   try{
-    const res = await api('/api/giveaway/join','POST',{telegram_id:tgUser.id,giveaway_id:id});
+    const is_premium = tg?.initDataUnsafe?.user?.is_premium || false;
+    const res = await api('/api/giveaway/join','POST',{telegram_id:tgUser.id,giveaway_id:id,is_premium});
     toast(userLang==='ru'?'🎉 Вы участвуете!':'🎉 You joined!','ok');
     loadGiveaways();
   }catch(e){ toast(e.message,'err'); }
@@ -868,8 +924,8 @@ function openSortFilter(){
 async function loadHistory() {
   const el=document.getElementById('history-list'); if(!el) return;
   try {
-    const data=await api(`/api/history/${tgUser.id}`);
-    let items=(data.history||[]).filter(i=>i.type==='market_buy'||i.type==='market_buy_ton'||i.type==='auction_won');
+    const data=await api(`/api/market/history`);
+    let items=(data.history||[]);
     // Sort
     if(historySortBy==='price_asc') items.sort((a,b)=>a.stars_amount-b.stars_amount);
     else if(historySortBy==='price_desc') items.sort((a,b)=>b.stars_amount-a.stars_amount);
@@ -883,19 +939,21 @@ async function loadHistory() {
     }
     let html=`<div style="display:flex;flex-direction:column;gap:8px">`;
     for(const item of items){
-      const isIncome=item.to_user_id===userData.id;
       const isAuction=item.type==='auction_won';
-      const label=isAuction?(isIncome?(userLang==='ru'?'🏆 Выиграл аукцион':'🏆 Auction won'):(userLang==='ru'?'🏆 Продано на аукционе':'🏆 Auction sold')):isIncome?(userLang==='ru'?'Продано':'Sold'):(userLang==='ru'?'Куплено':'Bought');
+      const buyerName=item.buyer_username?'@'+item.buyer_username:(item.buyer_name||'?');
+      const sellerName=item.seller_username?'@'+item.seller_username:(item.seller_name||'?');
+      const label=isAuction?(userLang==='ru'?'🏆 Аукцион':'🏆 Auction'):(userLang==='ru'?'Продажа':'Sale');
+      const participants=`${buyerName} ← ${sellerName}`;
       html+=`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px">
         <div style="width:40px;height:40px;border-radius:8px;background:var(--bg3);overflow:hidden;flex-shrink:0">
           <img src="${item.image_url||'/static/ponki/ponki.png'}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.opacity=0">
         </div>
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:700">Ponki · ${item.card_name||'?'}${item.serial_number?` <span style="color:var(--text2);font-weight:400">#${item.serial_number}</span>`:''}</div>
-          <div style="font-size:11px;color:var(--text2);margin-top:1px">${label}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:1px">${label} · ${participants}</div>
           <div style="font-size:10px;color:var(--text3);font-family:'Inter',sans-serif">${item.created_at?(new Date(item.created_at.replace(' ','T')+'Z')).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Tallinn'}).replace(',',''):''}</div>
         </div>
-        <div style="font-size:14px;font-weight:800;color:${isIncome?'var(--success)':'var(--text2)'};white-space:nowrap;display:flex;align-items:center;gap:3px">${item.type==='market_buy_ton'?`<img src="/static/icons/ton.png" style="width:13px;height:13px;object-fit:contain"> ${fmtNano(item.stars_amount)}`:`${item.stars_amount}⭐`}</div>
+        <div style="font-size:14px;font-weight:800;color:var(--text2);white-space:nowrap;display:flex;align-items:center;gap:3px">${item.type==='market_buy_ton'?`<img src="/static/icons/ton.png" style="width:13px;height:13px;object-fit:contain"> ${fmtNano(item.stars_amount)}`:`${item.stars_amount}⭐`}</div>
       </div>`;
     }
     html+=`</div>`; el.innerHTML=html;
@@ -914,6 +972,7 @@ function renderListings() {
 
   const el=document.getElementById('listings-list'); if(!el) return;
   if(list.length===0){el.innerHTML=`<div class="empty-state"><p>${t.noListings}</p></div>`;return;}
+  window._marketListings = list;
   let html=`<div class="cards-grid">`;
   for(const l of list){
     const isOwn=l.seller_id===userData.id;
@@ -929,10 +988,21 @@ function renderListings() {
   html+=`</div>`; el.innerHTML=html;
 }
 
-function openMarketModal(listing,isOwn) {
-  openModal(listing.name,`
+function openMarketModal(listing, isOwn, direction) {
+  _currentMarketListing = listing;
+  const list = window._marketListings || [];
+  const idx = list.findIndex(l => l.id === listing.id);
+  const slideClass = direction === 1 ? 'slide-in-right' : direction === -1 ? 'slide-in-left' : '';
+  openModal(listing.name, `
     <div style="font-size:12px;font-weight:800;color:#fff;text-align:center;margin-bottom:4px;letter-spacing:2px">PONKI</div>
-    <div class="modal-card-preview"><img src="${listing.image_url}" onerror="this.style.opacity=0"></div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <button onclick="swipeMarketCard(${idx},-1)" style="background:${idx>0?'var(--bg3)':'transparent'};border:1px solid ${idx>0?'var(--border)':'transparent'};color:${idx>0?'var(--text)':'var(--text3)'};font-size:22px;cursor:pointer;padding:0;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s">‹</button>
+      <div class="flip-container ${slideClass}" style="flex:1">
+        <div class="modal-card-preview" style="margin:0"><img src="${listing.image_url}" onerror="this.style.opacity=0"></div>
+      </div>
+      <button onclick="swipeMarketCard(${idx},1)" style="background:${idx<list.length-1?'var(--bg3)':'transparent'};border:1px solid ${idx<list.length-1?'var(--border)':'transparent'};color:${idx<list.length-1?'var(--text)':'var(--text3)'};font-size:22px;cursor:pointer;padding:0;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s">›</button>
+    </div>
+    ${list.length>1?`<div style="text-align:center;font-size:11px;color:var(--text3);font-family:'Inter',sans-serif">${idx+1} / ${list.length}</div>`:''}
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
       <div class="stat-box"><div class="val" style="font-size:14px">#${listing.serial_number}</div><div class="lbl">${t.serial}</div></div>
       <div class="stat-box"><div class="val" style="font-size:14px;color:#4ab0ff">${fmtTon(listing.price_stars)} TON</div><div class="lbl">${t.price}</div></div>
@@ -950,6 +1020,16 @@ function openMarketModal(listing,isOwn) {
     }
     <button class="btn btn-secondary btn-wide" onclick="closeModal()">${t.close}</button>
   `);
+}
+
+function swipeMarketCard(currentIdx, direction) {
+  haptic();
+  const list = window._marketListings || [];
+  const newIdx = currentIdx + direction;
+  if (newIdx < 0 || newIdx >= list.length) return;
+  const listing = list[newIdx];
+  const isOwn = listing.seller_id === userData.id;
+  openMarketModal(listing, isOwn, direction);
 }
 
 async function buyListing(id,price){
@@ -1029,11 +1109,14 @@ async function loadProfile() {
       cardsHtml=`<div class="empty-state" style="padding:24px 0"><p>${t.noCards}</p></div>`;
     } else {
       const showAll=window._showAllCards||false;
-      const vis=showAll?cards:cards.slice(0,6);
+      const vis=showAll?cards:cards.slice(0,3);
       cardsHtml=`
-        <div class="filters" style="margin-bottom:4px">
-          <button class="filter-btn ${profileSortBy==='serial_asc'||profileSortBy==='serial_desc'?'active':''}" onclick="toggleProfileSerial()"># ${profileSortBy==='serial_desc'?'↓':'↑'}</button>
-          <button class="filter-btn ${profileSortBy==='rarity_asc'||profileSortBy==='rarity_desc'?'active':''}" onclick="toggleProfileRarity()">${t.rarity} ${profileSortBy==='rarity_desc'?'↓':'↑'}</button>
+        <div class="filters" style="margin-bottom:4px;display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;gap:6px">
+            <button class="filter-btn ${profileSortBy==='serial_asc'||profileSortBy==='serial_desc'?'active':''}" onclick="toggleProfileSerial()"># ${profileSortBy==='serial_desc'?'↓':'↑'}</button>
+            <button class="filter-btn ${profileSortBy==='rarity_asc'||profileSortBy==='rarity_desc'?'active':''}" onclick="toggleProfileRarity()">${t.rarity} ${profileSortBy==='rarity_desc'?'↓':'↑'}</button>
+          </div>
+          <button onclick="openSplitLink()" style="background:linear-gradient(135deg,rgba(240,192,64,0.15),rgba(240,192,64,0.05));border:1px solid rgba(240,192,64,0.4);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;color:#f0c040;cursor:pointer;display:flex;align-items:center;gap:4px"><svg width="12" height="12" viewBox="0 0 24 24"><defs><linearGradient id="sg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffe566"/><stop offset="100%" stop-color="#f0a000"/></linearGradient></defs><polygon points="12,2 14.8,8.6 22,9.5 17,14.2 18.5,21.4 12,17.8 5.5,21.4 7,14.2 2,9.5 9.2,8.6" fill="url(#sg2)"/></svg>${t.buyCheapStars}</button>
         </div>
         <div class="cards-grid">`;
       for(const card of vis){
@@ -1046,8 +1129,8 @@ async function loadProfile() {
         </div>`;
       }
       cardsHtml+=`</div>`;
-      if(!showAll&&cards.length>6) cardsHtml+=`<button class="btn btn-secondary btn-wide" onclick="window._showAllCards=true;loadProfile()">${t.showAll} ${cards.length}</button>`;
-      else if(showAll&&cards.length>6) cardsHtml+=`<button class="btn btn-secondary btn-wide" onclick="window._showAllCards=false;loadProfile()">${t.showLess}</button>`;
+      if(!showAll&&cards.length>3) cardsHtml+=`<button class="btn btn-secondary btn-wide" onclick="window._showAllCards=true;loadProfile()">${t.showAll} ${cards.length}</button>`;
+      else if(showAll&&cards.length>3) cardsHtml+=`<button class="btn btn-secondary btn-wide" onclick="window._showAllCards=false;loadProfile()">${t.showLess}</button>`;
     }
 
     el.innerHTML=`
@@ -1063,18 +1146,22 @@ async function loadProfile() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ff2d78" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
         </button>
       </div>
-      <div class="stats-row" style="grid-template-columns:repeat(3,1fr)">
-        <div class="stat-box" onclick="openTonModal()" style="cursor:pointer">
+      <div class="stats-row" style="grid-template-columns:repeat(4,1fr)">
+        <div class="stat-box" onclick="openTonModal()" style="cursor:pointer;border:1px solid rgba(74,176,255,0.35);box-shadow:0 0 10px rgba(74,176,255,0.08)">
           <div class="val" style="color:#4ab0ff;display:flex;align-items:center;justify-content:center;gap:4px"><img src="/static/icons/ton.png" style="width:14px;height:14px;object-fit:contain" onerror="this.style.display='none'"><span>${userData.ton_balance>0?((userData.ton_balance/1000000000).toFixed(2)):'0'}</span></div>
-          <div class="lbl">TON</div>
+          <div class="lbl" style="font-size:9px">TON</div>
         </div>
-        <div class="stat-box" onclick="openGemsModal()" style="cursor:pointer">
-          <div style="display:flex;align-items:center;justify-content:center;gap:3px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 3L3 9L12 21L21 9L18 3Z" fill="#a78bfa" stroke="#7c3aed" stroke-width="1"/><path d="M3 9L12 12L21 9" stroke="#c4b5fd" stroke-width="1"/><path d="M8 3L6 9L12 12L18 9L16 3" stroke="none"/><path d="M12 3L9 9L12 12L15 9Z" fill="#c4b5fd" opacity="0.5"/><path d="M6 3L9 9" stroke="#c4b5fd" stroke-width="0.8"/><path d="M18 3L15 9" stroke="#c4b5fd" stroke-width="0.8"/><circle cx="12" cy="5" r="1" fill="#ede9fe" opacity="0.8"/></svg><span class="val" style="color:#a78bfa" id="gems-val">${userData.gems||0}</span></div>
-          <div class="lbl">${userLang==='ru'?'ГЕМЫ':'GEMS'}</div>
+        <div class="stat-box" onclick="openGemsModal()" style="cursor:pointer;border:1px solid rgba(167,139,250,0.35);box-shadow:0 0 10px rgba(167,139,250,0.08)">
+          <div style="display:flex;align-items:center;justify-content:center;gap:3px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 3L3 9L12 21L21 9L18 3Z" fill="#a78bfa" stroke="#7c3aed" stroke-width="1"/><path d="M3 9L12 12L21 9" stroke="#c4b5fd" stroke-width="1"/><path d="M12 3L9 9L12 12L15 9Z" fill="#c4b5fd" opacity="0.5"/><path d="M6 3L9 9" stroke="#c4b5fd" stroke-width="0.8"/><path d="M18 3L15 9" stroke="#c4b5fd" stroke-width="0.8"/><circle cx="12" cy="5" r="1" fill="#ede9fe" opacity="0.8"/></svg><span class="val" style="color:#a78bfa" id="gems-val">${userData.gems||0}</span></div>
+          <div class="lbl" style="font-size:9px">${userLang==='ru'?'ГЕМЫ':'GEMS'}</div>
         </div>
-        <div class="stat-box" onclick="openCashbackModal()" style="cursor:pointer">
+        <div class="stat-box" onclick="openFriendsModal()" style="cursor:pointer;border:1px solid rgba(74,255,138,0.35);box-shadow:0 0 10px rgba(74,255,138,0.08)">
+          <div style="display:flex;align-items:center;justify-content:center;gap:3px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="#4aff8a" stroke-width="1.5"/><path d="M3 20c0-3.31 2.69-5.5 6-5.5s6 2.19 6 5.5" stroke="#4aff8a" stroke-width="1.5" stroke-linecap="round"/><circle cx="17" cy="9" r="2" stroke="#4aff8a" stroke-width="1.2"/><path d="M20 19c0-2.2-1.3-4-3-4" stroke="#4aff8a" stroke-width="1.2" stroke-linecap="round"/></svg><span class="val" style="color:#4aff8a" id="friends-stat-val">${userData.referrals_count||0}</span></div>
+          <div class="lbl" style="font-size:9px">${userLang==='ru'?'ДРУЗЬЯ':'FRIENDS'}</div>
+        </div>
+        <div class="stat-box" onclick="openCashbackModal()" style="cursor:pointer;border:1px solid rgba(74,176,255,0.2)">
           <div style="display:flex;align-items:center;justify-content:center;gap:3px"><img src="/static/icons/ton.png" style="width:14px;height:14px;object-fit:contain"><span class="val" style="color:#4ab0ff" id="cashback-val">${(userData.cashback_balance||0)===0?'0':((userData.cashback_balance||0)/1e9).toFixed(2).replace(/\.?0+$/,'')}</span></div>
-          <div class="lbl">КЕШБЭК</div>
+          <div class="lbl" style="font-size:9px">КЕШБЭК</div>
         </div>
       </div>
 
@@ -1097,43 +1184,20 @@ async function loadProfile() {
       <div id="profile-cards-section" style="display:${profileView==='cards'?'flex':'none'};flex-direction:column;gap:14px">
         ${cardsHtml}
 
-        <div style="display:flex;flex-direction:column;gap:4px">
-          <div class="menu-item" style="border:1px solid rgba(255,255,255,0.12);box-shadow:0 0 12px rgba(255,255,255,0.04)" onclick="openFriendsModal()">
-            <span class="menu-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="8" cy="7" r="3.5" stroke="#fff" stroke-width="1.5"/><path d="M2 20c0-3.31 2.69-5.5 6-5.5s6 2.19 6 5.5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><circle cx="17" cy="8" r="2.5" stroke="rgba(255,255,255,0.6)" stroke-width="1.3"/><path d="M20 20c0-2.5-1.5-4.5-3.5-4.5" stroke="rgba(255,255,255,0.6)" stroke-width="1.3" stroke-linecap="round"/><path d="M14.5 4.5 C14.5 3.5 15.5 3 16.5 3.5 C17 3.8 17.5 4.3 17.5 5 C17.5 5.7 17 6.2 16.5 6.5 L14.5 8 L12.5 6.5 C12 6.2 11.5 5.7 11.5 5 C11.5 4.3 12 3.8 12.5 3.5 C13.5 3 14.5 3.5 14.5 4.5Z" fill="#ff2d78" opacity="0.9"/></svg></span>
-            <div class="menu-text"><div class="menu-label">${t.friends}</div></div>
-            <span style="background:#fff;color:#000;border-radius:50%;width:20px;height:20px;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center" id="friends-menu-count">—</span>
-          </div>
-          <div class="menu-item" style="border:1px solid rgba(74,176,255,0.18);box-shadow:0 0 12px rgba(74,176,255,0.04)" onclick="setProfileView('whales')">
-            <span class="menu-icon">🐳</span>
-            <div class="menu-text"><div class="menu-label">${userLang==='ru'?'Рейтинг китов':'Whale Rating'}</div></div>
-            <span style="color:var(--text3);font-size:16px">›</span>
-          </div>
-          <div class="menu-item" style="border:1px solid rgba(240,192,64,0.18);box-shadow:0 0 12px rgba(240,192,64,0.04)" onclick="openSplitLink()">
-            <span class="menu-icon"><svg width="22" height="22" viewBox="0 0 24 24"><defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffe566"/><stop offset="100%" stop-color="#f0a000"/></linearGradient></defs><polygon points="12,2 14.8,8.6 22,9.5 17,14.2 18.5,21.4 12,17.8 5.5,21.4 7,14.2 2,9.5 9.2,8.6" fill="url(#sg)" stroke="#c07800" stroke-width="0.5"/><polygon points="12,5 14,9.8 19.2,10.4 15.6,13.8 16.6,19 12,16.4 7.4,19 8.4,13.8 4.8,10.4 10,9.8" fill="#ffe88a" opacity="0.5"/></svg></span>
-            <div class="menu-text"><div class="menu-label">${t.buyCheapStars}</div></div>
-            <span style="color:var(--text3);font-size:16px">›</span>
-          </div>
-          <div class="menu-item" id="ton-menu-item" style="border:1px solid rgba(74,176,255,0.3);box-shadow:0 0 12px rgba(74,176,255,0.08)" onclick="connectTon()">
-            <span class="menu-icon"><img src="/static/icons/ton.png" style="width:22px;height:22px;object-fit:contain" onerror="this.outerHTML='💎'"></span>
-            <div class="menu-text">
-              <div class="menu-label" id="ton-label">${userData.ton_address?'TON подключён':t.connectTon}</div>
-            </div>
-            <span style="font-size:18px;font-weight:800" id="ton-arrow">${userData.ton_address?'✓':'›'}</span>
-          </div>
-        </div>
         <div style="background:var(--bg2);border:1px solid rgba(167,139,250,0.25);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px">
           <div style="font-size:15px;font-weight:700;margin-bottom:2px">⚡ ${userLang==='ru'?'Задания и Игры':'Tasks & Games'}</div>
           ${renderTaskItem('daily', userData)}
           ${renderTaskItem('spin', userData)}
-          ${renderTaskItem('pvp', userData)}
-          ${renderTaskItem('redblack', userData)}
+          ${renderTaskItem('buy_card', userData)}
           ${renderTaskItem('channel', userData)}
           ${renderTaskItem('friends5', userData)}
+          ${renderTaskItem('pvp', userData)}
+          ${renderTaskItem('redblack', userData)}
         </div>
 
         <div style="background:var(--bg2);border:1px solid rgba(255,45,120,0.3);border-radius:16px;padding:16px;box-shadow:0 0 24px rgba(255,45,120,0.06),inset 0 0 1px rgba(255,45,120,0.1)">
           <h3 style="font-size:15px;font-weight:700;margin-bottom:6px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="vertical-align:middle;margin-right:6px"><rect x="3" y="8" width="18" height="13" rx="2" fill="#ff2d78" opacity="0.9"/><rect x="2" y="6" width="20" height="4" rx="1.5" fill="#ff5599"/><path d="M12 6V21" stroke="#fff" stroke-width="1.5" stroke-dasharray="2 1"/><path d="M12 6C12 6 9 4 8 2.5C7.2 1.2 8.5 0 10 1C11 1.7 12 3 12 3" stroke="#ff5599" stroke-width="1.5" stroke-linecap="round" fill="none"/><path d="M12 6C12 6 15 4 16 2.5C16.8 1.2 15.5 0 14 1C13 1.7 12 3 12 3" stroke="#ff5599" stroke-width="1.5" stroke-linecap="round" fill="none"/><circle cx="12" cy="6" r="1.5" fill="#fff"/></svg> ${t.refEarn}</h3>
-          <p style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.5">${t.refText} <strong style="color:var(--star)">10%</strong> ${t.refOf} 🔥<br><span style="font-size:11px;color:rgba(255,255,255,0.4)">${userLang==='ru'?'За гемы можно покупать карты и играть в игры':'Use gems to buy cards &amp; play games'}</span></p>
+          <p style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.5">${t.refText} <strong style="color:var(--star)">10%</strong> ${t.refOf} <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><path d="M6 3L3 9L12 21L21 9L18 3Z" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.2"/><path d="M3 9L12 12L21 9" stroke="#c4b5fd" stroke-width="1"/><path d="M12 3L9 9L12 12L15 9Z" fill="#c4b5fd" opacity="0.5"/></svg><br><span style="font-size:11px;color:rgba(255,255,255,0.4)">${userLang==='ru'?'За гемы можно покупать карты и играть в игры':'Use gems to buy cards &amp; play games'}</span></p>
           <div style="display:flex;gap:8px;align-items:center">
             <div style="flex:1;background:var(--bg3);border:1px solid rgba(255,45,120,0.2);border-radius:8px;padding:10px 12px;font-family:'Inter',sans-serif;font-size:11px;color:var(--star);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">t.me/memstroybot?start=${userData.telegram_id}</div>
             <button class="btn btn-secondary" style="white-space:nowrap;flex-shrink:0;border-color:rgba(255,45,120,0.25)" onclick="copyRef(${userData.telegram_id})">${userLang==='ru'?'Копировать':'Copy'}</button>
@@ -1192,11 +1256,21 @@ async function loadProfileHistory() {
     }
     const typeLabel=(type,isIncome)=>{
       if(userLang==='ru'){
-        const map={buy:'🃏 Куплено',market_buy:'💰 Продано',market_buy_ton:'💰 Продано за TON',market_buy_offer:'🤝 Офер принят',upgrade:'✨ Улучшено',transfer:isIncome?'📥 Получено':'📤 Передано',sell:'💰 Продано',buy_stars:'⭐ Пополнение',payment:'🃏 Куплено'};
-        return map[type]||type;
+        if(type==='buy'||type==='payment') return '🃏 Куплено';
+        if(type==='market_buy'||type==='market_buy_ton'||type==='market_buy_offer') return isIncome?'💰 Продано':'🃏 Куплено';
+        if(type==='upgrade') return '✨ Улучшено';
+        if(type==='transfer') return isIncome?'📥 Получено':'📤 Передано';
+        if(type==='auction_won') return isIncome?'🏆 Продано на аукционе':'🏆 Выиграно на аукционе';
+        if(type==='buy_stars') return '⭐ Пополнение';
+        return type;
       } else {
-        const map={buy:'🃏 Bought',market_buy:'💰 Sold',market_buy_ton:'💰 Sold for TON',market_buy_offer:'🤝 Offer accepted',upgrade:'✨ Upgraded',transfer:isIncome?'📥 Received':'📤 Transferred',sell:'💰 Sold',buy_stars:'⭐ Stars added',payment:'🃏 Bought'};
-        return map[type]||type;
+        if(type==='buy'||type==='payment') return '🃏 Bought';
+        if(type==='market_buy'||type==='market_buy_ton'||type==='market_buy_offer') return isIncome?'💰 Sold':'🃏 Bought';
+        if(type==='upgrade') return '✨ Upgraded';
+        if(type==='transfer') return isIncome?'📥 Received':'📤 Transferred';
+        if(type==='auction_won') return isIncome?'🏆 Auction sold':'🏆 Auction won';
+        if(type==='buy_stars') return '⭐ Stars added';
+        return type;
       }
     };
     const typeIcon=(type)=>`<img src="/static/ponki/ponki.png" style="width:100%;height:100%;object-fit:cover">`;
@@ -1209,7 +1283,7 @@ async function loadProfileHistory() {
       })(item.created_at.replace(' ','T'))):'';
       html+=`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px">
         <div style="width:40px;height:40px;border-radius:8px;background:var(--bg3);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px">
-          ${item.image_url?`<img src="${item.image_url}" style="width:100%;height:100%;object-fit:cover" onerror="this.outerHTML='${typeIcon(item.type)}'">`:typeIcon(item.type)}
+          <img src="${item.image_url||'/static/ponki/ponki.png'}" style="width:100%;height:100%;object-fit:cover" onerror="this.src='/static/ponki/ponki.png'">
         </div>
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:700">${item.card_name||'Ponki'}${item.serial_number?` <span style="color:var(--text2);font-weight:400">#${item.serial_number}</span>`:''}</div>
@@ -1368,7 +1442,7 @@ async function listCard(cardId){
   const priceInput=parseFloat(document.getElementById('sell-price')?.value);
   if(!priceInput||priceInput<0.1){toast(userLang==='ru'?'Минимум 0.10 TON':'Min 0.10 TON','err');return;}
   const price=Math.round(priceInput*100); // store as integer (0.1 TON = 10)
-  try{await api('/api/market/list','POST',{telegram_id:tgUser.id,user_card_id:cardId,price_dev:price});closeModal();toast(t.listed,'ok');loadProfile();}catch(e){toast(e.message,'err');}
+  try{await api('/api/market/list','POST',{telegram_id:tgUser.id,user_card_id:cardId,price_dev:price});closeModal();toast(t.listed,'ok');loadProfile();loadTrade();}catch(e){toast(e.message,'err');}
 }
 
 function openTransferModal(cardId){
@@ -1640,25 +1714,110 @@ function setWhaleCategory(cat) {
   haptic();
   _whaleCategory = cat;
   loadProfileWhales();
+  const mEl = document.getElementById('modal-whales-list');
+  if(mEl) loadModalWhales(mEl);
+}
+
+async function loadModalWhales(el) {
+  if(!el) return;
+  el.innerHTML = '<div class="spinner" style="margin:32px auto"></div>';
+  try {
+    const data = await api(`/api/leaderboard?telegram_id=${tgUser.id}&category=${_whaleCategory}`);
+    const list = data.top || [];
+    const myRank = data.my_rank;
+    const myRow = data.my_entry;
+    const medals = ['🥇','🥈','🥉'];
+    const rankColors = ['#ffd700','#c0c0c0','#cd7f32'];
+    const cats = [
+      {key:'cards',    label:userLang==='ru'?'Карты':'Cards'},
+      {key:'friends',  label:userLang==='ru'?'Друзья':'Friends'},
+      {key:'gems',     label:userLang==='ru'?'Гемы':'Gems'},
+      {key:'cashback', label:userLang==='ru'?'Кешбэк':'Cashback'},
+    ];
+    const getVal = (u) => {
+      if(_whaleCategory==='friends') return (u.friends_count||u.score||0)+' 👥';
+      if(_whaleCategory==='cashback'){const v=(u.score||0)/1e9;return `${v===0?'0':v.toFixed(2).replace(/\.?0+$/,'')} TON`;}
+      if(_whaleCategory==='cards') return `${u.cards_count||u.score||0} 🃏`;
+      if(_whaleCategory==='gems') return `${u.score||0} 💎`;
+      return `⭐${(u.stars_spent||0).toLocaleString()}`;
+    };
+    let html = `<div style="display:flex;gap:4px;margin-bottom:10px;background:var(--bg3);border-radius:12px;padding:3px">
+      ${cats.map(c=>`<div onclick="setWhaleCategory('${c.key}')" style="flex:1;text-align:center;padding:6px 2px;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;background:${_whaleCategory===c.key?'#ff2d78':'transparent'};color:${_whaleCategory===c.key?'#fff':'var(--text3)'};transition:all 0.2s">${c.label}</div>`).join('')}
+    </div><div style="display:flex;flex-direction:column;gap:6px">`;
+    if(!list.length) {
+      html += `<div class="empty-state"><p>${userLang==='ru'?'Ещё никого':'No one yet'}</p></div>`;
+    } else {
+      list.forEach((u,i)=>{
+        const rank=i+1;
+        const isMe=userData&&u.telegram_id===userData.telegram_id;
+        const name=u.first_name||u.username||'User';
+        html+=`<div style="background:${isMe?'rgba(255,45,120,0.08)':'var(--bg2)'};border:1px solid ${isMe?'rgba(255,45,120,0.4)':'rgba(255,255,255,0.07)'};border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:10px">
+          <div style="min-width:26px;text-align:center;font-size:${rank<=3?'17':'12'}px;font-weight:800;color:${rankColors[rank-1]||'var(--text2)'}">${medals[rank-1]||'#'+rank}</div>
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">${(name[0]||'?').toUpperCase()}</div>
+          <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700">${name}${isMe?` <span style="color:#ff2d78;font-size:10px">(${userLang==='ru'?'ты':'you'})</span>`:''}</div>${u.username?`<div style="font-size:10px;color:var(--text2)">@${u.username}</div>`:''}</div>
+          <div style="font-size:12px;font-weight:800;color:var(--star);flex-shrink:0">${getVal(u)}</div>
+        </div>`;
+      });
+    }
+    if(myRow&&myRank>20) html+=`<div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px"><div style="background:rgba(255,45,120,0.08);border:1px solid rgba(255,45,120,0.4);border-radius:12px;padding:10px 12px;font-size:13px;font-weight:700">#${myRank} ${myRow.first_name||myRow.username||'Ты'} — ${getVal(myRow)}</div></div>`;
+    html += '</div>';
+    el.innerHTML = html;
+  } catch(e){ el.innerHTML=`<div class="empty-state"><p>${e.message}</p></div>`; }
+}
+
+function openWhalesModal(){
+  haptic();
+  openModal('🐳 '+(userLang==='ru'?'Рейтинг китов':'Whale Rating'), `<div id="modal-whales-list"><div class="spinner" style="margin:32px auto"></div></div>`);
+  setTimeout(()=>{ const el=document.getElementById('modal-whales-list'); if(el) loadModalWhales(el); }, 100);
 }
 
 
 async function initTon(){
+  if(tonUI) return;
   try{
     tonUI=new TON_CONNECT_UI.TonConnectUI({manifestUrl:location.origin+'/webapp/tonconnect-manifest.json',buttonRootId:null});
     tonUI.onStatusChange(w=>{
-      const label=document.getElementById('ton-label'),sub=document.getElementById('ton-sub'),arrow=document.getElementById('ton-arrow');
-      if(!label) return;
-      if(w){const short=w.account.address.slice(0,6)+'...'+w.account.address.slice(-4);label.textContent=userLang==='ru'?'TON подключён':'TON Connected';if(sub)sub.textContent=short;if(arrow)arrow.textContent='✓';fetch('/api/save_ton_wallet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({telegram_id:tgUser.id,ton_address:w.account.address})}).catch(()=>{});}
-      else{if(label)label.textContent=t.connectTon;if(sub)sub.textContent='';if(arrow)arrow.textContent='›';}
+      if(w){
+        userData.ton_address = w.account.address;
+        fetch('/api/save_ton_wallet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({telegram_id:tgUser.id,ton_address:w.account.address})}).catch(()=>{});
+        toast(userLang==='ru'?'Кошелёк подключён ✓':'Wallet connected ✓','ok');
+        closeModal();
+      } else {
+        userData.ton_address = '';
+      }
     });
   }catch(e){}
 }
 async function connectTon(){
   haptic();
   if(!tonUI) await initTon();
-  if(tonUI?.wallet){if(confirm(userLang==='ru'?'Отключить кошелёк?':'Disconnect wallet?')){await tonUI.disconnect();toast('Disconnected');}}
-  else tonUI?.openModal();
+  if(!tonUI){ toast('TON недоступен','err'); return; }
+  if(tonUI.wallet){
+    if(confirm(userLang==='ru'?'Отключить кошелёк?':'Disconnect wallet?')){
+      await tonUI.disconnect();
+      userData.ton_address='';
+      closeModal();
+      toast(userLang==='ru'?'Кошелёк отключён':'Disconnected');
+    }
+  } else {
+    try {
+      await tonUI.openModal();
+    } catch(e) {
+      toast('Ошибка подключения: '+e.message,'err');
+    }
+  }
+}
+
+async function disconnectTon(){
+  haptic();
+  if(!confirm(userLang==='ru'?'Отключить кошелёк?':'Disconnect wallet?')) return;
+  try { if(tonUI?.wallet) await tonUI.disconnect(); } catch(e){}
+  userData.ton_address='';
+  try { await fetch('/api/save_ton_wallet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({telegram_id:tgUser.id,ton_address:''})}); } catch(e){}
+  userData = await api(`/api/user/${tgUser.id}`).catch(()=>userData);
+  updateBalances();
+  closeModal();
+  toast(userLang==='ru'?'Кошелёк отключён':'Disconnected');
 }
 
 async function openTonModal(){
@@ -1682,16 +1841,22 @@ async function openTonModal(){
     } catch(e){}
   }
 
-  openModal('TON', `
-    ${walletAddr ? `
-    <div style="background:var(--bg3);border:1px solid rgba(74,176,255,0.2);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:8px">
-      <img src="/static/icons/ton.png" style="width:20px;height:20px;object-fit:contain">
-      <div style="flex:1">
-        <div style="font-size:11px;color:var(--text2)">${userLang==='ru'?'Кошелёк':'Wallet'}: ${shortAddr}</div>
-        <div style="font-size:13px;font-weight:700;color:#4ab0ff">${walletBal}</div>
-      </div>
-      <span style="color:var(--success)">✓</span>
-    </div>` : ''}
+  const walletRow = walletAddr
+    ? '<div style="background:var(--bg3);border:1px solid rgba(74,176,255,0.2);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+      + '<img src="/static/icons/ton.png" style="width:20px;height:20px;object-fit:contain">'
+      + '<div style="flex:1">'
+        + '<div style="font-size:11px;color:var(--text2)">'+(userLang==='ru'?'Кошелёк':'Wallet')+': '+shortAddr+'</div>'
+        + '<div style="font-size:13px;font-weight:700;color:#4ab0ff">'+walletBal+'</div>'
+      + '</div>'
+      + '<span onclick="disconnectTon()" style="color:#ff5555;font-size:22px;font-weight:700;cursor:pointer;padding:4px 8px;line-height:1">✕</span>'
+      + '</div>'
+    : '<div style="background:var(--bg3);border:1px solid rgba(74,176,255,0.2);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+      + '<img src="/static/icons/ton.png" style="width:20px;height:20px;object-fit:contain">'
+      + '<div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--text2)">'+(userLang==='ru'?'Кошелёк не подключён':'Wallet not connected')+'</div></div>'
+      + '<span id="ton-connect-btn" style="color:#4aff8a;font-size:28px;font-weight:400;cursor:pointer;padding:4px 8px;line-height:1">+</span>'
+      + '</div>';
+
+  openModal('TON', walletRow + `
 
     <div style="background:var(--bg3);border:1px solid rgba(74,176,255,0.3);border-radius:14px;padding:16px;text-align:center;margin-bottom:12px">
       <div style="font-size:11px;color:var(--text2);margin-bottom:6px">${userLang==='ru'?'Баланс в боте':'Balance in bot'}</div>
@@ -1715,6 +1880,10 @@ async function openTonModal(){
     <div id="ton-action-area"></div>
     <div id="ton-history-area"></div>
   `);
+  setTimeout(()=>{
+    const btn = document.getElementById('ton-connect-btn');
+    if(btn) btn.onclick = connectTon;
+  }, 100);
 }
 
 function showTonDeposit(personalAddr, memo){
@@ -1851,13 +2020,19 @@ async function doTonWithdraw(){
     toast(userLang==='ru'?`Недостаточно TON. Баланс: ${fmtNano(bal)}`:`Not enough TON. Balance: ${fmtNano(bal)}`,'err');
     return;
   }
+  // Защита от двойного нажатия
+  const btn = document.querySelector('#modal-body .btn-primary');
+  if(btn){ btn.disabled=true; btn.textContent=userLang==='ru'?'Отправка...':'Sending...'; }
   try {
     const res = await api('/api/ton/withdraw','POST',{telegram_id:tgUser.id,amount,to_address:addr});
     userData.ton_balance = (userData.ton_balance||0) - amountNano;
     updateBalances();
     toast(userLang==='ru'?`✅ Вывод ${amount} TON обрабатывается`:`✅ Withdrawal ${amount} TON processing`,'ok');
     setTimeout(()=>closeModal(), 2000);
-  } catch(e){ toast(e.message,'err'); }
+  } catch(e){
+    toast(e.message,'err');
+    if(btn){ btn.disabled=false; btn.textContent=userLang==='ru'?'Вывести':'Withdraw'; }
+  }
 }
 
 function openOfferModal(cardId, cardName, imageUrl){
@@ -2255,6 +2430,21 @@ function renderTaskItem(type, ud){
       + '</div>'
       + (done?'<span style="font-size:12px;color:var(--success);font-weight:700">✓</span>':'<button class="btn btn-secondary" style="padding:7px 14px;font-size:12px;flex-shrink:0" onclick="claimTask(\'daily\')">'+(userLang==='ru'?'Забрать':'Claim')+'</button>')
       + '</div>';
+  } else if(type==='buy_card'){
+    const today = new Date().toISOString().slice(0,10);
+    const done = ud?.buy_card_date === today;
+    html = `<div style="background:var(--bg3);border:1px solid ${done?'rgba(74,255,138,0.2)':'var(--border)'};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px">
+      <div style="width:36px;height:36px;border-radius:8px;overflow:hidden;border:1.5px solid rgba(255,45,120,0.4);flex-shrink:0"><img src="/static/ponki/ponki.png" style="width:100%;height:100%;object-fit:cover"></div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700">${userLang==='ru'?'Купи карту сегодня':'Buy a card today'}</div>
+        <div style="font-size:11px;color:var(--text2)">+10 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><path d="M6 3L3 9L12 21L21 9L18 3Z" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.2"/><path d="M3 9L12 12L21 9" stroke="#c4b5fd" stroke-width="1"/><path d="M12 3L9 9L12 12L15 9Z" fill="#c4b5fd" opacity="0.5"/></svg></div>
+      </div>
+      ${done?'<span style="font-size:12px;color:var(--success);font-weight:700">✓</span>':`<button class="btn btn-secondary" style="padding:7px 14px;font-size:12px;flex-shrink:0" onclick="claimBuyCardTask()">${userLang==='ru'?'Забрать':'Claim'}</button>`}
+    </div>`;
+  } else if(type==='spin'){
+    const done = spinDone;
+    const icon=`<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="17" height="14" rx="2.5" fill="#2d1060"/><rect x="2" y="6" width="17" height="14" rx="2.5" stroke="#a78bfa" stroke-width="1.2"/><rect x="3" y="7" width="15" height="3" rx="1" fill="#a78bfa" opacity="0.5"/><rect x="4" y="11" width="3" height="5" rx="1" fill="#1a0a2e" stroke="#c4b5fd" stroke-width="0.8"/><rect x="8.5" y="11" width="3" height="5" rx="1" fill="#1a0a2e" stroke="#c4b5fd" stroke-width="0.8"/><rect x="13" y="11" width="3" height="5" rx="1" fill="#1a0a2e" stroke="#c4b5fd" stroke-width="0.8"/><path d="M5.5 12.5 L6 11.5 L6.5 12.5 L5.5 12.5Z" fill="#f0c040"/><circle cx="10" cy="13" r="1.2" fill="#ff6b6b"/><path d="M13.8 12 L14.5 11 L15.2 12 L14.5 14 Z" fill="#4aff8a"/><path d="M20 9 L21 7.5 L21 14" stroke="#c4b5fd" stroke-width="1.8" stroke-linecap="round"/><circle cx="21" cy="14" r="1.8" fill="#f0c040" stroke="#c07800" stroke-width="0.8"/><rect x="8" y="18" width="5" height="1.5" rx="0.7" fill="#a78bfa" opacity="0.6"/></svg>`;
+    html = `<div style="background:var(--bg3);border:1px solid ${done?'rgba(74,255,138,0.2)':'rgba(167,139,250,0.25)'};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px"><span style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${icon}</span><div style="flex:1"><div style="font-size:13px;font-weight:700">${userLang==='ru'?'Крутить слот':'Spin slot'}</div><div style="font-size:11px;color:var(--text2)">${userLang==='ru'?'Испытай удачу раз в день':'Try your luck once a day'}</div></div>${done?'<span style="font-size:12px;color:var(--success);font-weight:700">✓</span>':`<button class="btn btn-secondary" style="padding:7px 14px;font-size:12px;flex-shrink:0;border-color:rgba(167,139,250,0.4);color:#a78bfa" onclick="openSpinModal()">${userLang==='ru'?'Крутить':'Spin'}</button>`}</div>`;
   } else if(type==='pvp'){
     const icon2=`<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 2L4 6V12C4 16.4 7.4 20.5 12 22C16.6 20.5 20 16.4 20 12V6L12 2Z" fill="#f0c040" opacity="0.2" stroke="#f0c040" stroke-width="1.5" stroke-linejoin="round"/><path d="M13.5 7L10 13H13L10.5 19L16 11H12.5L13.5 7Z" fill="#f0c040"/></svg>`;
     html = '<div style="background:var(--bg3);border:1px solid rgba(240,192,64,0.2);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px">'
@@ -2263,10 +2453,6 @@ function renderTaskItem(type, ud){
       + '<div style="font-size:11px;color:var(--text2)">'+(userLang==='ru'?'Победитель забирает все карты':'Winner takes all cards')+'</div></div>'
       + '<button class="btn btn-secondary" style="padding:7px 14px;font-size:12px;flex-shrink:0;border-color:rgba(240,192,64,0.5);color:#f0c040" onclick="openPvpModal()">'+(userLang==='ru'?'Играть':'Play')+'</button>'
       + '</div>';
-  } else if(type==='spin'){
-    const done = spinDone;
-    const icon=`<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="17" height="14" rx="2.5" fill="#2d1060"/><rect x="2" y="6" width="17" height="14" rx="2.5" stroke="#a78bfa" stroke-width="1.2"/><rect x="3" y="7" width="15" height="3" rx="1" fill="#a78bfa" opacity="0.5"/><rect x="4" y="11" width="3" height="5" rx="1" fill="#1a0a2e" stroke="#c4b5fd" stroke-width="0.8"/><rect x="8.5" y="11" width="3" height="5" rx="1" fill="#1a0a2e" stroke="#c4b5fd" stroke-width="0.8"/><rect x="13" y="11" width="3" height="5" rx="1" fill="#1a0a2e" stroke="#c4b5fd" stroke-width="0.8"/><path d="M5.5 12.5 L6 11.5 L6.5 12.5 L5.5 12.5Z" fill="#f0c040"/><circle cx="10" cy="13" r="1.2" fill="#ff6b6b"/><path d="M13.8 12 L14.5 11 L15.2 12 L14.5 14 Z" fill="#4aff8a"/><path d="M20 9 L21 7.5 L21 14" stroke="#c4b5fd" stroke-width="1.8" stroke-linecap="round"/><circle cx="21" cy="14" r="1.8" fill="#f0c040" stroke="#c07800" stroke-width="0.8"/><rect x="8" y="18" width="5" height="1.5" rx="0.7" fill="#a78bfa" opacity="0.6"/></svg>`;
-    html = `<div style="background:var(--bg3);border:1px solid ${done?'rgba(74,255,138,0.2)':'rgba(167,139,250,0.25)'};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px"><span style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${icon}</span><div style="flex:1"><div style="font-size:13px;font-weight:700">${userLang==='ru'?'Крутить слот':'Spin slot'}</div><div style="font-size:11px;color:var(--text2)">${userLang==='ru'?'Испытай удачу раз в день':'Try your luck once a day'}</div></div>${done?'<span style="font-size:12px;color:var(--success);font-weight:700">✓</span>':`<button class="btn btn-secondary" style="padding:7px 14px;font-size:12px;flex-shrink:0;border-color:rgba(167,139,250,0.4);color:#a78bfa" onclick="openSpinModal()">${userLang==='ru'?'Крутить':'Spin'}</button>`}</div>`;
   } else if(type==='redblack'){
     const icon=`<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="8" height="11" rx="2" fill="#ff4a4a"/><rect x="13" y="4" width="8" height="11" rx="2" fill="#1a1a1a" stroke="#444" stroke-width="1"/><circle cx="7" cy="9.5" r="2" fill="#fff" opacity="0.3"/><circle cx="17" cy="9.5" r="2" fill="#fff" opacity="0.3"/></svg>`;
     html = `<div style="background:var(--bg3);border:1px solid rgba(255,74,74,0.2);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px"><span style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${icon}</span><div style="flex:1"><div style="font-size:13px;font-weight:700">Red &amp; Black</div><div style="font-size:11px;color:var(--text2)">${userLang==='ru'?'Всё или ничего!':'All or nothing!'}</div></div><button class="btn btn-secondary" style="padding:7px 14px;font-size:12px;flex-shrink:0;border-color:rgba(255,74,74,0.4);color:#ff4a4a" onclick="openRedBlackModal()">${userLang==='ru'?'Играть':'Play'}</button></div>`;
@@ -2292,12 +2478,12 @@ function openRedBlackModal(){
       <div style="font-size:12px;color:var(--text2)">${userLang==='ru'?'Угадай цвет — выиграй x2':'Guess the color — win x2'}</div>
     </div>
     <div style="margin-bottom:12px">
-      <div style="font-size:12px;color:var(--text2);margin-bottom:6px">${userLang==='ru'?'Ставка (1–100 гемов):':'Bet (1–100 gems):'}</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:6px">${userLang==='ru'?'Ставка (1–128 гемов):':'Bet (1–128 gems):'}</div>
       <div style="display:flex;gap:6px;margin-bottom:8px">
-        ${[1,5,10,25,50,100].map(v=>`<button onclick="setRBBet(${v},this)" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:7px 2px;font-size:12px;font-weight:700;cursor:pointer;color:var(--text)" data-bet="${v}">${v}</button>`).join('')}
+        ${[1,2,4,8,16,32,64,128].map(v=>`<button onclick="setRBBet(${v},this)" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:7px 2px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text)" data-bet="${v}">${v}</button>`).join('')}
       </div>
       <div class="price-input-row">
-        <input type="number" id="rb-bet" min="1" max="100" value="1" style="font-size:16px;font-weight:700">
+        <input type="number" id="rb-bet" min="1" max="128" value="1" style="font-size:16px;font-weight:700">
         <span class="cur" style="color:#a78bfa"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><path d="M6 3L3 9L12 21L21 9L18 3Z" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.2"/><path d="M3 9L12 12L21 9" stroke="#c4b5fd" stroke-width="1"/><path d="M12 3L9 9L12 12L15 9Z" fill="#c4b5fd" opacity="0.5"/><path d="M6 3L9 9" stroke="#c4b5fd" stroke-width="0.8"/><path d="M18 3L15 9" stroke="#c4b5fd" stroke-width="0.8"/><circle cx="12" cy="5.5" r="1" fill="#ede9fe" opacity="0.9"/></svg></span>
       </div>
     </div>
@@ -2341,7 +2527,7 @@ async function playRedBlack(){
   const bet = parseInt(document.getElementById('rb-bet')?.value||'1');
   const choice = window._rbChoice;
   if(!choice){toast(userLang==='ru'?'Выберите цвет':'Choose a color','err');return;}
-  if(!bet||bet<1||bet>100){toast(userLang==='ru'?'Ставка 1–100':'Bet 1–100','err');return;}
+  if(!bet||bet<1||bet>128){toast(userLang==='ru'?'Ставка 1–128':'Bet 1–128','err');return;}
   const btn = document.getElementById('rb-play-btn');
   if(btn) btn.disabled=true;
   const resultEl = document.getElementById('rb-result');
@@ -2471,6 +2657,17 @@ async function claimTask(type){
     updateBalances();
     loadProfile();
     toast(`+${type==='daily'?1:type==='channel'?5:50} 💎`,'ok');
+  }catch(e){toast(e.message,'err');}
+}
+
+async function claimBuyCardTask(){
+  haptic('medium');
+  try{
+    const res = await api('/api/tasks/buy_card','POST',{telegram_id:tgUser.id});
+    userData = await api(`/api/user/${tgUser.id}`);
+    updateBalances();
+    loadProfile();
+    toast('+5 💎','ok');
   }catch(e){toast(e.message,'err');}
 }
 
