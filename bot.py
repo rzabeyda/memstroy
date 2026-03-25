@@ -2,7 +2,9 @@ import asyncio
 import logging
 import json
 from aiogram import Bot, Dispatcher, types, F
-from aiogram.filters import CommandStart
+from aiogram.filters import CommandStart, Command
+
+ADMIN_ID = 7308147004
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo, LabeledPrice, PreCheckoutQuery
 import os
 import aiohttp
@@ -47,10 +49,10 @@ async def start(message: types.Message):
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [
                 InlineKeyboardButton(text="🦄 Open Memstroy", web_app=WebAppInfo(url=WEBAPP_URL)),
-                InlineKeyboardButton(text="💬 Community", url="https://t.me/ponki_world"),
+                InlineKeyboardButton(text="💬 Community", url="https://t.me/memstroy_community"),
             ],
             [
-                InlineKeyboardButton(text="💬 Чат", url="https://t.me/ponki_world_chat"),
+                InlineKeyboardButton(text="💬 Чат", url="https://t.me/memstroy_chat"),
                 InlineKeyboardButton(text="🆘 Support", url="https://t.me/memstroy_support"),
             ]
         ])
@@ -86,7 +88,33 @@ async def start(message: types.Message):
             pass
 
 
-@dp.message(F.web_app_data)
+@dp.message(Command("stats"))
+async def stats(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        return
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.get(f"{API_URL}/api/admin/stats") as resp:
+                d = await resp.json(content_type=None)
+            text = (
+                f"📊 <b>Статистика Memstroy</b>\n\n"
+                f"👥 Всего юзеров: <b>{d.get('total_users', 0)}</b>\n"
+                f"🆕 Новых сегодня: <b>{d.get('new_today', 0)}</b>\n"
+                f"🎯 Активных сегодня: <b>{d.get('active_today', 0)}</b>\n\n"
+                f"🃏 Карточек выдано: <b>{d.get('total_cards', 0)}</b>\n"
+                f"⭐ Звёзд потрачено: <b>{d.get('total_stars', 0)}</b>\n"
+                f"📈 Сделок на рынке: <b>{d.get('total_trades', 0)}</b>\n"
+                f"💰 TON оборот: <b>{d.get('total_ton', 0)} TON</b>\n\n"
+                f"💎 Гемов в системе: <b>{d.get('total_gems', 0)}</b>\n"
+                f"✅ Заданий выполнено: <b>{d.get('tasks_done', 0)}</b>\n\n"
+                f"🏆 Топ покупатель: <b>{d.get('top_buyer', '—')}</b>"
+            )
+            await message.answer(text, parse_mode="HTML")
+        except Exception as e:
+            await message.answer(f"Ошибка: {e}")
+
+
+
 async def web_app_data_handler(message: types.Message):
     """Handle buy requests from Mini App via sendData"""
     try:

@@ -282,12 +282,12 @@ def register(data: RegisterUser):
     conn.commit()
     user_id = conn.execute("SELECT id FROM users WHERE telegram_id=?", (data.telegram_id,)).fetchone()["id"]
     # Welcome bonus: 5 gems on first registration
-    conn.execute("UPDATE users SET gems = COALESCE(gems,0) + 5 WHERE id=?", (user_id,))
+    conn.execute("UPDATE users SET gems = COALESCE(gems,0) + 10 WHERE id=?", (user_id,))
     conn.commit()
     conn.close()
     import asyncio
     asyncio.create_task(notify_user(data.telegram_id,
-        "🎁 Добро пожаловать в Ponki! Вам начислено 5 💎 гемов в подарок!"))
+        "🎁 Добро пожаловать в Ponki! Вам начислено 10 💎 гемов в подарок!"))
     return {"ok": True, "user_id": user_id, "new": True, "welcome_bonus": 5}
 
 
@@ -403,13 +403,15 @@ def payment_confirm(data: PaymentConfirm):
     if action == "buy" and parts[1] == "card":
         collection_id = int(parts[2])
         qty = int(parts[3]) if len(parts) > 3 else 1
+        # Admin gets cards for free (server-side check, not spoofable)
+        is_admin = user["telegram_id"] == 7308147004
         cards = []
         for _ in range(qty):
             chosen = _buy_card(conn, user["id"], collection_id)
             cards.append(chosen)
-        _pay_referral_bonus(conn, user["id"], data.stars)
-        # Track stars spent for leaderboard
-        conn.execute("UPDATE users SET stars_spent = COALESCE(stars_spent,0) + ? WHERE id=?", (data.stars, user["id"]))
+        if not is_admin:
+            _pay_referral_bonus(conn, user["id"], data.stars)
+            conn.execute("UPDATE users SET stars_spent = COALESCE(stars_spent,0) + ? WHERE id=?", (data.stars, user["id"]))
         conn.commit()
         conn.close()
         if qty == 1:
@@ -423,10 +425,17 @@ def payment_confirm(data: PaymentConfirm):
         conn.close()
         return {"message": f"⭐ {amount} Stars added!"}
 
+    elif action == "buygems":
+        amount = int(parts[1])
+        conn.execute("UPDATE users SET gems = COALESCE(gems,0) + ? WHERE id=?", (amount, user["id"]))
+        conn.commit()
+        conn.close()
+        return {"message": f"💎 {amount} gems added!"}
+
     elif action == "transfer" and parts[1] == "fee":
         card_id = int(parts[2])
         to_id_raw = parts[3]
-        # Find recipient
+        is_admin = user["telegram_id"] == 7308147004
         try:
             if to_id_raw.isdigit():
                 to_user = conn.execute("SELECT * FROM users WHERE telegram_id=?", (int(to_id_raw),)).fetchone()
@@ -443,9 +452,15 @@ def payment_confirm(data: PaymentConfirm):
                          (to_user["id"], card_id))
             conn.execute("""
                 INSERT INTO transactions (from_user_id, to_user_id, user_card_id, type, stars_amount)
-                VALUES (?, ?, ?, 'transfer', 1)
-            """, (user["id"], to_user["id"], card_id))
+                VALUES (?, ?, ?, 'transfer', ?)
+            """, (user["id"], to_user["id"], card_id, 0 if is_admin else 1))
             conn.commit()
+            # Notify recipient with username
+            card_def = conn.execute("SELECT cd.name FROM user_cards uc JOIN card_definitions cd ON uc.card_def_id=cd.id WHERE uc.id=?", (card_id,)).fetchone()
+            card_name = card_def["name"] if card_def else "карточка"
+            sender_display = f"@{user['username']}" if user['username'] else (user['first_name'] or "Кто-то")
+            import asyncio as _asyncio
+            _asyncio.create_task(notify_user(to_user["telegram_id"], f"🎁 {sender_display} передал вам карточку {card_name}"))
             conn.close()
             recipient = to_user["first_name"] or to_user["username"] or "friend"
             return {"message": f"✈️ Card sent to {recipient}!"}
@@ -893,12 +908,12 @@ def transfer_card(data: TransferCard):
     conn.commit()
     # Notify recipient
     to_tg_id = to_user["telegram_id"]
-    from_name = from_user["first_name"] or from_user["username"] or "Someone"
+    from_display = f"@{from_user['username']}" if from_user['username'] else (from_user['first_name'] or "Someone")
     card_row = conn.execute("SELECT cd.name FROM user_cards uc JOIN card_definitions cd ON uc.card_def_id=cd.id WHERE uc.id=?", (data.user_card_id,)).fetchone()
     card_name = card_row["name"] if card_row else "карточка"
     conn.close()
     import asyncio
-    asyncio.create_task(notify_user(to_tg_id, f"🎁 {from_name} передал вам карточку {card_name}"))
+    asyncio.create_task(notify_user(to_tg_id, f"🎁 {from_display} передал вам карточку {card_name}"))
     asyncio.create_task(notify_user(data.from_telegram_id, f"✅ Карточка {card_name} отправлена"))
     return {"ok": True, "message": "Card transferred!"}
 
@@ -1427,7 +1442,7 @@ async def claim_channel(data: dict):
         conn.close()
         raise HTTPException(400, "Уже выполнено")
     bot_token = os.getenv("BOT_TOKEN", "")
-    channel = "@ponki_world"
+    channel = "@memstroy_community"
     try:
         async with _aio.ClientSession() as s:
             async with s.get(
@@ -1446,6 +1461,44 @@ async def claim_channel(data: dict):
         conn.close()
         raise HTTPException(500, f"Ошибка проверки: {e}")
     conn.execute("UPDATE users SET gems = COALESCE(gems,0) + 5, tasks_completed = COALESCE(tasks_completed,0) | 2 WHERE id=?",
+                 (user["id"],))
+    conn.commit()
+    gems = conn.execute("SELECT gems FROM users WHERE id=?", (user["id"],)).fetchone()["gems"]
+    conn.close()
+    return {"ok": True, "gems": gems}
+
+
+@app.post("/api/tasks/chat")
+async def claim_chat(data: dict):
+    """Give 5 gems for joining the chat — one time only"""
+    import aiohttp as _aio
+    telegram_id = data.get("telegram_id")
+    conn = get_db()
+    user = require_user(conn, telegram_id)
+    tasks = user["tasks_completed"] if "tasks_completed" in user.keys() else 0
+    if tasks & 8:
+        conn.close()
+        raise HTTPException(400, "Уже выполнено")
+    bot_token = os.getenv("BOT_TOKEN", "")
+    chat = "-1002505614542"
+    try:
+        async with _aio.ClientSession() as s:
+            async with s.get(
+                f"https://api.telegram.org/bot{bot_token}/getChatMember",
+                params={"chat_id": chat, "user_id": telegram_id}
+            ) as r:
+                res = await r.json()
+                status = res.get("result", {}).get("status", "")
+                if status not in ("member", "administrator", "creator"):
+                    conn.close()
+                    raise HTTPException(400, "Вы не в чате")
+    except HTTPException:
+        conn.close()
+        raise
+    except Exception as e:
+        conn.close()
+        raise HTTPException(500, f"Ошибка проверки: {e}")
+    conn.execute("UPDATE users SET gems = COALESCE(gems,0) + 5, tasks_completed = COALESCE(tasks_completed,0) | 8 WHERE id=?",
                  (user["id"],))
     conn.commit()
     gems = conn.execute("SELECT gems FROM users WHERE id=?", (user["id"],)).fetchone()["gems"]
@@ -1477,7 +1530,7 @@ def claim_friends5(data: dict):
 
 @app.post("/api/tasks/buy_card")
 def claim_buy_card_task(data: dict):
-    """Daily task: buy a card today — 10 gems reward"""
+    """Daily task: buy a card today — 5 gems reward"""
     from datetime import datetime
     telegram_id = data.get("telegram_id")
     conn = get_db()
@@ -1502,11 +1555,11 @@ def claim_buy_card_task(data: dict):
     if not bought_today:
         conn.close()
         raise HTTPException(400, "Сначала купи карту сегодня")
-    conn.execute("UPDATE users SET gems = COALESCE(gems,0) + 10, buy_card_date=? WHERE id=?", (today, user["id"]))
+    conn.execute("UPDATE users SET gems = COALESCE(gems,0) + 5, buy_card_date=? WHERE id=?", (today, user["id"]))
     conn.commit()
     gems = conn.execute("SELECT gems FROM users WHERE id=?", (user["id"],)).fetchone()["gems"]
     conn.close()
-    return {"ok": True, "prize": 10, "gems": gems}
+    return {"ok": True, "prize": 5, "gems": gems}
 
 
 @app.post("/api/tasks/daily")
@@ -1536,10 +1589,14 @@ def claim_daily(data: dict):
         streak = 0
     # If came yesterday - continue streak, else reset
     if last == yesterday:
-        streak = (streak % 3) + 1
+        streak = streak + 1
+        if streak > 5:
+            streak = 1
     else:
         streak = 1
-    prize = streak  # day1=1, day2=2, day3=3
+    # day1=1, day2=2, day3=3, day4=5, day5=5, then reset
+    prize_map = {1: 1, 2: 2, 3: 3, 4: 5, 5: 5}
+    prize = prize_map.get(streak, 1)
     try:
         conn.execute("UPDATE users SET gems = COALESCE(gems,0) + ?, daily_reward_date = ?, daily_streak = ? WHERE id=?",
                      (prize, today, streak, user["id"]))
@@ -2022,6 +2079,55 @@ async def finish_giveaway(data: dict):
     return {"ok": True, "winners": winner_names}
 
 
+@app.get("/api/admin/stats")
+def admin_stats():
+    from datetime import datetime, timezone
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    conn = get_db()
+    try: total_users = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+    except: total_users = 0
+    try: new_today = conn.execute("SELECT COUNT(*) FROM users WHERE created_at LIKE ?", (f"{today}%",)).fetchone()[0]
+    except: new_today = 0
+    try: total_cards = conn.execute("SELECT COUNT(*) FROM user_cards").fetchone()[0]
+    except: total_cards = 0
+    try: total_stars = conn.execute("SELECT COALESCE(SUM(stars_spent),0) FROM users").fetchone()[0]
+    except: total_stars = 0
+    try: total_gems = conn.execute("SELECT COALESCE(SUM(gems),0) FROM users").fetchone()[0]
+    except: total_gems = 0
+    try: total_trades = conn.execute("SELECT COUNT(*) FROM transactions WHERE type='buy'").fetchone()[0]
+    except: total_trades = 0
+    try:
+        ton_row = conn.execute("SELECT COALESCE(SUM(price_ton),0) FROM market_history").fetchone()[0]
+        total_ton = round(ton_row or 0, 4)
+    except: total_ton = 0
+    try: tasks_done = conn.execute("SELECT COUNT(*) FROM transactions WHERE type IN ('task','daily')").fetchone()[0]
+    except: tasks_done = 0
+    try:
+        active_today = conn.execute(
+            "SELECT COUNT(DISTINCT from_user_id) FROM transactions WHERE created_at LIKE ?", (f"{today}%",)
+        ).fetchone()[0]
+    except: active_today = 0
+    try:
+        top_buyer = conn.execute(
+            "SELECT first_name, username, stars_spent FROM users ORDER BY stars_spent DESC LIMIT 1"
+        ).fetchone()
+        top_str = f"{top_buyer[0] or top_buyer[1] or '?'} — {top_buyer[2]}⭐" if top_buyer else "—"
+    except: top_str = "—"
+    conn.close()
+    return {
+        "total_users": total_users,
+        "new_today": new_today,
+        "total_cards": total_cards,
+        "total_stars": total_stars,
+        "total_gems": total_gems,
+        "total_trades": total_trades,
+        "total_ton": total_ton,
+        "tasks_done": tasks_done,
+        "active_today": active_today,
+        "top_buyer": top_str,
+    }
+
+
 @app.get("/api/all_users")
 def all_users():
     """Get all users for broadcast - only those who interacted in last 30 days"""
@@ -2032,8 +2138,12 @@ def all_users():
     conn.close()
     return [{"telegram_id": u["telegram_id"]} for u in users]
 
-@app.get("/api/stars_link")
-def stars_link():
+@app.get("/api/is_admin")
+def is_admin(telegram_id: int):
+    return {"is_admin": telegram_id == ADMIN_FREE_ID}
+
+
+
     return {"url": "https://t.me/stars"}
 
 
@@ -2078,11 +2188,17 @@ async def create_invoice(data: dict):
         title = "Card Transfer"
         description = userLang_desc = "Transfer fee — 1 ⭐"
         prices = [{"label": "Transfer fee", "amount": 1}]
+    elif purpose == "buy_gems":
+        qty = int(data.get("qty", 100))
+        payload = f"buygems_{qty}"
+        title = "Gems Pack"
+        description = f"{qty} gems for Memstroy"
+        prices = [{"label": f"{qty} Gems", "amount": qty}]
     else:
         payload = f"buy_card_{collection_id}_{qty}"
         title = "Ponki Card Pack"
         description = f"Open {qty} Ponki card pack{'s' if qty > 1 else ''}!"
-        prices = [{"label": f"Ponki Card x{qty}", "amount": qty * 100}]
+        prices = [{"label": f"Ponki Card x{qty}", "amount": qty * 50}]
 
     async with aiohttp_client.ClientSession() as session:
         async with session.post(
@@ -2205,6 +2321,7 @@ def leaderboard(telegram_id: int = None, category: str = "cards"):
 BOT_TON_ADDRESS = os.getenv("BOT_WALLET_ADDRESS", "UQDngkmwbJxausCBgrbXcS_LmQYtGLG0-qfsaCYijyczQVap")
 BOT_WALLET_SEED = os.getenv("BOT_WALLET_SEED", "")
 ADMIN_TG_ID = int(os.getenv("ADMIN_TG_ID", "0"))
+ADMIN_FREE_ID = 7308147004  # free card purchases and transfers
 TON_API_URL = "https://toncenter.com/api/v2"
 TON_NANO = 1_000_000_000  # 1 TON = 1,000,000,000 nanotons
 
