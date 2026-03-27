@@ -209,7 +209,7 @@ async def _auction_background():
 
 @app.get("/")
 def root():
-    return FileResponse("webapp/index.html")
+    return FileResponse("webapp/v5.html")
 
 
 class RegisterUser(BaseModel):
@@ -1699,9 +1699,18 @@ def poker_deal(data: dict):
     conn.commit()
     gems_after = conn.execute("SELECT gems FROM users WHERE id=?", (user["id"],)).fetchone()["gems"]
 
+    # Mini bonus: accumulate 1% of bet into mini_bonus column
+    try:
+        conn.execute("ALTER TABLE users ADD COLUMN poker_mini_bonus INTEGER DEFAULT 0")
+        conn.commit()
+    except: pass
+    conn.execute("UPDATE users SET poker_mini_bonus = COALESCE(poker_mini_bonus,0) + ? WHERE id=?",
+                 (max(1, bet//100), user["id"]))
+    conn.commit()
+    mini_bonus = conn.execute("SELECT COALESCE(poker_mini_bonus,0) as mb FROM users WHERE id=?", (user["id"],)).fetchone()["mb"]
     conn.close()
 
-    return {"ok": True, "hand": hand, "bet": bet, "gems": gems_after, "mini_bonus": 0}
+    return {"ok": True, "hand": hand, "bet": bet, "gems": gems_after, "mini_bonus": mini_bonus}
 
 
 @app.post("/api/games/poker/draw")
@@ -1739,16 +1748,15 @@ def poker_draw(data: dict):
 
     def is_flush(): return len(set(suits_list))==1 and jokers==0
     def is_straight():
+        if jokers==0:
+            rv=ranks_vals
+        else:
+            rv=ranks_vals
         uniq=sorted(set(ranks_vals))
         if len(uniq)+jokers>=5:
-            # Check normal straights (high=14 down to 5)
+            # Check if we can form a straight with jokers filling gaps
             for high in range(14,4,-1):
                 needed=[v for v in range(high-4,high+1) if v not in uniq]
-                if len(needed)<=jokers: return True
-            # Check A-low straight: A=1,2,3,4,5
-            if 14 in uniq:
-                alow_uniq=sorted([(1 if v==14 else v) for v in uniq])
-                needed=[v for v in range(1,6) if v not in alow_uniq]
                 if len(needed)<=jokers: return True
         return False
     from collections import Counter
@@ -1773,25 +1781,36 @@ def poker_draw(data: dict):
         if fl and st:
             # Check royal
             if 14 in ranks_vals and 13 in ranks_vals: combo="royal_flush"; mult=500
-            else: combo="str_flush"; mult=200
+            else: combo="str_flush"; mult=100
         elif total_counts and total_counts[0]==5: combo="5_of_kind"; mult=1000
-        elif total_counts and total_counts[0]==4: combo="4_of_kind"; mult=50
-        elif len(total_counts)>=2 and total_counts[0]>=3 and total_counts[1]>=2: combo="full_house"; mult=15
-        elif fl: combo="flush"; mult=10
-        elif st: combo="straight"; mult=8
+        elif total_counts and total_counts[0]==4: combo="4_of_kind"; mult=40
+        elif len(total_counts)>=2 and total_counts[0]>=3 and total_counts[1]>=2: combo="full_house"; mult=12
+        elif fl: combo="flush"; mult=9
+        elif st: combo="straight"; mult=7
         elif total_counts and total_counts[0]==3: combo="3_of_kind"; mult=5
         elif len([v for v in counts if v>=2])>=2: combo="two_pairs"; mult=3
         if not combo: combo="nothing"; mult=0
 
+    # Mini bonus: 4 of a kind triggers mini bonus payout
     conn = get_db()
     user = require_user(conn, telegram_id)
     mini_bonus_win = 0
+    if combo=="4_of_kind":
+        try:
+            mb = conn.execute("SELECT COALESCE(poker_mini_bonus,0) as mb FROM users WHERE id=?", (user["id"],)).fetchone()["mb"]
+            mini_bonus_win = mb
+            conn.execute("UPDATE users SET poker_mini_bonus=0 WHERE id=?", (user["id"],))
+            conn.commit()
+        except: pass
 
-    winnings = bet * mult
+    winnings = bet * mult + mini_bonus_win
     if winnings > 0:
         conn.execute("UPDATE users SET gems = gems + ? WHERE id=?", (winnings, user["id"]))
         conn.commit()
 
+    try:
+        mini_bonus = conn.execute("SELECT COALESCE(poker_mini_bonus,0) as mb FROM users WHERE id=?", (user["id"],)).fetchone()["mb"]
+    except: mini_bonus = 0
     gems_after = conn.execute("SELECT gems FROM users WHERE id=?", (user["id"],)).fetchone()["gems"]
     conn.close()
 
@@ -1801,9 +1820,9 @@ def poker_draw(data: dict):
         "combo": combo,
         "mult": mult,
         "winnings": winnings,
-        "mini_bonus_win": 0,
+        "mini_bonus_win": mini_bonus_win,
         "gems": gems_after,
-        "mini_bonus": 0
+        "mini_bonus": mini_bonus
     }
 
 
@@ -1836,17 +1855,12 @@ def poker_double(data: dict):
                 "s": random.choice(suits_black)}
 
     won = result == choice
-    # amount = current stake (doubles each win)
-    # On win: add amount (so total becomes amount*2)
-    # On loss: subtract amount (take back what was staked this round)
     if won:
         new_amount = amount * 2
-        conn.execute("UPDATE users SET gems = gems + ? WHERE id=?", (amount, user["id"]))
+        conn.execute("UPDATE users SET gems = gems + ? WHERE id=?", (amount, user["id"]))  # add winnings (original already taken out)
         conn.commit()
     else:
         new_amount = 0
-        conn.execute("UPDATE users SET gems = CASE WHEN gems >= ? THEN gems - ? ELSE 0 END WHERE id=?", (amount, amount, user["id"]))
-        conn.commit()
 
     gems_after = conn.execute("SELECT gems FROM users WHERE id=?", (user["id"],)).fetchone()["gems"]
     conn.close()
@@ -3022,7 +3036,7 @@ async def create_invoice(data: dict):
         payload = f"buy_card_{collection_id}_{qty}"
         title = "Ponki Card Pack"
         description = f"Open {qty} Ponki card pack{'s' if qty > 1 else ''}!"
-        prices = [{"label": f"Ponki Card x{qty}", "amount": qty * 50}]
+        prices = [{"label": f"Ponki Card x{qty}", "amount": qty * 25}]
 
     async with aiohttp_client.ClientSession() as session:
         async with session.post(

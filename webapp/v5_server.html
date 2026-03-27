@@ -124,6 +124,14 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;heigh
 .trade-filter-btn:active{transform:scale(0.95)}
 .trade-filter-btn.has-filter{border-color:#ff2d78;color:#ff2d78}
 .trade-filter-count{background:#fff;color:#000;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:800;display:inline-flex;align-items:center;justify-content:center}
+.bsym-7{font-family:Impact,Arial,sans-serif!important;font-size:46px!important;font-weight:900!important;color:#ff0000!important;line-height:1!important;display:block!important;-webkit-text-stroke:1px #800000!important}
+.bsym-bar{display:inline-block!important;font-family:Impact,Arial,sans-serif!important;font-size:11px!important;font-weight:900!important;color:#111!important;background:#e0e0e0!important;border:2px solid #888!important;border-radius:3px!important;padding:3px 5px!important;letter-spacing:2px!important;line-height:1.2!important}
+.bsym-fruit{font-size:36px!important;line-height:1!important;display:block!important}
+.bsym-blank{font-size:20px!important;color:#333!important;line-height:1!important;display:block!important}
+@keyframes floatUp{0%{opacity:1;transform:translateY(0) scale(1)}60%{opacity:1;transform:translateY(-40px) scale(1.2)}100%{opacity:0;transform:translateY(-80px) scale(0.9)}}
+</style><style>
+@keyframes pkShimmer{0%{opacity:1}50%{opacity:0.5;box-shadow:0 0 12px #f0b432}100%{opacity:1}}
+.pk-step-active{animation:pkShimmer 1s ease-in-out infinite}
 </style>
 </head>
 <body>
@@ -699,7 +707,7 @@ async function loadBuy() {
         + '<div style="flex:1;text-align:center"><span id="qty-val" style="font-size:22px;font-weight:800">'+qty+'</span> <span id="qty-word" style="font-size:13px;color:var(--text2)">'+t.cardCount(qty)+'</span></div>'
         + '<button class="btn btn-secondary" style="width:44px;height:44px;font-size:20px;flex-shrink:0;padding:0" onclick="changeQty(1)">+</button>'
       + '</div>'
-      + '<button class="btn btn-secondary btn-wide" id="buy-btn" onclick="buyCard('+col.id+')" style="border-color:rgba(240,192,64,0.4);color:#f0c040">'+buyLabel+' <span style="text-decoration:line-through;opacity:0.5;font-size:12px">'+(qty*100)+'</span> '+(qty*50)+' '+starSvg+'</button>'
+      + '<button class="btn btn-secondary btn-wide" id="buy-btn" onclick="buyCard('+col.id+')" style="border-color:rgba(240,192,64,0.4);color:#f0c040">'+buyLabel+' <span style="text-decoration:line-through;opacity:0.5;font-size:12px">'+(qty*50)+'</span> '+(qty*25)+' '+starSvg+'</button>'
       + _gemBuyBtn(col.id,qty,userData?.gems||0)
       + '</div>';
   } catch(e) { el.innerHTML=`<div class="empty-state"><p>${e.message}</p></div>`; }
@@ -716,7 +724,7 @@ function changeQty(d) {
   const bl = userLang==='ru'?'Купить за':'Buy for';
   if(qv) qv.textContent=_buyQty;
   if(qw) qw.textContent=t.cardCount(_buyQty);
-  if(bb) bb.innerHTML = bl+' <span style="text-decoration:line-through;opacity:0.5;font-size:12px">'+(_buyQty*100)+'</span> '+(_buyQty*50)+' '+_starSvg14;
+  if(bb) bb.innerHTML = bl+' <span style="text-decoration:line-through;opacity:0.5;font-size:12px">'+(_buyQty*50)+'</span> '+(_buyQty*25)+' '+_starSvg14;
   if(bg){
     const ug=userData?.gems||0;
     if(ug>=_buyQty*100){bg.innerHTML=bl+' '+(_buyQty*100)+' '+_gemSvg16;bg.style.color='#a78bfa';bg.style.borderColor='rgba(167,139,250,0.4)';}
@@ -830,14 +838,9 @@ function renderTradeUI() {
         <div onclick="setTradeView('auction')" style="padding:5px 10px;border-radius:16px;font-size:11px;font-weight:700;transition:all 0.2s;cursor:pointer;background:${tradeView==='auction'?'#ff2d78':'transparent'};color:${tradeView==='auction'?'#fff':'var(--text3)'}">
           ${userLang==='ru'?'Аукцион':'Auction'}
         </div>
-        <div onclick="setTradeView('history')" style="padding:5px 10px;border-radius:16px;font-size:11px;font-weight:700;transition:all 0.2s;cursor:pointer;background:${tradeView==='history'?'#ff2d78':'transparent'};color:${tradeView==='history'?'#fff':'var(--text3)'}">
-          ${t.historyTitle||'History'}
-        </div>
+
       </div>
-      <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
-        <div onclick="openGiveawaysModal()" style="padding:5px 10px;border-radius:16px;font-size:11px;font-weight:700;cursor:pointer;background:rgba(255,45,120,0.12);border:1px solid rgba(255,45,120,0.35);color:#ff2d78;white-space:nowrap">${userLang==='ru'?'Розыгрыши':'Giveaways'}</div>
-        <div onclick="openGiveawayAdminHint()" style="width:28px;height:28px;border-radius:50%;background:rgba(255,45,120,0.15);border:1px solid rgba(255,45,120,0.4);color:#ff2d78;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">+</div>
-      </div>
+
     </div>
     <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
       <button class="trade-filter-btn" style="font-size:12px" onclick="openCollectionFilter()">${t.collection} <span class="trade-filter-count">1</span></button>
@@ -1232,6 +1235,7 @@ async function loadProfile() {
             <button onclick="switchTab('games')" style="background:rgba(255,45,120,0.1);border:1px solid rgba(255,45,120,0.3);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:700;color:#ff2d78;cursor:pointer">🎮 Игры →</button>
           </div>
           ${renderTaskItem('daily', userData)}
+          ${renderTaskItem('hourly', userData)}
           ${renderTaskItem('spin', userData)}
           ${renderTaskItem('buy_card', userData)}
           ${renderTaskItem('channel', userData)}
@@ -1365,7 +1369,7 @@ function openFriendsModal(){
       const colors=['#ff2d78','#4ab0ff','#4aff8a','#f0c040','#ff8c00'];
       const color=colors[(name.charCodeAt(0)||0)%colors.length];
       html+=`<div class="friend-item">
-        <div class="friend-av" style="background:${color}22;border-color:${color}44;color:${color};font-size:17px">${name[0].toUpperCase()}</div>
+        <div class="friend-av" style="background:${color+'22'};border-color:${color+'44'};color:${color};font-size:17px">${name[0].toUpperCase()}</div>
         <div style="flex:1">
           <div class="friend-name">${name}</div>
           <div class="friend-meta">${f.username?'@'+f.username:'ID '+f.telegram_id}</div>
@@ -1841,15 +1845,17 @@ async function initTon(){
   if(tonUI) return;
   try{
     tonUI=new TON_CONNECT_UI.TonConnectUI({manifestUrl:location.origin+'/webapp/tonconnect-manifest.json',buttonRootId:null});
+    let _tonFirstLoad=true;
     tonUI.onStatusChange(w=>{
       if(w){
         userData.ton_address = w.account.address;
         fetch('/api/save_ton_wallet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({telegram_id:tgUser.id,ton_address:w.account.address})}).catch(()=>{});
-        toast(userLang==='ru'?'Кошелёк подключён ✓':'Wallet connected ✓','ok');
+        if(!_tonFirstLoad) toast(userLang==='ru'?'Кошелёк подключён ✓':'Wallet connected ✓','ok');
         closeModal();
       } else {
         userData.ton_address = '';
       }
+      _tonFirstLoad=false;
     });
   }catch(e){}
 }
@@ -2578,6 +2584,28 @@ function renderTaskItem(type, ud){
       + '</div>'
       + (done?'<span style="font-size:12px;color:var(--success);font-weight:700">✓</span>':'<button class="btn btn-secondary" style="padding:7px 14px;font-size:12px;flex-shrink:0" onclick="claimTask(\'daily\')">'+(userLang==='ru'?'Забрать':'Claim')+'</button>')
       + '</div>';
+  } else if(type==='hourly'){
+    const hourlyAt = ud?.hourly_reward_at;
+    let hourlyDone = false;
+    let remainingLabel = '';
+    if(hourlyAt){
+      const diff = (Date.now() - new Date(hourlyAt+'Z').getTime()) / 1000;
+      if(diff < 3600){
+        hourlyDone = true;
+        const rem = Math.ceil(3600 - diff);
+        const m = Math.floor(rem/60), s = rem%60;
+        remainingLabel = `${m}м ${s}с`;
+      }
+    }
+    const icon=`<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#4aff8a" stroke-width="1.5" fill="none" opacity="0.6"/><circle cx="12" cy="12" r="9" fill="#4aff8a" opacity="0.08"/><path d="M12 7v5l3 2" stroke="#4aff8a" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="1.5" fill="#4aff8a"/></svg>`;
+    html = `<div style="background:var(--bg3);border:1px solid ${hourlyDone?'rgba(74,255,138,0.2)':'rgba(74,255,138,0.25)'};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px">
+      <span style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${icon}</span>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700">${userLang==='ru'?'Каждый час':'Hourly bonus'}</div>
+        <div style="font-size:11px;color:var(--text2)">${hourlyDone?(userLang==='ru'?'Следующая через: ':'Next in: ')+remainingLabel:'+10 💎 '+(userLang==='ru'?'раз в час':'per hour')}</div>
+      </div>
+      ${hourlyDone?'<span style="font-size:12px;color:var(--success);font-weight:700">✓</span>':`<button class="btn btn-secondary" style="padding:7px 14px;font-size:12px;flex-shrink:0;border-color:rgba(74,255,138,0.4);color:#4aff8a" onclick="claimTask('hourly')">${userLang==='ru'?'Забрать':'Claim'}</button>`}
+    </div>`;
   } else if(type==='buy_card'){
     const today = new Date().toISOString().slice(0,10);
     const done = ud?.buy_card_date === today;
@@ -2593,6 +2621,16 @@ function renderTaskItem(type, ud){
     const done = spinDone;
     const icon=`<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="17" height="14" rx="2.5" fill="#2d1060"/><rect x="2" y="6" width="17" height="14" rx="2.5" stroke="#a78bfa" stroke-width="1.2"/><rect x="3" y="7" width="15" height="3" rx="1" fill="#a78bfa" opacity="0.5"/><rect x="4" y="11" width="3" height="5" rx="1" fill="#1a0a2e" stroke="#c4b5fd" stroke-width="0.8"/><rect x="8.5" y="11" width="3" height="5" rx="1" fill="#1a0a2e" stroke="#c4b5fd" stroke-width="0.8"/><rect x="13" y="11" width="3" height="5" rx="1" fill="#1a0a2e" stroke="#c4b5fd" stroke-width="0.8"/><path d="M5.5 12.5 L6 11.5 L6.5 12.5 L5.5 12.5Z" fill="#f0c040"/><circle cx="10" cy="13" r="1.2" fill="#ff6b6b"/><path d="M13.8 12 L14.5 11 L15.2 12 L14.5 14 Z" fill="#4aff8a"/><path d="M20 9 L21 7.5 L21 14" stroke="#c4b5fd" stroke-width="1.8" stroke-linecap="round"/><circle cx="21" cy="14" r="1.8" fill="#f0c040" stroke="#c07800" stroke-width="0.8"/><rect x="8" y="18" width="5" height="1.5" rx="0.7" fill="#a78bfa" opacity="0.6"/></svg>`;
     html = `<div style="background:var(--bg3);border:1px solid ${done?'rgba(74,255,138,0.2)':'rgba(167,139,250,0.25)'};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px"><span style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${icon}</span><div style="flex:1"><div style="font-size:13px;font-weight:700">${userLang==='ru'?'Крутить слот':'Spin slot'}</div><div style="font-size:11px;color:var(--text2)">${userLang==='ru'?'Испытай удачу раз в день':'Try your luck once a day'}</div></div>${done?'<span style="font-size:12px;color:var(--success);font-weight:700">✓</span>':`<button class="btn btn-secondary" style="padding:7px 14px;font-size:12px;flex-shrink:0;border-color:rgba(167,139,250,0.4);color:#a78bfa" onclick="openSpinModal()">${userLang==='ru'?'Крутить':'Spin'}</button>`}</div>`;
+  } else if(type==='roulette'){
+    const icon=`<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#ff6b6b" stroke-width="1.5" fill="none" opacity="0.7"/><circle cx="12" cy="12" r="9" fill="#ff6b6b" opacity="0.07"/><circle cx="12" cy="12" r="5" stroke="#ff6b6b" stroke-width="1" fill="none" opacity="0.5"/><circle cx="12" cy="12" r="1.5" fill="#ff6b6b"/><line x1="12" y1="3" x2="12" y2="6" stroke="#ff6b6b" stroke-width="1.5" stroke-linecap="round"/><line x1="12" y1="18" x2="12" y2="21" stroke="#ff6b6b" stroke-width="1.5" stroke-linecap="round"/><line x1="3" y1="12" x2="6" y2="12" stroke="#ff6b6b" stroke-width="1.5" stroke-linecap="round"/><line x1="18" y1="12" x2="21" y2="12" stroke="#ff6b6b" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+    html = `<div style="background:var(--bg3);border:1px solid rgba(255,107,107,0.25);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px">
+      <span style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${icon}</span>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700">${userLang==='ru'?'Рулетка':'Roulette'}</div>
+        <div style="font-size:11px;color:var(--text2)">${userLang==='ru'?'Ставки от 1 до 1024 💎':'Bets from 1 to 1024 💎'}</div>
+      </div>
+      <button class="btn btn-secondary" style="padding:7px 14px;font-size:12px;flex-shrink:0;border-color:rgba(255,107,107,0.4);color:#ff6b6b" onclick="openRouletteModal()">${userLang==='ru'?'Играть':'Play'}</button>
+    </div>`;
   } else if(type==='pvp'){
     const icon2=`<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 2L4 6V12C4 16.4 7.4 20.5 12 22C16.6 20.5 20 16.4 20 12V6L12 2Z" fill="#f0c040" opacity="0.2" stroke="#f0c040" stroke-width="1.5" stroke-linejoin="round"/><path d="M13.5 7L10 13H13L10.5 19L16 11H12.5L13.5 7Z" fill="#f0c040"/></svg>`;
     html = '<div style="background:var(--bg3);border:1px solid rgba(240,192,64,0.2);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px">'
@@ -2647,8 +2685,8 @@ function openRedBlackModal(){
     </div>
     <div style="display:flex;gap:8px;margin-bottom:16px">
       <div id="rb-color-btn" style="width:100%;border-radius:12px;overflow:hidden;border:2px solid rgba(255,255,255,0.1);cursor:pointer;position:relative;height:54px;display:flex" onclick="toggleRBGradient()">
-        <div id="rb-red" onclick="event.stopPropagation();selectRBColor('red',this)" style="flex:1;background:linear-gradient(135deg,#7c0000,#c0392b);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;transition:all 0.2s;opacity:0.7;cursor:pointer">RED ♥</div>
-        <div id="rb-black" onclick="event.stopPropagation();selectRBColor('black',this)" style="flex:1;background:linear-gradient(135deg,#111,#222);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:rgba(255,255,255,0.6);transition:all 0.2s;border-left:1px solid rgba(255,255,255,0.08);cursor:pointer">BLACK ♠</div>
+        <div id="rb-red" onclick="event.stopPropagation();selectRBColor('red',this)" style="flex:1;background:linear-gradient(135deg,#7c0000,#c0392b);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;transition:all 0.2s;opacity:0.7;cursor:pointer;position:relative">RED ♥<span style="position:absolute;top:4px;right:6px;font-size:9px;font-weight:700;color:rgba(255,255,255,0.7)">x2</span></div>
+        <div id="rb-black" onclick="event.stopPropagation();selectRBColor('black',this)" style="flex:1;background:linear-gradient(135deg,#111,#222);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:rgba(255,255,255,0.6);transition:all 0.2s;border-left:1px solid rgba(255,255,255,0.08);cursor:pointer;position:relative">BLACK ♠<span style="position:absolute;top:4px;right:6px;font-size:9px;font-weight:700;color:rgba(255,255,255,0.5)">x2</span></div>
       </div>
     </div>
     <div id="rb-result" style="min-height:32px;text-align:center;margin-bottom:12px"></div>
@@ -2737,7 +2775,7 @@ async function playRedBlack(){
     if(gamesGemsEl) gamesGemsEl.textContent = res.gems;
     const rbGemsEl = document.getElementById('rb-gems-display');
     if(rbGemsEl) rbGemsEl.firstChild.textContent = res.gems + ' ';
-    if(btn){btn.disabled=false;btn.textContent=userLang==='ru'?'🎲 Ещё раз!':'🎲 Again!';}
+    if(btn){btn.disabled=false;btn.textContent=userLang==='ru'?'🎲 Крутить ещё!':'🎲 Again!';}
     window._rbChoice=null;
     const red=document.getElementById('rb-red'),black=document.getElementById('rb-black');
     if(red){red.style.opacity='0.7';red.style.background='linear-gradient(135deg,#7c0000,#c0392b)';red.style.boxShadow='';}
@@ -2752,18 +2790,38 @@ async function playRedBlack(){
 function openSpinModal(){
   haptic();
   const symbols = ['💎','⭐','🎰','🃏','🌟','💫','✨','🔮'];
-  openModal(userLang==='ru'?'Крутить слот':'Spin slot', `
+  openModal(userLang==='ru'?'🎰 Однорукий бандит':'🎰 Slot Machine', `
     <div style="text-align:center;padding:8px 0">
-      <div style="display:flex;justify-content:center;gap:8px;margin-bottom:20px">
+      <div style="display:flex;justify-content:center;gap:10px;margin-bottom:18px">
         ${[0,1,2].map(i=>`
-          <div id="slot-reel-${i}" style="width:72px;height:72px;background:var(--bg3);border:2px solid rgba(167,139,250,0.3);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:32px;overflow:hidden">
+          <div id="slot-reel-${i}" style="width:76px;height:76px;background:linear-gradient(145deg,var(--bg3),var(--bg2));border:2px solid rgba(167,139,250,0.4);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:34px;overflow:hidden;box-shadow:0 4px 16px rgba(124,58,237,0.15)">
             💎
           </div>`).join('')}
       </div>
-      <div id="slot-result" style="font-size:14px;color:var(--text2);min-height:20px;margin-bottom:16px"></div>
-      <button id="spin-btn" class="btn btn-primary btn-wide" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none" onclick="doSpin()">
+
+      <div id="slot-result" style="min-height:48px;margin-bottom:14px"></div>
+
+      <button id="spin-btn" class="btn btn-primary btn-wide" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;margin-bottom:18px" onclick="doSpin()">
         ${userLang==='ru'?'🎰 Крутить!':'🎰 Spin!'}
       </button>
+
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:10px 12px;text-align:left">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">${userLang==='ru'?'Таблица выплат':'Payouts'}</div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          ${[
+            {syms:'7️⃣ 7️⃣ 7️⃣', mult:'', color:'#f0c040', bg:'rgba(240,192,64,0.12)'},
+            {syms:'BAR BAR BAR', mult:'', color:'#ff9f43', bg:'rgba(255,159,67,0.12)'},
+            {syms:'🍒 🍒 🍒', mult:'', color:'#ff6b6b', bg:'rgba(255,107,107,0.12)'},
+            {syms:'🍇 🍇 🍇', mult:'',  color:'#a78bfa', bg:'rgba(167,139,250,0.12)'},
+            {syms:'🍋 🍋 🍋', mult:'',  color:'#ffd32a', bg:'rgba(255,211,42,0.12)'},
+            {syms:'7️⃣ 7️⃣ + любой', mult:'', color:'#4aff8a', bg:'rgba(74,255,138,0.08)'},
+          ].map(p=>`
+            <div style="display:flex;align-items:center;justify-content:space-between;background:${p.bg};border:1px solid ${p.color+'22'};border-radius:8px;padding:5px 10px">
+              <span style="font-size:12px;color:var(--text1)">${p.syms}</span>
+              <span style="font-size:13px;font-weight:800;color:${p.color}">${p.mult}</span>
+            </div>`).join('')}
+        </div>
+      </div>
     </div>
   `);
 }
@@ -2772,10 +2830,9 @@ async function doSpin(){
   haptic('medium');
   const btn = document.getElementById('spin-btn');
   if(btn) btn.disabled = true;
-  const spinSymbols = ['⭐','🍒','7️⃣','💎','🔮','🌟','🃏','💫'];
+  const spinSymbols = ['7️⃣','BAR','🍒','🍇','🍋','💎'];
   const reels = [0,1,2].map(i=>document.getElementById(`slot-reel-${i}`));
 
-  // Animate reels
   let ticks = 0;
   const interval = setInterval(()=>{
     reels.forEach(r=>{ if(r) r.textContent = spinSymbols[Math.floor(Math.random()*spinSymbols.length)]; });
@@ -2789,25 +2846,28 @@ async function doSpin(){
     await new Promise(r=>setTimeout(r,1400));
     clearInterval(interval);
 
-    const comboMap = {
-      '777':   { syms:['7️⃣','7️⃣','7️⃣'], color:'rgba(240,192,64,0.6)',  label:'7 7 7' },
-      'cherry':{ syms:['🍒','🍒','🍒'], color:'rgba(74,255,138,0.6)',  label:'🍒🍒🍒' },
-      'star':  { syms:['⭐','⭐','⭐'], color:'rgba(167,139,250,0.4)', label:'⭐⭐⭐' },
-    };
-    const combo = comboMap[res.combo] || comboMap['star'];
-    reels.forEach((r,i)=>{ if(r){ r.textContent=combo.syms[i]; r.style.borderColor=combo.color; }});
+    const comboMap = window._BANDIT_COMBO_MAP;
+    const combo = comboMap[res.combo] || comboMap['miss'];
+    reels.forEach((r,i)=>{ if(r){ r.textContent=combo.syms[i]; r.style.borderColor=combo.color; r.style.boxShadow=res.prize>0?'0 0 12px '+combo.color+'44':'none'; }});
 
     const resultEl = document.getElementById('slot-result');
     if(resultEl){
       const prize = res.prize;
-      resultEl.innerHTML = `<div style="font-size:18px;margin-bottom:2px">${combo.label}</div>
-        <div style="font-size:20px;font-weight:900;color:${prize>=100?'#f0c040':prize>=10?'var(--success)':'#a78bfa'}">+${prize} <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><path d="M6 3L3 9L12 21L21 9L18 3Z" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.2"/><path d="M3 9L12 12L21 9" stroke="#c4b5fd" stroke-width="1"/><path d="M12 3L9 9L12 12L15 9Z" fill="#c4b5fd" opacity="0.5"/></svg></div>`;
+      if(prize > 0){
+        resultEl.innerHTML = `
+          <div style="display:inline-flex;flex-direction:column;align-items:center;background:${combo.color+'18'};border:1px solid ${combo.color+'44'};border-radius:12px;padding:8px 20px;gap:2px">
+            <div style="font-size:13px;color:${combo.color};font-weight:700">${combo.label} ${combo.mult}</div>
+            <div style="font-size:22px;font-weight:900;color:${prize>=50?'#f0c040':prize>=15?'var(--success)':'#a78bfa'}">+${prize} 💎</div>
+          </div>`;
+      } else {
+        resultEl.innerHTML = `<div style="font-size:13px;color:var(--text3);padding:8px">😔 ${userLang==='ru'?'Не повезло':'No luck'}</div>`;
+      }
     }
     if(btn){ btn.textContent='✓'; btn.style.background='var(--bg3)'; }
     haptic('heavy');
     userData = await api(`/api/user/${tgUser.id}`);
     updateBalances();
-    setTimeout(()=>{ closeModal(); loadProfile(); }, 1800);
+    setTimeout(()=>{ closeModal(); loadProfile(); }, 2000);
   }catch(e){
     clearInterval(interval);
     toast(e.message,'err');
@@ -2837,6 +2897,650 @@ async function claimBuyCardTask(){
   }catch(e){toast(e.message,'err');}
 }
 
+
+// ── EUROPEAN ROULETTE ──
+
+const ROULETTE_REDS = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
+
+function openRouletteModal(){
+  haptic('medium');
+  const gems = userData?.gems||0;
+  const gemSvg=`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><path d="M6 3L3 9L12 21L21 9L18 3Z" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.2"/><path d="M3 9L12 12L21 9" stroke="#c4b5fd" stroke-width="1"/><path d="M12 3L9 9L12 12L15 9Z" fill="#c4b5fd" opacity="0.5"/></svg>`;
+  openModal('🎡 '+(userLang==='ru'?'Рулетка':'Roulette'),`
+    <div style="padding:4px 0">
+      <!-- Balance + total bet -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-size:12px;color:var(--text2)">${userLang==='ru'?'Баланс:':'Balance:'} <span id="rlt-balance" style="color:#a78bfa;font-weight:700">${gems}</span> ${gemSvg}</span>
+        <span style="font-size:12px;color:var(--text2)">${userLang==='ru'?'Ставка:':'Total bet:'} <span id="rlt-total" style="color:#f0c040;font-weight:700">0</span> ${gemSvg}</span>
+      </div>
+
+      <!-- Wheel -->
+      <div style="text-align:center;margin-bottom:12px">
+        <div id="rlt-ball" style="display:inline-flex;align-items:center;justify-content:center;width:76px;height:76px;border-radius:50%;border:3px solid rgba(74,255,138,0.4);background:radial-gradient(circle,#0a1a05,#050a03);font-size:26px;font-weight:900;box-shadow:0 0 18px rgba(74,255,138,0.12);color:#4aff8a">?</div>
+        <div id="rlt-result-num" style="font-size:13px;color:var(--text2);margin-top:5px;min-height:18px"></div>
+      </div>
+
+      <!-- Chip size -->
+      <div style="margin-bottom:8px">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:4px">${userLang==='ru'?'Фишка (размер ставки на позицию):':'Chip (bet per position):'}</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap">
+          ${[1,5,10,25,50,100].map(v=>`<button onclick="setRltBet(${v},this)" data-rbet="${v}" style="flex:1;min-width:32px;background:rgba(74,255,138,0.08);border:1px solid rgba(74,255,138,0.2);border-radius:8px;padding:4px 2px;font-size:11px;font-weight:700;cursor:pointer;color:#4aff8a">${v}</button>`).join('')}
+        </div>
+      </div>
+
+      <!-- Quick bets: color/parity/half — toggleable -->
+      <div style="font-size:10px;color:var(--text3);margin-bottom:4px">${userLang==='ru'?'Простые ставки (можно несколько):':'Simple bets (multiple allowed):'}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px">
+        <button id="rlt-b-red" onclick="toggleRltQuick('red',this)" style="padding:9px;border-radius:10px;border:2px solid #ff6b6b44;background:#ff6b6b18;color:#ff6b6b;font-size:12px;font-weight:700;cursor:pointer">🔴 RED ×2</button>
+        <button id="rlt-b-black" onclick="toggleRltQuick('black',this)" style="padding:9px;border-radius:10px;border:2px solid #55555588;background:#22222288;color:#ccc;font-size:12px;font-weight:700;cursor:pointer">⚫ BLACK ×2</button>
+        <button id="rlt-b-even" onclick="toggleRltQuick('even',this)" style="padding:9px;border-radius:10px;border:2px solid rgba(167,139,250,0.3);background:rgba(167,139,250,0.08);color:#a78bfa;font-size:12px;font-weight:700;cursor:pointer">${userLang==='ru'?'ЧЁТНОЕ':'EVEN'} ×2</button>
+        <button id="rlt-b-odd" onclick="toggleRltQuick('odd',this)" style="padding:9px;border-radius:10px;border:2px solid rgba(240,192,64,0.3);background:rgba(240,192,64,0.08);color:#f0c040;font-size:12px;font-weight:700;cursor:pointer">${userLang==='ru'?'НЕЧЁТНОЕ':'ODD'} ×2</button>
+        <button id="rlt-b-low" onclick="toggleRltQuick('low',this)" style="padding:9px;border-radius:10px;border:2px solid rgba(74,255,138,0.25);background:rgba(74,255,138,0.06);color:#4aff8a;font-size:12px;font-weight:700;cursor:pointer">1–18 ×2</button>
+        <button id="rlt-b-high" onclick="toggleRltQuick('high',this)" style="padding:9px;border-radius:10px;border:2px solid rgba(255,159,67,0.3);background:rgba(255,159,67,0.08);color:#ff9f43;font-size:12px;font-weight:700;cursor:pointer">19–36 ×2</button>
+      </div>
+
+      <!-- Numbers grid — always visible -->
+      <div style="font-size:10px;color:var(--text3);margin-bottom:4px">${userLang==='ru'?'Числа (×35 за одно):':'Numbers (×35 each):'}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:10px">
+        ${Array.from({length:36},(_,i)=>i+1).map(n=>{
+          const isRed=ROULETTE_REDS.has(n);
+          return `<button onclick="toggleRltNum(${n})" id="rlt-n-${n}" style="width:32px;height:32px;border-radius:7px;border:1px solid ${isRed?'#ff6b6b44':'#44444466'};background:${isRed?'#ff6b6b15':'#1a1a1a'};color:${isRed?'#ff6b6b':'#888'};font-size:11px;font-weight:700;cursor:pointer">${n}</button>`;
+        }).join('')}
+        <button onclick="toggleRltNum(0)" id="rlt-n-0" style="width:32px;height:32px;border-radius:7px;border:1px solid #4aff8a55;background:#4aff8a18;color:#4aff8a;font-size:11px;font-weight:700;cursor:pointer">0</button>
+      </div>
+
+      <div style="display:flex;gap:8px">
+        <button id="rlt-rebet-btn" class="btn btn-secondary" style="flex:0 0 auto;padding:12px 16px;font-size:13px;font-weight:700;border-color:rgba(74,255,138,0.3);color:#4aff8a" onclick="doRebet()" title="Rebet">🔄 REBET</button>
+        <button id="rlt-spin-btn" class="btn btn-primary" style="flex:1;background:linear-gradient(135deg,#4aff8a,#00b359);border:none;color:#000;font-weight:800;font-size:15px" onclick="doRoulette()">
+          🎡 ${userLang==='ru'?'Крутить!':'Spin!'}
+        </button>
+      </div>
+    </div>
+  `);
+  window._rltNums = new Set();
+  window._rltQuicks = new Set();
+  window._rltChipSize = 10;
+  setTimeout(()=>{
+    const b=document.querySelector('[data-rbet="10"]');
+    if(b){b.style.background='rgba(74,255,138,0.3)';b.style.borderColor='#4aff8a';}
+  },50);
+}
+
+function setRltBet(v, el){
+  window._rltChipSize = v;
+  document.querySelectorAll('[data-rbet]').forEach(b=>{
+    b.style.background='rgba(74,255,138,0.08)';b.style.borderColor='rgba(74,255,138,0.2)';
+  });
+  if(el){el.style.background='rgba(74,255,138,0.3)';el.style.borderColor='#4aff8a';}
+  updateRltTotal();
+}
+
+function toggleRltQuick(choice, el){
+  if(!window._rltQuicks) window._rltQuicks = new Set();
+  if(window._rltQuicks.has(choice)){
+    window._rltQuicks.delete(choice);
+    el.style.opacity='1'; el.style.outline='none';
+  } else {
+    window._rltQuicks.add(choice);
+    el.style.outline='2px solid #fff8';
+  }
+  updateRltTotal();
+}
+
+function toggleRltNum(n){
+  if(!window._rltNums) window._rltNums = new Set();
+  const btn=document.getElementById(`rlt-n-${n}`);
+  if(window._rltNums.has(n)){
+    window._rltNums.delete(n);
+    if(btn){btn.style.outline='none';btn.style.opacity='1';}
+  } else {
+    window._rltNums.add(n);
+    if(btn){btn.style.outline='2px solid #fff9';btn.style.opacity='1';}
+  }
+  updateRltTotal();
+}
+
+function updateRltTotal(){
+  const chip = window._rltChipSize||10;
+  const count = (window._rltNums?.size||0) + (window._rltQuicks?.size||0);
+  const total = count * chip;
+  const el = document.getElementById('rlt-total');
+  if(el) el.textContent = total;
+}
+
+function selectRltQuick(){ }
+function switchRltTab(){ }
+function updateRltSelected(){ }
+
+function doRebet(){
+  haptic();
+  if(!window._lastRltBet){ toast(userLang==='ru'?'Нет прошлой ставки':'No previous bet','err'); return; }
+  const {chip, quicks, nums} = window._lastRltBet;
+  window._rltChipSize = chip;
+  document.querySelectorAll('[data-rbet]').forEach(b=>{b.style.background='rgba(74,255,138,0.08)';b.style.borderColor='rgba(74,255,138,0.2)';});
+  const chipBtn=document.querySelector(`[data-rbet="${chip}"]`);
+  if(chipBtn){chipBtn.style.background='rgba(74,255,138,0.3)';chipBtn.style.borderColor='#4aff8a';}
+  window._rltQuicks=new Set(quicks);
+  ['red','black','even','odd','low','high'].forEach(c=>{const b=document.getElementById(`rlt-b-${c}`);if(b)b.style.outline=quicks.includes(c)?'2px solid #fff8':'none';});
+  window._rltNums=new Set(nums);
+  for(let i=0;i<=36;i++){const b=document.getElementById(`rlt-n-${i}`);if(b)b.style.outline=nums.includes(i)?'2px solid #fff9':'none';}
+  updateRltTotal();
+}
+
+async function doRoulette(){
+  haptic('medium');
+  const btn=document.getElementById('rlt-spin-btn');
+  if(btn) btn.disabled=true;
+
+  const chip = window._rltChipSize||10;
+  const nums = [...(window._rltNums||[])];
+  const quicks = [...(window._rltQuicks||[])];
+
+  if(nums.length===0 && quicks.length===0){
+    toast(userLang==='ru'?'Сделай ставку':'Make a bet','err');
+    if(btn) btn.disabled=false; return;
+  }
+
+  const totalBet = (nums.length + quicks.length) * chip;
+  if((userData?.gems||0) < totalBet){
+    toast(userLang==='ru'?'Недостаточно гемов':'Not enough gems','err');
+    if(btn) btn.disabled=false; return;
+  }
+
+  // Build bets array: [{bet_type, bet_value, bet}]
+  const bets = [];
+  for(const q of quicks){
+    const map={red:'color',black:'color',even:'parity',odd:'parity',low:'half',high:'half'};
+    bets.push({bet_type:map[q], bet_value:q, bet:chip});
+  }
+  for(const n of nums){
+    bets.push({bet_type:'number', bet_value:[n], bet:chip});
+  }
+
+  const ballEl=document.getElementById('rlt-ball');
+  const nums37=Array.from({length:37},(_,i)=>i);
+  let tick=0;
+  const iv=setInterval(()=>{
+    const rn=nums37[Math.floor(Math.random()*37)];
+    if(ballEl){
+      const isR=ROULETTE_REDS.has(rn);
+      ballEl.style.background=rn===0?'radial-gradient(circle,#1a5c1a,#0a2e0a)':isR?'radial-gradient(circle,#5c1a1a,#2e0a0a)':'radial-gradient(circle,#111,#0a0a0a)';
+      ballEl.textContent=rn; ballEl.style.color=rn===0?'#4aff8a':isR?'#ff6b6b':'#ccc';
+    }
+    tick++; if(tick>25) clearInterval(iv);
+  },70);
+
+  try{
+    const res=await api('/api/games/roulette_multi','POST',{telegram_id:tgUser.id, bets});
+    await new Promise(r=>setTimeout(r,1800));
+    clearInterval(iv);
+
+    const num=res.number;
+    const isRed=ROULETTE_REDS.has(num);
+    if(ballEl){
+      ballEl.textContent=num; ballEl.style.fontWeight='900';
+      ballEl.style.color=num===0?'#4aff8a':isRed?'#ff6b6b':'#ccc';
+      ballEl.style.background=num===0?'radial-gradient(circle,#1a5c1a,#0a2e0a)':isRed?'radial-gradient(circle,#5c1a1a,#2e0a0a)':'radial-gradient(circle,#111,#0a0a0a)';
+      ballEl.style.boxShadow=res.net_win>0?`0 0 20px ${num===0?'#4aff8a66':isRed?'#ff6b6b66':'#aaa66'}`:'none';
+    }
+
+    const resultEl=document.getElementById('rlt-result-num');
+    if(resultEl){
+      if(res.net_win>0){
+        resultEl.innerHTML=`<span style="color:#4aff8a;font-weight:700;font-size:15px">+${res.net_win} 💎 ${userLang==='ru'?'Выигрыш!':'Win!'}</span>`;
+        haptic('heavy');
+      } else if(res.net_win===0){
+        resultEl.innerHTML=`<span style="color:#f0c040;font-size:13px">${userLang==='ru'?'Возврат':'Push'}</span>`;
+      } else {
+        resultEl.innerHTML=`<span style="color:#ff6b6b;font-size:13px">${res.net_win} ${_gemSvg12} ${userLang==='ru'?'Не повезло':'No luck'}</span>`;
+      }
+    }
+
+    userData=await api(`/api/user/${tgUser.id}`);
+    updateBalances();
+    const balEl=document.getElementById('rlt-balance');
+    if(balEl) balEl.textContent=userData.gems||0;
+    // Save last bet for rebet
+    window._lastRltBet = {chip, quicks:[...quicks], nums:[...nums]};
+    // Reset selections
+    window._rltNums=new Set(); window._rltQuicks=new Set();
+    document.querySelectorAll('[id^="rlt-n-"],[id^="rlt-b-"]').forEach(b=>{b.style.outline='none';b.style.opacity='1';});
+    updateRltTotal();
+    if(btn){btn.disabled=false; btn.textContent='🎡 '+(userLang==='ru'?'Крутить ещё!':'Spin again!');}
+  }catch(e){
+    clearInterval(iv);
+    toast(e.message,'err');
+    if(btn) btn.disabled=false;
+  }
+}
+
+// ── AMERICAN POKER ──
+
+const _POKER_COMBOS = {
+  '5_of_kind':  {ru:'Five of a Kind', en:'Five of a Kind',  mult:1000, color:'#f0b432'},
+  'royal_flush':{ru:'Royal Flush',    en:'Royal Flush',     mult:500,  color:'#ff2d78'},
+  'str_flush':  {ru:'Straight Flush', en:'Straight Flush',  mult:100,  color:'#ff6b6b'},
+  '4_of_kind':  {ru:'Four of a Kind', en:'Four of a Kind',  mult:40,   color:'#f0c040'},
+  'full_house': {ru:'Full House',     en:'Full House',      mult:12,   color:'#a78bfa'},
+  'flush':      {ru:'Flush',          en:'Flush',           mult:9,    color:'#4aff8a'},
+  'straight':   {ru:'Straight',       en:'Straight',        mult:7,    color:'#4aff8a'},
+  '3_of_kind':  {ru:'Three of a Kind',en:'Three of a Kind', mult:5,    color:'#4aff8a'},
+  'two_pairs':  {ru:'Two Pairs',      en:'Two Pairs',       mult:3,    color:'#4aff8a'},
+  'nothing':    {ru:'No combination', en:'No combination',  mult:0,    color:'#666'},
+};
+
+let _pokerState = null;
+
+function _pokerCardHTML(card, idx, held, phase){
+  if(!card) return '';
+  if(!card) return _pokerCardBack(idx);
+  const isJoker = card.r==='Jo';
+  const isRed = ['♥','♦'].includes(card.s);
+  const isHeld = held.includes(idx);
+  const bg = isJoker ? 'linear-gradient(145deg,#2a1500,#1a0a00)' : 'linear-gradient(145deg,#0d0d1a,#151525)';
+  const border = isJoker ? '2px solid #f0b432' : isHeld ? '2px solid #4aff8a' : '1px solid rgba(255,255,255,0.15)';
+  const col = isJoker ? '#f0b432' : isRed ? '#ff6b6b' : '#e0e0e0';
+  const shadow = isHeld ? '0 0 12px rgba(74,255,138,0.4)' : isJoker ? '0 0 10px rgba(240,180,50,0.3)' : 'none';
+  const heldLabel = isHeld ? `<div style="font-size:9px;font-weight:900;color:#4aff8a;text-align:center;margin-top:3px;letter-spacing:1px">HOLD</div>` : `<div style="font-size:9px;color:transparent;margin-top:3px">·</div>`;
+  const clickable = phase==='hold' ? `onclick="togglePokerHold(${idx},this)"` : '';
+  const cursor = phase==='hold' ? 'cursor:pointer' : '';
+  const inner = isJoker
+    ? `<div style="font-size:13px;font-weight:900;color:#f0b432;text-align:center;line-height:1.2">🤡<br><span style="font-size:11px">Jo</span></div>`
+    : `<div style="font-size:16px;font-weight:900;color:${col};line-height:1">${card.r}</div><div style="font-size:22px;color:${col};line-height:1">${card.s}</div>`;
+  return `<div style="display:flex;flex-direction:column;align-items:center">
+    <div ${clickable} style="width:62px;height:90px;background:${bg};border:${border};border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:${shadow};${cursor};transition:transform 0.2s,box-shadow 0.2s;transform:${isHeld?'translateY(-8px)':'none'}" id="pcard-${idx}">
+      ${inner}
+    </div>
+    ${heldLabel}
+  </div>`;
+}
+
+function _pokerPaytableHTML(activeCombo){
+  const combos = ['5_of_kind','royal_flush','str_flush','4_of_kind','full_house','flush','straight','3_of_kind','two_pairs'];
+  return combos.map(k=>{
+    const c=_POKER_COMBOS[k];
+    const isActive = k===activeCombo;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 8px;border-radius:5px;background:${isActive?c.color+'22':'transparent'};border:1px solid ${isActive?c.color+'88':'transparent'}">
+      <span style="font-size:11px;font-weight:${isActive?'900':'600'};color:${isActive?c.color:'rgba(255,255,255,0.5)'}">${userLang==='ru'?c.ru:c.en}</span>
+      <span style="font-size:11px;font-weight:900;color:${isActive?c.color:'rgba(255,255,255,0.3)'}">×${c.mult}</span>
+    </div>`;
+  }).join('');
+}
+
+function togglePokerInfo(){
+  const pt=document.getElementById('pk-paytable');
+  if(pt) pt.style.display=pt.style.display==='none'?'':'none';
+}
+
+function openPokerModal(){
+  haptic('medium');
+  const gems = userData?.gems||0;
+  const miniBonus = _pokerState?.mini_bonus||0;
+  openModal(userLang==='ru'?'Американский покер':'American Poker', `
+    <div style="padding:2px 0;font-family:'Inter',sans-serif">
+
+      <!-- Stats: CREDIT left, BET right, i top-right -->
+      <div style="display:flex;align-items:center;gap:0;margin-bottom:8px;background:#0a0a14;border:1px solid rgba(240,180,50,0.25);border-radius:10px;overflow:hidden">
+        <div style="flex:1;padding:8px 12px">
+          <div style="font-size:9px;color:rgba(240,180,50,0.5);font-weight:700;letter-spacing:1.5px;margin-bottom:2px">CREDIT</div>
+          <div style="font-size:22px;font-weight:900;color:#f0b432" id="pk-credit">${gems}</div>
+        </div>
+        <div style="width:1px;height:44px;background:rgba(240,180,50,0.15);flex-shrink:0"></div>
+        <div style="padding:8px 12px;text-align:right;position:relative">
+          <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-bottom:2px">
+            <button onclick="togglePokerInfo()" style="width:18px;height:18px;border-radius:50%;border:1px solid rgba(240,180,50,0.4);background:rgba(240,180,50,0.08);color:#f0b432;font-size:10px;font-weight:900;cursor:pointer;line-height:1;flex-shrink:0">i</button>
+            <div style="font-size:9px;color:rgba(240,180,50,0.5);font-weight:700;letter-spacing:1.5px">BET</div>
+          </div>
+          <div id="pk-bet-display" style="font-size:22px;font-weight:900;color:#f0b432;cursor:pointer" onclick="togglePkBetMenu()">${_pokerState?.bet||10}</div>
+          <!-- BET menu -->
+          <div id="pk-bet-menu" style="display:none;position:absolute;right:0;top:100%;background:#1a1a2e;border:1px solid rgba(240,180,50,0.3);border-radius:10px;padding:6px;z-index:100;display:none">
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;min-width:160px">
+              ${[1,2,3,5,10,20,50,100].map(v=>`<button onclick="selectPkBet(${v})" style="padding:6px 4px;border-radius:7px;border:1px solid rgba(240,180,50,0.25);background:rgba(240,180,50,0.08);color:#f0b432;font-size:12px;font-weight:700;cursor:pointer">${v}</button>`).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+      <input type="hidden" id="pk-bet" value="10">
+
+      <!-- Paytable - hidden -->
+      <div id="pk-paytable" style="background:#0a0a14;border:1px solid rgba(240,180,50,0.2);border-radius:10px;padding:6px;margin-bottom:8px;display:none">
+        ${_pokerPaytableHTML('')}
+      </div>
+
+      <!-- Cards area -->
+      <div id="pk-cards" style="display:flex;justify-content:center;gap:5px;margin-bottom:8px;min-height:106px;align-items:flex-end">
+        ${[0,1,2,3,4].map(i=>`<div style="width:60px;height:86px;background:linear-gradient(145deg,#1a0a00,#0d0500);border:1px solid rgba(240,180,50,0.3);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:28px">🗽</div>`).join('')}
+      </div>
+
+      <!-- Combo bar -->
+      <div id="pk-combo-bar" style="margin-bottom:6px;min-height:0"></div>
+
+      <!-- Status -->
+      <div id="pk-status" style="text-align:center;min-height:20px;font-size:13px;font-weight:700;margin-bottom:8px"></div>
+
+      <!-- ИГРАТЬ button -->
+      <button id="pk-deal-btn" class="btn btn-primary btn-wide" style="background:linear-gradient(135deg,#4aff8a,#00b359);border:none;color:#000;font-weight:900;font-size:16px" onclick="pokerAction()">
+        ИГРАТЬ
+      </button>
+
+      <!-- Double up area -->
+      <div id="pk-double-area" style="display:none;margin-top:10px">
+        <div style="text-align:center;font-size:12px;color:var(--text2);margin-bottom:6px">${userLang==='ru'?'Удвоить? RED или BLACK':'Double up? RED or BLACK'} · <span id="pk-double-amount" style="color:#f0b432;font-weight:700"></span> ${_gemSvg12}</div>
+        <div id="pk-double-card" style="text-align:center;margin-bottom:8px;min-height:80px;display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap"></div>
+        <div id="pk-ladder" style="margin-bottom:10px"></div>
+        <div style="display:flex;gap:8px">
+          <button onclick="pokerDouble('red')" style="flex:1;padding:10px;border-radius:10px;border:2px solid #ff6b6b66;background:#ff6b6b18;color:#ff6b6b;font-size:14px;font-weight:800;cursor:pointer">🔴 RED</button>
+          <button onclick="pokerDouble('black')" style="flex:1;padding:10px;border-radius:10px;border:2px solid #44444488;background:#22222288;color:#ccc;font-size:14px;font-weight:800;cursor:pointer">⚫ BLACK</button>
+          <button onclick="pokerTake();pokerDeal()" style="flex:1;padding:10px;border-radius:10px;border:2px solid rgba(74,255,138,0.4);background:rgba(74,255,138,0.1);color:#4aff8a;font-size:14px;font-weight:800;cursor:pointer">✅ ИГРАТЬ</button>
+        </div>
+      </div>
+    </div>
+  `);
+  const prevBet=_pokerState?.bet||10;
+  if(!_pokerState) _pokerState={phase:'idle',hand:[],held:[],bet:prevBet,winnings:0,double_amount:0,mini_bonus:miniBonus};
+  window._pokerBusy=false;
+  setTimeout(()=>{
+    const bd=document.getElementById('pk-bet-display'); if(bd) bd.textContent=_pokerState.bet||prevBet;
+    const bi=document.getElementById('pk-bet'); if(bi) bi.value=_pokerState.bet||prevBet;
+    // Restore cards if in hold phase
+    if(_pokerState.phase==='hold' && _pokerState.hand.length){
+      const cardsEl=document.getElementById('pk-cards');
+      if(cardsEl) cardsEl.innerHTML=_pokerState.hand.map((c,i)=>_pokerCardHTML(c,i,_pokerState.held,'hold')).join('');
+      const dealBtn=document.getElementById('pk-deal-btn');
+      if(dealBtn) dealBtn.textContent='ИГРАТЬ';
+    }
+    // Restore credit
+    const crEl=document.getElementById('pk-credit'); if(crEl) crEl.textContent=userData?.gems||0;
+  },50);
+}
+
+function togglePkBetMenu(){
+  const menu=document.getElementById('pk-bet-menu');
+  if(!menu) return;
+  menu.style.display=menu.style.display==='none'||!menu.style.display?'block':'none';
+}
+
+function selectPkBet(v){
+  const inp=document.getElementById('pk-bet');
+  const disp=document.getElementById('pk-bet-display');
+  const menu=document.getElementById('pk-bet-menu');
+  if(inp) inp.value=v;
+  if(disp) disp.textContent=v;
+  if(menu) menu.style.display='none';
+  if(_pokerState) _pokerState.bet=v;
+  haptic();
+}
+
+function togglePkBetInput(hide){ togglePkBetMenu(); }
+
+
+function setPkBet(v,el){ togglePkBetInput(); if(_pokerState)_pokerState.bet=v; }
+
+function togglePokerHold(idx, el){
+  if(!_pokerState||_pokerState.phase!=='hold') return;
+  haptic();
+  const held=_pokerState.held;
+  const pos=held.indexOf(idx);
+  if(pos>=0) held.splice(pos,1); else held.push(idx);
+  // Re-render cards
+  const cardsEl=document.getElementById('pk-cards');
+  if(cardsEl) cardsEl.innerHTML=_pokerState.hand.map((c,i)=>_pokerCardHTML(c,i,held,'hold')).join('');
+}
+
+function _pokerLadderHTML(baseWin, currentStep){
+  // Pyramid: 7 steps, top = round(baseWin * 1000 / baseWin) but fixed at nice number
+  // Actually: top = if bet<=1: 1000, bet<=5: 5000, else 10000
+  // Steps: baseWin, x2, x4, x8, x16, x32, then TOP
+  const bet = _pokerState?.bet||10;
+  const top = 1000 * bet;
+  const steps=[baseWin, baseWin*2, baseWin*4, baseWin*8, baseWin*16, baseWin*32, top];
+  const reversed=[...steps].reverse();
+  return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;width:100%">`+
+  reversed.map((v,i)=>{
+    const isTop=i===0;
+    const isCurrent=(i===(reversed.length-1-currentStep));
+    const w=Math.round(30+(i/reversed.length)*70);
+    return `<div class="${isCurrent&&!isTop?'pk-step-active':''}" style="width:${w}%;padding:4px 8px;border-radius:6px;border:1px solid rgba(240,180,50,${isTop?'1':isCurrent?'0.9':'0.2'});background:${isTop?'linear-gradient(135deg,#f0b432,#c07800)':isCurrent?'rgba(240,180,50,0.25)':'rgba(240,180,50,0.04)'};font-size:${isTop?'13':'11'}px;font-weight:${isTop||isCurrent?'900':'500'};color:${isTop?'#000':isCurrent?'#f0b432':'rgba(240,180,50,0.4)'};text-align:center">${isTop?'🏆 ':''}<b>${v}</b></div>`;
+  }).join('')+`</div>`;
+}
+
+function _pokerAutoHold(hand){
+  const RO={"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"8":8,"9":9,"10":10,"J":11,"Q":12,"K":13,"A":14,"Jo":15};
+  const held=[];
+  const jokerIdx=hand.findIndex(c=>c.r==='Jo');
+  if(jokerIdx>=0) held.push(jokerIdx);
+  const nj=hand.map((c,i)=>({...c,i})).filter(c=>c.r!=='Jo');
+  const rc={};
+  nj.forEach(c=>{rc[c.r]=(rc[c.r]||0)+1;});
+  const g={};
+  Object.entries(rc).forEach(([r,cnt])=>{if(!g[cnt])g[cnt]=[];g[cnt].push(r);});
+  if(g[4]){nj.filter(c=>c.r===g[4][0]).forEach(c=>held.push(c.i));return held;}
+  if(g[3]){nj.filter(c=>c.r===g[3][0]).forEach(c=>held.push(c.i));return held;}
+  if(g[2]&&g[2].length>=2){g[2].slice(0,2).forEach(r=>nj.filter(c=>c.r===r).forEach(c=>held.push(c.i)));return held;}
+  if(g[2]){nj.filter(c=>c.r===g[2][0]).forEach(c=>held.push(c.i));return held;}
+  const sc={};nj.forEach(c=>{sc[c.s]=(sc[c.s]||0)+1;});
+  const fs=Object.entries(sc).find(([s,n])=>n>=4);
+  if(fs){nj.filter(c=>c.s===fs[0]).forEach(c=>held.push(c.i));return held;}
+  nj.filter(c=>['A','K','Q'].includes(c.r)).forEach(c=>held.push(c.i));
+  return held;
+}
+
+function pokerAction(){
+  if(window._pokerBusy) return;
+  const phase = _pokerState?.phase||'idle';
+  if(phase==='hold'){
+    pokerDraw();
+  } else if(phase==='double'){
+    // ИГРАТЬ in double = take winnings + new deal
+    pokerTake();
+  } else {
+    pokerDealCards();
+  }
+}
+
+async function pokerDealCards(){
+  if(window._pokerBusy) return;
+  window._pokerBusy = true;
+  haptic('medium');
+  const bet = Math.max(1, Math.min(10000, (_pokerState?.bet)||parseInt(document.getElementById('pk-bet')?.value)||10));
+  const dealBtn = document.getElementById('pk-deal-btn');
+  if(dealBtn) dealBtn.disabled = true;
+
+  try{
+    const res = await api('/api/games/poker/deal','POST',{telegram_id:tgUser.id, bet});
+    const autoHeld = _pokerAutoHold(res.hand);
+    _pokerState = {phase:'hold', hand:res.hand, held:autoHeld, bet, winnings:0, double_amount:0, doubleStep:0, mini_bonus:res.mini_bonus};
+
+    const cardsEl = document.getElementById('pk-cards');
+    if(cardsEl) cardsEl.innerHTML = [0,1,2,3,4].map(i=>_pokerCardBack(i)).join('');
+    const statusEl = document.getElementById('pk-status');
+    if(statusEl) statusEl.innerHTML = `<span style="color:var(--text3)">${userLang==='ru'?'Выбери карты для удержания':'Hold cards to keep'}</span>`;
+
+    // Reveal cards one by one
+    const revealHand = [];
+    for(let i=0;i<5;i++){
+      await new Promise(r=>setTimeout(r,150));
+      revealHand.push(res.hand[i]);
+      if(cardsEl) cardsEl.innerHTML =
+        revealHand.map((c,j)=>_pokerCardHTML(c,j,autoHeld,'hold')).join('') +
+        [0,1,2,3,4].slice(revealHand.length).map(k=>_pokerCardBack(revealHand.length+k)).join('');
+      haptic();
+    }
+
+    const creditEl = document.getElementById('pk-credit');
+    if(creditEl) creditEl.textContent = res.gems;
+    if(dealBtn){ dealBtn.disabled=false; }
+    document.getElementById('pk-paytable')?.innerHTML && (document.getElementById('pk-paytable').innerHTML = _pokerPaytableHTML(''));
+    userData = await api(`/api/user/${tgUser.id}`);
+    updateBalances();
+    const crEl = document.getElementById('pk-credit');
+    if(crEl) crEl.textContent = userData.gems||0;
+  }catch(e){
+    toast(e.message,'err');
+    if(dealBtn) dealBtn.disabled=false;
+  }
+  window._pokerBusy = false;
+}
+
+async function pokerDeal(){
+  pokerDealCards();
+}
+
+async function pokerDraw(){
+  if(window._pokerBusy) return;
+  window._pokerBusy = true;
+  haptic('medium');
+  const dealBtn=document.getElementById('pk-deal-btn');
+  if(dealBtn) dealBtn.disabled=true;
+
+  try{
+    const res=await api('/api/games/poker/draw','POST',{
+      telegram_id:tgUser.id,
+      hand:_pokerState.hand,
+      held:_pokerState.held,
+      bet:_pokerState.bet
+    });
+
+    _pokerState.phase='result';
+    _pokerState.hand=res.hand;
+    _pokerState.winnings=res.winnings;
+    _pokerState.double_amount=res.winnings;
+    _pokerState.doubleStep=0;
+    _pokerState.mini_bonus=res.mini_bonus;
+    _pokerState.combo=res.combo;
+
+    const cardsEl=document.getElementById('pk-cards');
+    // Show held cards + backs for replaced
+    const prevHeld=_pokerState.held;
+    const drawTemp=res.hand.map((c,i)=>prevHeld.includes(i)?c:null);
+    if(cardsEl) cardsEl.innerHTML=drawTemp.map((c,i)=>c?_pokerCardHTML(c,i,prevHeld,'result'):_pokerCardBack(i)).join('');
+    await new Promise(r=>setTimeout(r,300));
+    // Reveal new cards one by one left to right
+    for(let i=0;i<5;i++){
+      if(!prevHeld.includes(i)){
+        await new Promise(r=>setTimeout(r,280));
+        drawTemp[i]=res.hand[i];
+        if(cardsEl) cardsEl.innerHTML=drawTemp.map((c,j)=>c?_pokerCardHTML(c,j,prevHeld,'result'):_pokerCardBack(j)).join('');
+        haptic();
+      }
+    }
+
+    const combo=_POKER_COMBOS[res.combo]||_POKER_COMBOS['nothing'];
+    document.getElementById('pk-paytable').innerHTML=_pokerPaytableHTML(res.combo);
+    // Show combo bar under cards
+    const comboBar=document.getElementById('pk-combo-bar');
+    if(comboBar){
+      if(res.combo!=='nothing'&&res.combo){
+        comboBar.innerHTML=`<div style="text-align:center;padding:6px 12px;background:${combo.color+'22'};border:1px solid ${combo.color+'66'};border-radius:8px;font-size:14px;font-weight:900;color:${combo.color}">${userLang==='ru'?combo.ru:combo.en}${res.winnings>0?' · +'+res.winnings+' '+_gemSvg12:''}</div>`;
+      } else {
+        comboBar.innerHTML='';
+      }
+    }
+
+    const statusEl=document.getElementById('pk-status');
+    const miniEl=document.getElementById('pk-mini');
+    const creditEl=document.getElementById('pk-credit');
+
+    if(creditEl) creditEl.textContent=res.gems;
+
+    if(res.winnings>0){
+      haptic('heavy');
+      let statusText=`<span style="color:${combo.color};font-size:14px">🎉 ${userLang==='ru'?combo.ru:combo.en} · +${res.winnings} ${_gemSvg12}</span>`;
+      if(res.mini_bonus_win>0) statusText+=`<br><span style="color:#f0b432;font-size:12px">🎰 MINI BONUS +${res.mini_bonus_win} ${_gemSvg12}</span>`;
+      if(statusEl) statusEl.innerHTML=statusText;
+
+      // Show double-up
+      const dblArea=document.getElementById('pk-double-area');
+      const dblAmt=document.getElementById('pk-double-amount');
+      const ladder=document.getElementById('pk-ladder');
+      if(dblArea) dblArea.style.display='';
+      if(dblAmt) dblAmt.textContent=res.winnings;
+      if(ladder) ladder.innerHTML=_pokerLadderHTML(res.winnings,0);
+
+      if(dealBtn){dealBtn.textContent='ИГРАТЬ'; dealBtn.disabled=false;}
+    } else {
+      if(statusEl) statusEl.innerHTML=`<span style="color:#666;font-size:13px">${userLang==='ru'?'Нет комбинации':'No combination'}</span>`;
+      if(dealBtn){dealBtn.textContent='ИГРАТЬ'; dealBtn.disabled=false;}
+      // Flip cards back face down
+      await new Promise(r=>setTimeout(r,900));
+      const cardsElBack=document.getElementById('pk-cards');
+      if(cardsElBack) cardsElBack.innerHTML=[0,1,2,3,4].map(i=>_pokerCardBack(i)).join('');
+      _pokerState.phase='idle';
+    }
+
+    userData=await api(`/api/user/${tgUser.id}`);
+    updateBalances();
+  }catch(e){
+    toast(e.message,'err');
+    if(dealBtn) dealBtn.disabled=false;
+  } finally { window._pokerBusy=false; }
+}
+
+async function pokerDouble(choice){
+  haptic('medium');
+  const amount=_pokerState?.double_amount||0;
+  if(!amount){toast('Нет выигрыша для удвоения','err');return;}
+
+  try{
+    const res=await api('/api/games/poker/double','POST',{
+      telegram_id:tgUser.id,
+      amount,
+      choice
+    });
+
+    const dblCard=document.getElementById('pk-double-card');
+    const isRed=['♥','♦'].includes(res.card.s);
+    const cardColor=isRed?'#ff6b6b':'#e0e0e0';
+    if(dblCard) dblCard.innerHTML=(dblCard.innerHTML||'')+`<div style="display:inline-flex;width:48px;height:68px;background:linear-gradient(145deg,#0d0d1a,#151525);border:2px solid ${res.won?'#4aff8a':'#ff4444'};border-radius:8px;align-items:center;justify-content:center;flex-direction:column;gap:2px;box-shadow:0 0 12px ${res.won?'rgba(74,255,138,0.4)':'rgba(255,68,68,0.4)'}"><span style="font-size:12px;font-weight:900;color:${cardColor}">${res.card.r}</span><span style="font-size:16px;color:${cardColor}">${res.card.s}</span></div>`;
+
+    const statusEl=document.getElementById('pk-status');
+    const creditEl=document.getElementById('pk-credit');
+    const dblAmt=document.getElementById('pk-double-amount');
+    const ladder=document.getElementById('pk-ladder');
+
+    if(res.won){
+      haptic('heavy');
+      _pokerState.doubleStep=(_pokerState.doubleStep||0)+1;
+      _pokerState.double_amount=res.new_amount;
+      // Check if reached top (step 6 = 64x = max)
+      if(_pokerState.doubleStep>=6){
+        // Jackpot! confetti + auto-take
+        _banditJackpot('7');
+        if(statusEl) statusEl.innerHTML=`<span style="color:#f0b432;font-weight:900;font-size:15px">🏆 ВЕРШИНА! +${res.new_amount} ${_gemSvg12}</span>`;
+        if(dblAmt) dblAmt.textContent=res.new_amount;
+        if(ladder) ladder.innerHTML=_pokerLadderHTML(res.new_amount/_pokerState.doubleStep||res.new_amount, _pokerState.doubleStep);
+        setTimeout(()=>pokerTake(),1500);
+        return;
+      }
+      if(statusEl) statusEl.innerHTML=`<span style="color:#4aff8a;font-weight:700">✅ ${userLang==='ru'?'Удвоено!':'Doubled!'} → ${res.new_amount} ${_gemSvg12}</span>`;
+      if(dblAmt) dblAmt.textContent=res.new_amount;
+      if(ladder) ladder.innerHTML=_pokerLadderHTML(_pokerState.winnings||res.new_amount/_pokerState.doubleStep, _pokerState.doubleStep);
+    } else {
+      _pokerState.double_amount=0;
+      _pokerState.phase='idle';
+      if(statusEl) statusEl.innerHTML=`<span style="color:#ff4444;font-weight:700">❌ ${userLang==='ru'?'Проигрыш при удвоении':'Lost on double'}</span>`;
+      document.getElementById('pk-double-area').style.display='none';
+      const dealBtn=document.getElementById('pk-deal-btn');
+      if(dealBtn){dealBtn.textContent='ИГРАТЬ'; dealBtn.disabled=false;}
+    }
+    if(creditEl) creditEl.textContent=res.gems;
+    userData=await api(`/api/user/${tgUser.id}`);
+    updateBalances();
+  }catch(e){toast(e.message,'err');}
+}
+
+function pokerTake(){
+  haptic();
+  const amount=_pokerState?.double_amount||0;
+  const dblArea=document.getElementById('pk-double-area');
+  if(dblArea) dblArea.style.display='none';
+  const statusEl=document.getElementById('pk-status');
+  if(statusEl) statusEl.innerHTML=`<span style="color:#4aff8a;font-weight:700">✅ ${userLang==='ru'?'Забрал':'Taken'}: +${amount} ${_gemSvg12}</span>`;
+  _pokerState.phase='idle';
+  _pokerState.double_amount=0;
+  const dealBtn=document.getElementById('pk-deal-btn');
+  if(dealBtn){dealBtn.textContent='ИГРАТЬ'; dealBtn.disabled=false;}
+}
 
 // ── PvP BATTLE ──
 let _pvpInterval = null;
@@ -3141,7 +3845,42 @@ function loadGamesTab() {
         <div style="color:rgba(255,255,255,0.3);font-size:22px">›</div>
       </div>
 
-      <!-- Row 2: Red&Black + Bandit — 2 columns -->
+      <!-- Row 2: Bandit + Roulette -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div onclick="openBanditModal()" style="background:linear-gradient(145deg,#0a0a1a,#15153a);border:1px solid rgba(167,139,250,0.35);border-radius:16px;padding:16px 12px;text-align:center;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:10px;position:relative;overflow:hidden">
+          <div style="position:absolute;top:-10px;right:-10px;width:50px;height:50px;background:rgba(167,139,250,0.08);border-radius:50%"></div>
+          <div style="font-size:36px;line-height:1">🎰</div>
+          <div>
+            <div style="font-size:13px;font-weight:800;color:#fff">Бандит</div>
+            <div style="font-size:10px;color:rgba(167,139,250,0.8);margin-top:2px">777 = x50 ${_gemSvg12}</div>
+          </div>
+        </div>
+        <div onclick="openRouletteModal()" style="background:linear-gradient(145deg,#0a1a05,#051a0a);border:1px solid rgba(74,255,138,0.3);border-radius:16px;padding:16px 12px;text-align:center;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:10px;position:relative;overflow:hidden">
+          <div style="position:absolute;top:-10px;right:-10px;width:50px;height:50px;background:rgba(74,255,138,0.06);border-radius:50%"></div>
+          <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+            <circle cx="26" cy="26" r="24" fill="#0a1a05" stroke="rgba(74,255,138,0.5)" stroke-width="1.5"/>
+            <circle cx="26" cy="26" r="18" fill="none" stroke="rgba(74,255,138,0.25)" stroke-width="1"/>
+            <circle cx="26" cy="26" r="11" fill="none" stroke="rgba(74,255,138,0.2)" stroke-width="1"/>
+            ${Array.from({length:37},(_,i)=>{
+              const a=(i/37)*Math.PI*2-Math.PI/2;
+              const isRed=[1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36].includes(i);
+              const x1=26+22*Math.cos(a); const y1=26+22*Math.sin(a);
+              const x2=26+18*Math.cos(a); const y2=26+18*Math.sin(a);
+              const color=i===0?'#4aff8a':isRed?'#ff6b6b':'#888';
+              return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>`;
+            }).join('')}
+            <circle cx="26" cy="26" r="5" fill="#0a1a05" stroke="rgba(74,255,138,0.6)" stroke-width="1.5"/>
+            <circle cx="26" cy="26" r="2" fill="#4aff8a"/>
+            <circle cx="26" cy="14" r="2.5" fill="#fff" opacity="0.9"/>
+          </svg>
+          <div>
+            <div style="font-size:13px;font-weight:800;color:#fff">Рулетка</div>
+            <div style="font-size:10px;color:rgba(74,255,138,0.8);margin-top:2px">До x35 ${_gemSvg12}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 3: Red&Black + Poker -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div onclick="openRedBlackModal()" style="background:linear-gradient(145deg,#1a0505,#2a0a0a);border:1px solid rgba(255,74,74,0.35);border-radius:16px;padding:16px 12px;text-align:center;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:10px;position:relative;overflow:hidden">
           <div style="position:absolute;top:-10px;right:-10px;width:50px;height:50px;background:rgba(255,74,74,0.08);border-radius:50%"></div>
@@ -3154,82 +3893,139 @@ function loadGamesTab() {
             <div style="font-size:10px;color:rgba(255,120,120,0.8);margin-top:2px">Угадай цвет · x2</div>
           </div>
         </div>
-        <div onclick="openBanditModal()" style="background:linear-gradient(145deg,#0a0a1a,#15153a);border:1px solid rgba(167,139,250,0.35);border-radius:16px;padding:16px 12px;text-align:center;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:10px;position:relative;overflow:hidden">
-          <div style="position:absolute;top:-10px;right:-10px;width:50px;height:50px;background:rgba(167,139,250,0.08);border-radius:50%"></div>
-          <div style="font-size:36px;line-height:1">🎰</div>
+        <div onclick="openPokerModal()" style="background:linear-gradient(145deg,#0a0505,#1a0a00);border:1px solid rgba(240,180,50,0.4);border-radius:16px;padding:16px 12px;text-align:center;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:10px;position:relative;overflow:hidden">
+          <div style="position:absolute;top:-10px;right:-10px;width:50px;height:50px;background:rgba(240,180,50,0.06);border-radius:50%"></div>
+          <div style="display:flex;gap:3px;align-items:center">
+            <div style="width:22px;height:32px;background:linear-gradient(135deg,#1a1a2e,#0d0d1a);border-radius:4px;border:1px solid rgba(240,180,50,0.5);display:flex;align-items:center;justify-content:center;font-size:13px;color:#f0b432;font-weight:900">A</div>
+            <div style="width:22px;height:32px;background:linear-gradient(135deg,#1a1a2e,#0d0d1a);border-radius:4px;border:1px solid rgba(240,180,50,0.5);display:flex;align-items:center;justify-content:center;font-size:11px;color:#ff6b6b;font-weight:900">K♥</div>
+            <div style="width:22px;height:32px;background:linear-gradient(135deg,#2a1a0a,#1a0a00);border-radius:4px;border:2px solid #f0b432;display:flex;align-items:center;justify-content:center;font-size:10px;color:#f0b432;font-weight:900">Jo</div>
+            <div style="width:22px;height:32px;background:linear-gradient(135deg,#1a1a2e,#0d0d1a);border-radius:4px;border:1px solid rgba(240,180,50,0.5);display:flex;align-items:center;justify-content:center;font-size:11px;color:#ff6b6b;font-weight:900">Q♦</div>
+            <div style="width:22px;height:32px;background:linear-gradient(135deg,#1a1a2e,#0d0d1a);border-radius:4px;border:1px solid rgba(240,180,50,0.5);display:flex;align-items:center;justify-content:center;font-size:13px;color:#f0b432;font-weight:900">A</div>
+          </div>
           <div>
-            <div style="font-size:13px;font-weight:800;color:#fff">Бандит</div>
-            <div style="font-size:10px;color:rgba(167,139,250,0.8);margin-top:2px">777 = x50 ${_gemSvg12}</div>
+            <div style="font-size:13px;font-weight:800;color:#f0b432">Американский покер</div>
+            <div style="font-size:10px;color:rgba(240,180,50,0.7);margin-top:2px">С джокером · Удвоение</div>
           </div>
         </div>
       </div>
 
-      <!-- Row 3: PvP — full width, coming soon -->
-      <div style="background:linear-gradient(145deg,#0d1200,#1a1f00);border:1px solid rgba(240,192,64,0.2);border-radius:16px;padding:14px 18px;display:flex;align-items:center;gap:14px;position:relative;overflow:hidden;opacity:0.65;cursor:default">
-        <div style="position:absolute;top:8px;right:-18px;background:linear-gradient(135deg,#f0c040,#c07800);color:#000;font-size:8px;font-weight:900;padding:2px 28px;transform:rotate(35deg);letter-spacing:0.5px">В РАЗРАБОТКЕ</div>
-        <div style="width:48px;height:48px;border-radius:12px;background:rgba(240,192,64,0.1);border:1px solid rgba(240,192,64,0.25);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:24px">⚔️</div>
-        <div>
-          <div style="font-size:15px;font-weight:800;color:rgba(255,255,255,0.5)">PvP Битва</div>
-          <div style="font-size:11px;color:rgba(240,192,64,0.4);margin-top:2px">Победитель забирает карты · Скоро</div>
-        </div>
-      </div>
+
     </div>`;
 }
 
+const _BANDIT_COMBO_MAP = {
+  '7':      { syms:['7️⃣','7️⃣','7️⃣'], color:'#ff2020',  label:'7️⃣ 7️⃣ 7️⃣'  },
+  '777':    { syms:['7️⃣','7️⃣','7️⃣'], color:'#ff2020',  label:'7️⃣ 7️⃣ 7️⃣'  },
+  'bar':    { syms:['BAR','BAR','BAR'], color:'#bbb',     label:'BAR BAR BAR' },
+  'grape':  { syms:['🍇','🍇','🍇'],   color:'#a78bfa',  label:'🍇 🍇 🍇'    },
+  'bell':   { syms:['🔔','🔔','🔔'],   color:'#ffd32a',  label:'🔔 🔔 🔔'    },
+  'lemon':  { syms:['🍋','🍋','🍋'],   color:'#88cc44',  label:'🍋 🍋 🍋'    },
+  'cherry': { syms:['🍒','🍒','🍒'],   color:'#ff6b6b',  label:'🍒 🍒 🍒'    },
+  'miss':   { syms:['🍒','🍋','🍇'],   color:'var(--text3)', label:''        },
+};
+
 const _BANDIT_SYMBOLS = {
-  '7':      {emoji:'7',   style:'font-family:Impact,"Arial Black",sans-serif;font-size:48px;font-weight:900;color:#ff0000;text-shadow:3px 3px 0 #800000,-1px 0 0 #ff8888,0 0 20px rgba(255,0,0,0.6);line-height:1;display:block'},
-  'bar':    {emoji:'BAR', style:'display:inline-block;font-family:Impact,"Arial Black",sans-serif;font-size:10px;font-weight:900;color:#ddd;background:linear-gradient(180deg,#444,#111);border:1.5px solid #666;border-radius:2px;padding:3px 5px;letter-spacing:2px;line-height:1.2;box-shadow:inset 0 1px 0 rgba(255,255,255,0.15),0 1px 3px rgba(0,0,0,0.5)'},
-  'cherry': {emoji:'🍒',  style:'font-size:36px;line-height:1;display:block'},
-  'grape':  {emoji:'🍇',  style:'font-size:36px;line-height:1;display:block'},
-  'lemon':  {emoji:'🍋',  style:'font-size:36px;line-height:1;display:block'},
-  'blank':  {emoji:'—',   style:'font-size:24px;color:#2a2a2a;line-height:1;display:block'},
+  '7':      {html:'<svg width="56" height="64" viewBox="0 0 56 64" style="display:block;margin:auto"><defs><linearGradient id="sg7" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ff5555"/><stop offset="100%" stop-color="#cc0000"/></linearGradient></defs><text x="50%" y="58" font-family="Impact,Arial Black,sans-serif" font-size="60" font-weight="900" fill="url(#sg7)" stroke="#660000" stroke-width="1" text-anchor="middle">7</text></svg>'},
+  'bar':    {html:'<b style="font-family:Impact,Arial,sans-serif;font-size:11px;font-weight:900;color:#ddd;background:#1a1a1a;border:2px solid #555;border-radius:3px;padding:3px 5px;letter-spacing:2px;display:inline-block">BAR</b>'},
+  'cherry': {html:'<span style="font-size:36px;display:block;line-height:1">🍒</span>'},
+  'grape':  {html:'<span style="font-size:36px;display:block;line-height:1">🍇</span>'},
+  'lemon':  {html:'<span style="font-size:36px;display:block;line-height:1">🍋</span>'},
+  'bell':   {html:'<span style="font-size:36px;display:block;line-height:1">🔔</span>'},
 };
 const _BANDIT_PAYOUTS = {
-  '7':50,'bar':25,'cherry':15,'grape':8,'lemon':6,'pair':2
+  '7':50,'bar':25,'grape':15,'bell':8,'lemon':6,'cherry':4
 };
+
+function _banditJackpot(combo){
+  // Flash reels
+  const colors = combo==='7' ? ['#ff2020','#ff8800','#ffff00'] : ['#ff9f43','#f0c040','#fff'];
+  const reelEls = ['r0','r1','r2'].map(id=>document.getElementById(id)?.parentElement);
+  let flash=0;
+  const fi = setInterval(()=>{
+    const col = colors[flash%colors.length];
+    reelEls.forEach(el=>{if(el) el.style.boxShadow='0 0 24px '+col+', 0 0 48px '+col+'44';});
+    flash++;
+    if(flash>12){ clearInterval(fi); reelEls.forEach(el=>{if(el) el.style.boxShadow='none';}); }
+  },120);
+  // Confetti burst
+  const modal = document.querySelector('.modal-body')||document.querySelector('.modal-content');
+  if(!modal) return;
+  const rect = modal.getBoundingClientRect();
+  for(let i=0;i<28;i++){
+    const dot = document.createElement('div');
+    const cols=['#ff2020','#f0c040','#4aff8a','#a78bfa','#ff9f43','#fff'];
+    dot.style.cssText=`position:fixed;width:8px;height:8px;border-radius:50%;background:${cols[i%cols.length]};left:${rect.left+rect.width/2}px;top:${rect.top+80}px;pointer-events:none;z-index:9999;transition:none`;
+    document.body.appendChild(dot);
+    const angle=(i/28)*Math.PI*2;
+    const dist=80+Math.random()*80;
+    const tx=Math.cos(angle)*dist, ty=Math.sin(angle)*dist-60;
+    setTimeout(()=>{
+      dot.style.transition='transform 0.8s ease-out, opacity 0.8s ease-out';
+      dot.style.transform=`translate(${tx}px,${ty}px) scale(0.3)`;
+      dot.style.opacity='0';
+      setTimeout(()=>dot.remove(),900);
+    },10+i*15);
+  }
+}
 
 function openBanditModal(){
   haptic();
   const gems = userData?.gems || 0;
   openModal(userLang==='ru'?'🎰 Однорукий Бандит':'🎰 One-Armed Bandit',`
-    <div style="text-align:center;margin-bottom:10px">
-      <!-- Slot machine display -->
-      <div style="background:linear-gradient(135deg,#1a0a2e,#0a0a1a);border:2px solid rgba(167,139,250,0.4);border-radius:16px;padding:16px 10px;margin-bottom:10px;box-shadow:0 0 20px rgba(167,139,250,0.15)">
-        <div style="display:flex;justify-content:center;gap:6px;margin-bottom:8px">
+    <div style="text-align:center">
+      <!-- Reels -->
+      <div style="background:linear-gradient(135deg,#1a0a2e,#0a0a1a);border:2px solid rgba(167,139,250,0.4);border-radius:14px;padding:10px 8px 6px;margin-bottom:6px;box-shadow:0 0 20px rgba(167,139,250,0.12)">
+        <div style="display:flex;justify-content:center;gap:6px;margin-bottom:6px">
           ${['r0','r1','r2'].map(id=>`
-            <div style="width:70px;height:80px;background:#0a0a14;border:2px solid rgba(167,139,250,0.3);border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative">
-              <div id="${id}" style="line-height:1;transition:transform 0.1s;display:flex;align-items:center;justify-content:center">🎰</div>
+            <div style="width:80px;height:84px;background:#0d0d1a;border:2px solid rgba(167,139,250,0.35);border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden">
+              <div id="${id}" style="line-height:1;display:flex;align-items:center;justify-content:center">🎰</div>
             </div>
           `).join('')}
         </div>
-        <div id="bandit-status" style="font-size:13px;color:var(--text2);min-height:20px"></div>
+        <!-- Win flash bar -->
+        <div id="bandit-winbar" style="display:none;border-radius:8px;padding:6px 12px;font-size:14px;font-weight:900;text-align:center;margin-top:2px"></div>
       </div>
-      <!-- Bet -->
-      <div style="font-size:12px;color:var(--text2);margin-bottom:6px;text-align:left">${userLang==='ru'?'Ставка:':'Bet:'} <span id="bandit-balance" style="color:#a78bfa;font-weight:700">${gems} ${_gemSvg12}</span></div>
-      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
-        ${[1,5,10,25,100].map(v=>`<button onclick="setBanditBet(${v},this)" data-bbet="${v}" style="flex:1;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.25);border-radius:8px;padding:6px 4px;font-size:11px;font-weight:700;cursor:pointer;color:#a78bfa;min-width:32px">${v}</button>`).join('')}
+      <!-- Balance + Bets -->
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+        <div style="background:rgba(167,139,250,0.1);border:1.5px solid rgba(167,139,250,0.4);border-radius:50px;padding:5px 16px;min-width:60px;text-align:center">
+          <b style="color:#a78bfa;font-size:16px;font-weight:900" id="bandit-balance">${gems}</b>
+        </div>
+        <div style="display:flex;gap:4px;flex:1;justify-content:flex-end;flex-wrap:wrap">
+          ${[1,5,10,25,50,100].map(v=>`<button onclick="setBanditBet(${v},this)" data-bbet="${v}" style="background:rgba(167,139,250,0.08);border:1.5px solid rgba(167,139,250,0.3);border-radius:50px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;color:#a78bfa;min-width:34px">${v}</button>`).join('')}
+          <input type="number" id="bandit-bet" value="10" style="display:none">
+        </div>
       </div>
-      <div class="price-input-row" style="margin-bottom:10px">
-        <input type="number" id="bandit-bet" min="1" max="1024" value="10" style="font-size:16px;font-weight:700" oninput="this.value=Math.min(1024,Math.max(1,this.value||1))">
-        <span class="cur" style="color:#a78bfa">${_gemSvg16}</span>
-      </div>
-      <button id="bandit-spin-btn" class="btn btn-primary btn-wide" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;font-size:15px;font-weight:900;padding:14px" onclick="spinBandit()">🎰 ${userLang==='ru'?'Крутить!':'Spin!'}</button>
-    </div>
-    <!-- Paytable -->
-    <div style="background:var(--bg3);border-radius:10px;padding:10px;font-size:11px">
-      <div style="font-weight:700;color:var(--text2);margin-bottom:6px">Выплаты:</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px">
-        <div><span style="font-family:Arial Black,sans-serif;font-size:11px;color:#ff2d78;font-weight:900">7 7 7</span> → <span style="color:#ff2d78;font-weight:700">x50</span></div>
-        <div><span style="font-family:Arial Black,sans-serif;font-size:9px;color:#f0c040;font-weight:900">BAR BAR BAR</span> → <span style="color:#f0c040;font-weight:700">x25</span></div>
-        <div>🍒🍒🍒 → <span style="color:#ff4a4a;font-weight:700">x15</span></div>
-        <div>🍇🍇🍇 → <span style="color:#a78bfa;font-weight:700">x8</span></div>
-        <div>🍋🍋🍋 → <span style="color:#f0c040;font-weight:700">x6</span></div>
-        <div><span style="font-family:Arial Black,sans-serif;font-size:11px;color:#ff2d78;font-weight:900">7 7</span> + любой → <span style="color:#4aff8a;font-weight:700">x3</span></div>
-        <div><span style="font-family:Arial Black,sans-serif;font-size:11px;color:#ff2d78;font-weight:900">7</span> + любые → <span style="color:#4aff8a;font-weight:700">x1.5</span></div>
+      <!-- Spin button -->
+      <button id="bandit-spin-btn" class="btn btn-primary btn-wide" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);border:none;font-size:15px;font-weight:900;padding:13px;margin-bottom:10px" onclick="spinBandit()">🎰 ${userLang==='ru'?'Крутить!':'Spin!'}</button>
+      <!-- Paytable -->
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,0,0,0.1);border:1px solid rgba(255,0,0,0.25);border-radius:9px;padding:6px 12px">
+          <span style="font-family:Impact,Arial,sans-serif;font-size:22px;font-weight:900;color:#ff2020;letter-spacing:1px">7 7 7</span>
+          <span style="font-size:14px;font-weight:900;color:#ff2020">×50</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(30,30,30,0.8);border:1px solid rgba(150,150,150,0.35);border-radius:9px;padding:6px 12px">
+          <span style="font-family:Impact,Arial,sans-serif;font-size:12px;font-weight:900;color:#ccc;letter-spacing:1px">BAR BAR BAR</span>
+          <span style="font-size:14px;font-weight:900;color:#bbb">×25</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.25);border-radius:9px;padding:6px 12px">
+          <span style="font-size:16px">🍇 🍇 🍇</span>
+          <span style="font-size:14px;font-weight:900;color:#a78bfa">×15</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,211,42,0.1);border:1px solid rgba(255,211,42,0.25);border-radius:9px;padding:6px 12px">
+          <span style="font-size:16px">🔔 🔔 🔔</span>
+          <span style="font-size:14px;font-weight:900;color:#ffd32a">×8</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(136,204,68,0.08);border:1px solid rgba(136,204,68,0.25);border-radius:9px;padding:6px 12px">
+          <span style="font-size:16px">🍋 🍋 🍋</span>
+          <span style="font-size:14px;font-weight:900;color:#88cc44">×6</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.2);border-radius:9px;padding:6px 12px">
+          <span style="font-size:16px">🍒 🍒 🍒</span>
+          <span style="font-size:14px;font-weight:900;color:#ff6b6b">×4</span>
+        </div>
       </div>
     </div>
   `);
-  // Set default bet highlight
   setTimeout(()=>{
     const btn = document.querySelector('[data-bbet="10"]');
     if(btn){btn.style.background='rgba(167,139,250,0.3)';btn.style.borderColor='#a78bfa';}
@@ -3239,9 +4035,9 @@ function openBanditModal(){
 function setBanditBet(v, el){
   haptic();
   document.querySelectorAll('[data-bbet]').forEach(b=>{
-    b.style.background='rgba(167,139,250,0.1)';b.style.borderColor='rgba(167,139,250,0.25)';
+    b.style.background='rgba(167,139,250,0.08)';b.style.borderColor='rgba(167,139,250,0.3)';b.style.color='#a78bfa';
   });
-  el.style.background='rgba(167,139,250,0.3)';el.style.borderColor='#a78bfa';
+  el.style.background='rgba(167,139,250,0.35)';el.style.borderColor='#a78bfa';el.style.color='#fff';
   const inp=document.getElementById('bandit-bet');
   if(inp) inp.value=v;
 }
@@ -3254,60 +4050,74 @@ async function spinBandit(){
   const btn=document.getElementById('bandit-spin-btn');
   const statusEl=document.getElementById('bandit-status');
   if(btn){btn.disabled=true;btn.textContent='🎰 ...';}
+  if(statusEl) statusEl.innerHTML='';
 
-  // Animate reels spinning
   const reelIds=['r0','r1','r2'];
-  const spinSymbols=['7','🍒','🍋','🍇','BAR'];
-  let frame=0;
-  const spinAnim=setInterval(()=>{
-    reelIds.forEach(id=>{
-      const el=document.getElementById(id);
-      if(el){
-        const sym=spinSymbols[Math.floor(Math.random()*spinSymbols.length)];
-        const s=_BANDIT_SYMBOLS[sym]||{emoji:sym,style:'font-size:32px'};
-        el.innerHTML=`<span style="${s.style}">${s.emoji}</span>`;
-      }
-    });
-    frame++;
-  },80);
+  const slotHtml='<span style="font-size:32px">🎰</span>';
+
+  // Step 1: все три сразу становятся 🎰
+  reelIds.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.innerHTML=slotHtml;
+  });
 
   try{
+    // Запрос к серверу пока показываем 🎰
     const res=await api('/api/games/bandit','POST',{telegram_id:tgUser.id,bet});
-    clearInterval(spinAnim);
 
-    // Show result with staggered reveal
-    const renderSym=(sym)=>{
-      const s=_BANDIT_SYMBOLS[sym]||{emoji:sym,style:'font-size:32px'};
-      return `<span style="${s.style}">${s.emoji}</span>`;
-    };
+    const renderSym=(sym)=>(_BANDIT_SYMBOLS[sym]||{html:`<span class="bsym-fruit">${sym}</span>`}).html;
+
+    // Step 2: открываем барабаны по очереди с паузой
     for(let i=0;i<3;i++){
-      await new Promise(r=>setTimeout(r,220));
+      await new Promise(r=>setTimeout(r,400));
       const el=document.getElementById(`r${i}`);
       if(el){
         el.innerHTML=renderSym(res.reels[i]);
-        el.style.transform='scale(1.15)';
+        el.style.transform='scale(1.25)';
         setTimeout(()=>{if(el)el.style.transform='scale(1)';},200);
       }
       haptic();
     }
 
-    await new Promise(r=>setTimeout(r,300));
+    await new Promise(r=>setTimeout(r,250));
 
     userData.gems=res.gems;
     updateBalances();
     const balEl=document.getElementById('bandit-balance');
-    if(balEl) balEl.innerHTML=res.gems+' '+_gemSvg12;
+    if(balEl) balEl.textContent=res.gems;
 
+    const winBar = document.getElementById('bandit-winbar');
     if(res.won){
       haptic('heavy');
-      if(statusEl) statusEl.innerHTML=`<span style="color:#4aff8a;font-weight:700;font-size:15px">🎉 +${res.winnings} ${_gemSvg12} (x${res.multiplier})</span>`;
+      if(statusEl) statusEl.innerHTML='';
+      const combo = window._BANDIT_COMBO_MAP[res.combo]||window._BANDIT_COMBO_MAP['miss'];
+      const winSyms = (combo.syms||[]).join(' ');
+      const winColor = combo.color||'#4aff8a';
+      if(winBar){
+        winBar.innerHTML=`${winSyms} &nbsp; +${res.winnings} 💎`;
+        winBar.style.display='block';
+        winBar.style.padding='6px 12px';
+        winBar.style.background=winColor+'22';
+        winBar.style.border='1px solid '+winColor+'55';
+        winBar.style.color=winColor;
+      }
+      // Floating +number
+      const balEl2=document.getElementById('bandit-balance');
+      if(balEl2){
+        const floater=document.createElement('div');
+        floater.textContent='+'+res.winnings;
+        const rect=balEl2.getBoundingClientRect();
+        floater.style.cssText=`position:fixed;left:${rect.left}px;top:${rect.top}px;font-size:22px;font-weight:900;color:${winColor};pointer-events:none;z-index:9999;animation:floatUp 1.2s ease-out forwards`;
+        document.body.appendChild(floater);
+        setTimeout(()=>floater.remove(),1300);
+      }
+      if(res.combo==='7'||res.combo==='bar') _banditJackpot(res.combo);
     } else {
-      if(statusEl) statusEl.innerHTML=`<span style="color:#ff4a4a;font-weight:700">💸 −${bet} ${_gemSvg12}</span>`;
+      if(statusEl) statusEl.innerHTML='';
+      if(winBar){ winBar.style.display='none'; winBar.innerHTML=''; }
     }
-    if(btn){btn.disabled=false;btn.textContent='🎰 '+(userLang==='ru'?'Ещё раз!':'Again!');}
+    if(btn){btn.disabled=false;btn.textContent=res.won?('🎰 +'+res.winnings):'🎰 '+(userLang==='ru'?'Крутить ещё!':'Again!');if(res.won)setTimeout(()=>{if(btn)btn.textContent='🎰 '+(userLang==='ru'?'Крутить ещё!':'Again!');},2000);}
   }catch(e){
-    clearInterval(spinAnim);
-    toast(e.message,'err');
     if(btn){btn.disabled=false;btn.textContent='🎰 '+(userLang==='ru'?'Крутить!':'Spin!');}
   }
 }
