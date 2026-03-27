@@ -211,8 +211,8 @@ let isAdmin = false; // set after init
 
 const userLang = ((tg?.initDataUnsafe?.user?.language_code || navigator.language || 'en')+'').toLowerCase().startsWith('ru') ? 'ru' : 'en';
 const T = {
-  en:{shop:'Shop',trade:'Market',profile:'Profile',whales:'Whales',left:'LEFT',price:'PRICE',supply:'SUPPLY',buy:'Buy',cardCount:(n)=>n===1?'card':`cards`,upgrade:'UPGRADE',sell:'Sell',transfer:'Transfer',serial:'Serial',drop:'Drop %',status:'Status',supplyLbl:'Supply',listSale:'List for Sale',cancel:'Cancel',close:'Close',send:'Send',remove:'Remove listing',noListings:'No listings yet',collection:'Collection',model:'Model',refEarn:'Refer & Earn',refText:'Invite friends — earn',refOf:'of their spending in gems',buyCheapStars:'Buy Stars',connectTon:'Connect TON Wallet',myCards:'My Cards',friends:'Friends',noCards:'No cards yet',noFriends:'No friends yet',showAll:'Show all',showLess:'Show less',clear:'Clear',apply:'Apply',notInPonki:'User not in Ponki',notJoined:"This person hasn't joined yet.",invite:'Invite',purchased:'Purchased!',listed:'Listed!',removed:'Removed',cardSent:'Card sent!',linkCopied:'Link copied!',notEnoughDev:'Not enough DEV',notEnoughStars:'Not enough stars',enterPrice:'Enter price',enterTgId:'Enter Telegram ID',commission:'Commission: 5%',rarity:'Rarity',descShop:'50 unique models · upgrade free',historyTitle:'History'},
-  ru:{shop:'Магазин',trade:'Рынок',profile:'Профиль',whales:'Киты',left:'ОСТАЛОСЬ',price:'ЦЕНА',supply:'ТИРАЖ',buy:'Купить',cardCount:(n)=>{if(n%10===1&&n%100!==11)return'карта';if([2,3,4].includes(n%10)&&![12,13,14].includes(n%100))return'карты';return'карт';},upgrade:'УЛУЧШИТЬ',sell:'Продать',transfer:'Передать',serial:'Номер',drop:'Редкость',status:'Статус',supplyLbl:'Тираж',listSale:'Выставить',cancel:'Отмена',close:'Закрыть',send:'Отправить',remove:'Снять',noListings:'Нет объявлений',collection:'Коллекция',model:'Модель',refEarn:'Приглашай и зарабатывай',refText:'Приглашай друзей — получай',refOf:'от их трат в виде гемов',buyCheapStars:'Купить звёзды',connectTon:'Подключить TON кошелёк',myCards:'Мои карточки',friends:'Друзья',noCards:'Карточек пока нет',noFriends:'Нет друзей — поделись ссылкой!',showAll:'Показать все',showLess:'Скрыть',clear:'Сбросить',apply:'Применить',notInPonki:'Пользователь не в Ponki',notJoined:'Этот человек ещё не вступил.',invite:'Пригласить',purchased:'Куплено!',listed:'Выставлено!',removed:'Снято',cardSent:'Карточка отправлена!',linkCopied:'Ссылка скопирована!',notEnoughDev:'Недостаточно DEV',notEnoughStars:'Недостаточно звёзд',enterPrice:'Введите цену',enterTgId:'Введите Telegram ID',commission:'Комиссия: 5%',rarity:'Редкость',descShop:'50 уникальных моделей · улучшение бесплатно',historyTitle:'История'}
+  en:{shop:'Shop',trade:'Market',profile:'Profile',whales:'Whales',left:'LEFT',price:'PRICE',supply:'SUPPLY',buy:'Buy',cardCount:(n)=>n===1?'card':`cards`,upgrade:'UPGRADE',sell:'Sell',transfer:'Transfer',serial:'Serial',drop:'Drop %',status:'Status',supplyLbl:'Supply',listSale:'List for Sale',cancel:'Cancel',close:'Close',send:'Send',remove:'Remove listing',noListings:'No listings yet',collection:'Collection',model:'Model',refEarn:'Refer & Earn',refText:'',refOf:'20% of their spending in gems',buyCheapStars:'Buy Stars',connectTon:'Connect TON Wallet',myCards:'My Cards',friends:'Friends',noCards:'No cards yet',noFriends:'No friends yet',showAll:'Show all',showLess:'Show less',clear:'Clear',apply:'Apply',notInPonki:'User not in Ponki',notJoined:"This person hasn't joined yet.",invite:'Invite',purchased:'Purchased!',listed:'Listed!',removed:'Removed',cardSent:'Card sent!',linkCopied:'Link copied!',notEnoughDev:'Not enough DEV',notEnoughStars:'Not enough stars',enterPrice:'Enter price',enterTgId:'Enter Telegram ID',commission:'Commission: 5%',rarity:'Rarity',descShop:'50 unique models · upgrade free',historyTitle:'History'},
+  ru:{shop:'Магазин',trade:'Рынок',profile:'Профиль',whales:'Киты',left:'ОСТАЛОСЬ',price:'ЦЕНА',supply:'ТИРАЖ',buy:'Купить',cardCount:(n)=>{if(n%10===1&&n%100!==11)return'карта';if([2,3,4].includes(n%10)&&![12,13,14].includes(n%100))return'карты';return'карт';},upgrade:'УЛУЧШИТЬ',sell:'Продать',transfer:'Передать',serial:'Номер',drop:'Редкость',status:'Статус',supplyLbl:'Тираж',listSale:'Выставить',cancel:'Отмена',close:'Закрыть',send:'Отправить',remove:'Снять',noListings:'Нет объявлений',collection:'Коллекция',model:'Модель',refEarn:'Приглашай и зарабатывай',refText:'',refOf:'Приглашай друзей — получай 20% от их трат в виде гемов',buyCheapStars:'Купить звёзды',connectTon:'Подключить TON кошелёк',myCards:'Мои карточки',friends:'Друзья',noCards:'Карточек пока нет',noFriends:'Нет друзей — поделись ссылкой!',showAll:'Показать все',showLess:'Скрыть',clear:'Сбросить',apply:'Применить',notInPonki:'Пользователь не в Ponki',notJoined:'Этот человек ещё не вступил.',invite:'Пригласить',purchased:'Куплено!',listed:'Выставлено!',removed:'Снято',cardSent:'Карточка отправлена!',linkCopied:'Ссылка скопирована!',notEnoughDev:'Недостаточно DEV',notEnoughStars:'Недостаточно звёзд',enterPrice:'Введите цену',enterTgId:'Введите Telegram ID',commission:'Комиссия: 5%',rarity:'Редкость',descShop:'50 уникальных моделей · улучшение бесплатно',historyTitle:'История'}
 };
 const t = T[userLang];
 
@@ -311,7 +311,7 @@ function openModal(title, html) {
   document.getElementById('modal-body').innerHTML = html;
   document.getElementById('modal').classList.add('open');
 }
-function closeModal() { document.getElementById('modal').classList.remove('open'); }
+function closeModal() { document.getElementById('modal').classList.remove('open'); try{_stopPkBlink();}catch(e){} }
 document.getElementById('modal').addEventListener('click', e=>{
   if (e.target===document.getElementById('modal')) closeModal();
 });
@@ -647,7 +647,7 @@ function onBuyIconClick(){
 function _gemBuyBtn(colId, qty, userGems) {
   const hasEnough = (userGems||0) >= qty*100;
   const gem = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><path d="M6 3L3 9L12 21L21 9L18 3Z" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.2"/><path d="M3 9L12 12L21 9" stroke="#c4b5fd" stroke-width="1"/><path d="M12 3L9 9L12 12L15 9Z" fill="#c4b5fd" opacity="0.5"/><circle cx="12" cy="5.5" r="1" fill="#ede9fe" opacity="0.9"/></svg>';
-  const label = (userLang==="ru"?"Купить за ":"Buy for ") + (qty*100);
+  const label = (userLang==="ru"?"Купить за ":"Buy for ") + (qty*50);
   if(hasEnough){
     return '<button class="btn btn-secondary btn-wide" id="buy-gems-btn" onclick="buyCardWithGems(' + colId + ')" style="border-color:rgba(167,139,250,0.4);color:#a78bfa;margin-top:6px">' + label + ' ' + gem + '</button>';
   } else {
@@ -727,8 +727,8 @@ function changeQty(d) {
   if(bb) bb.innerHTML = bl+' <span style="text-decoration:line-through;opacity:0.5;font-size:12px">'+(_buyQty*50)+'</span> '+(_buyQty*25)+' '+_starSvg14;
   if(bg){
     const ug=userData?.gems||0;
-    if(ug>=_buyQty*100){bg.innerHTML=bl+' '+(_buyQty*100)+' '+_gemSvg16;bg.style.color='#a78bfa';bg.style.borderColor='rgba(167,139,250,0.4)';}
-    else{bg.innerHTML=(userLang==='ru'?'Купить за ':'Buy for ')+(_buyQty*100)+' '+_gemSvg16;bg.style.color='rgba(167,139,250,0.4)';bg.style.borderColor='rgba(167,139,250,0.15)';bg.style.opacity='0.7';bg.onclick=function(){notEnoughGemsToast(_buyQty*100,ug);};}    
+    if(ug>=_buyQty*50){bg.innerHTML=bl+' '+(_buyQty*50)+' '+_gemSvg16;bg.style.color='#a78bfa';bg.style.borderColor='rgba(167,139,250,0.4)';}
+    else{bg.innerHTML=(userLang==='ru'?'Купить за ':'Buy for ')+(_buyQty*50)+' '+_gemSvg16;bg.style.color='rgba(167,139,250,0.4)';bg.style.borderColor='rgba(167,139,250,0.15)';bg.style.opacity='0.7';bg.onclick=function(){notEnoughGemsToast(_buyQty*50,ug);};}    
   }
 }
 
@@ -1245,7 +1245,7 @@ async function loadProfile() {
 
         <div style="background:var(--bg2);border:1px solid rgba(255,45,120,0.3);border-radius:16px;padding:16px;box-shadow:0 0 24px rgba(255,45,120,0.06),inset 0 0 1px rgba(255,45,120,0.1)">
           <h3 style="font-size:15px;font-weight:700;margin-bottom:6px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="vertical-align:middle;margin-right:6px"><rect x="3" y="8" width="18" height="13" rx="2" fill="#ff2d78" opacity="0.9"/><rect x="2" y="6" width="20" height="4" rx="1.5" fill="#ff5599"/><path d="M12 6V21" stroke="#fff" stroke-width="1.5" stroke-dasharray="2 1"/><path d="M12 6C12 6 9 4 8 2.5C7.2 1.2 8.5 0 10 1C11 1.7 12 3 12 3" stroke="#ff5599" stroke-width="1.5" stroke-linecap="round" fill="none"/><path d="M12 6C12 6 15 4 16 2.5C16.8 1.2 15.5 0 14 1C13 1.7 12 3 12 3" stroke="#ff5599" stroke-width="1.5" stroke-linecap="round" fill="none"/><circle cx="12" cy="6" r="1.5" fill="#fff"/></svg> ${t.refEarn}</h3>
-          <p style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.5">${t.refText} <strong style="color:var(--star)">10%</strong> ${t.refOf} <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><path d="M6 3L3 9L12 21L21 9L18 3Z" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.2"/><path d="M3 9L12 12L21 9" stroke="#c4b5fd" stroke-width="1"/><path d="M12 3L9 9L12 12L15 9Z" fill="#c4b5fd" opacity="0.5"/></svg><br><span style="font-size:11px;color:rgba(255,255,255,0.4)">${userLang==='ru'?'За гемы можно покупать карты и играть в игры':'Use gems to buy cards &amp; play games'}</span></p>
+          <p style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.5">${t.refOf} <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><path d="M6 3L3 9L12 21L21 9L18 3Z" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.2"/><path d="M3 9L12 12L21 9" stroke="#c4b5fd" stroke-width="1"/><path d="M12 3L9 9L12 12L15 9Z" fill="#c4b5fd" opacity="0.5"/></svg><br><span style="font-size:11px;color:rgba(255,255,255,0.4)">${userLang==='ru'?'За гемы можно покупать карты и играть в игры':'Use gems to buy cards &amp; play games'}</span></p>
           <div style="display:flex;gap:8px;align-items:center">
             <div style="flex:1;background:var(--bg3);border:1px solid rgba(255,45,120,0.2);border-radius:8px;padding:10px 12px;font-family:'Inter',sans-serif;font-size:11px;color:var(--star);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">t.me/memstroybot?start=${userData.telegram_id}</div>
             <button class="btn btn-secondary" style="white-space:nowrap;flex-shrink:0;border-color:rgba(255,45,120,0.25)" onclick="copyRef(${userData.telegram_id})">${userLang==='ru'?'Копировать':'Copy'}</button>
@@ -3119,11 +3119,11 @@ async function doRoulette(){
 const _POKER_COMBOS = {
   '5_of_kind':  {ru:'Five of a Kind', en:'Five of a Kind',  mult:1000, color:'#f0b432'},
   'royal_flush':{ru:'Royal Flush',    en:'Royal Flush',     mult:500,  color:'#ff2d78'},
-  'str_flush':  {ru:'Straight Flush', en:'Straight Flush',  mult:100,  color:'#ff6b6b'},
-  '4_of_kind':  {ru:'Four of a Kind', en:'Four of a Kind',  mult:40,   color:'#f0c040'},
-  'full_house': {ru:'Full House',     en:'Full House',      mult:12,   color:'#a78bfa'},
-  'flush':      {ru:'Flush',          en:'Flush',           mult:9,    color:'#4aff8a'},
-  'straight':   {ru:'Straight',       en:'Straight',        mult:7,    color:'#4aff8a'},
+  'str_flush':  {ru:'Straight Flush', en:'Straight Flush',  mult:200,  color:'#ff6b6b'},
+  '4_of_kind':  {ru:'Four of a Kind', en:'Four of a Kind',  mult:50,   color:'#f0c040'},
+  'full_house': {ru:'Full House',     en:'Full House',      mult:15,   color:'#a78bfa'},
+  'flush':      {ru:'Flush',          en:'Flush',           mult:10,   color:'#4aff8a'},
+  'straight':   {ru:'Straight',       en:'Straight',        mult:8,    color:'#4aff8a'},
   '3_of_kind':  {ru:'Three of a Kind',en:'Three of a Kind', mult:5,    color:'#4aff8a'},
   'two_pairs':  {ru:'Two Pairs',      en:'Two Pairs',       mult:3,    color:'#4aff8a'},
   'nothing':    {ru:'No combination', en:'No combination',  mult:0,    color:'#666'},
@@ -3131,8 +3131,11 @@ const _POKER_COMBOS = {
 
 let _pokerState = null;
 
+function _pokerCardBack(idx){
+  return '<div style="width:62px;height:90px;background:linear-gradient(145deg,#1a0a00,#0d0500);border:1px solid rgba(240,180,50,0.3);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:36px">🗽</div>';
+}
+
 function _pokerCardHTML(card, idx, held, phase){
-  if(!card) return '';
   if(!card) return _pokerCardBack(idx);
   const isJoker = card.r==='Jo';
   const isRed = ['♥','♦'].includes(card.s);
@@ -3145,8 +3148,8 @@ function _pokerCardHTML(card, idx, held, phase){
   const clickable = phase==='hold' ? `onclick="togglePokerHold(${idx},this)"` : '';
   const cursor = phase==='hold' ? 'cursor:pointer' : '';
   const inner = isJoker
-    ? `<div style="font-size:13px;font-weight:900;color:#f0b432;text-align:center;line-height:1.2">🤡<br><span style="font-size:11px">Jo</span></div>`
-    : `<div style="font-size:16px;font-weight:900;color:${col};line-height:1">${card.r}</div><div style="font-size:22px;color:${col};line-height:1">${card.s}</div>`;
+    ? `<div style="font-size:10px;font-weight:900;color:#f0b432;text-align:center;line-height:1.2;padding:1px"><div style="font-size:38px;line-height:1">🃏</div><div style="letter-spacing:1px;font-size:9px;margin-top:1px">JOKER</div></div>`
+    : `<div style="font-size:22px;font-weight:900;color:${col};line-height:1">${card.r}</div><div style="font-size:28px;color:${col};line-height:1">${card.s}</div>`;
   return `<div style="display:flex;flex-direction:column;align-items:center">
     <div ${clickable} style="width:62px;height:90px;background:${bg};border:${border};border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:${shadow};${cursor};transition:transform 0.2s,box-shadow 0.2s;transform:${isHeld?'translateY(-8px)':'none'}" id="pcard-${idx}">
       ${inner}
@@ -3156,14 +3159,13 @@ function _pokerCardHTML(card, idx, held, phase){
 }
 
 function _pokerPaytableHTML(activeCombo){
+  const bet = _pokerState?.bet||10;
   const combos = ['5_of_kind','royal_flush','str_flush','4_of_kind','full_house','flush','straight','3_of_kind','two_pairs'];
   return combos.map(k=>{
     const c=_POKER_COMBOS[k];
     const isActive = k===activeCombo;
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 8px;border-radius:5px;background:${isActive?c.color+'22':'transparent'};border:1px solid ${isActive?c.color+'88':'transparent'}">
-      <span style="font-size:11px;font-weight:${isActive?'900':'600'};color:${isActive?c.color:'rgba(255,255,255,0.5)'}">${userLang==='ru'?c.ru:c.en}</span>
-      <span style="font-size:11px;font-weight:900;color:${isActive?c.color:'rgba(255,255,255,0.3)'}">×${c.mult}</span>
-    </div>`;
+    const payout = bet * c.mult;
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 8px;border-radius:5px;background:'+(isActive?c.color+'22':'transparent')+';border:1px solid '+(isActive?c.color+'88':'transparent')+'"><span style="font-size:11px;font-weight:'+(isActive?'900':'600')+';color:'+(isActive?c.color:'rgba(255,255,255,0.5)')+'">'+( userLang==='ru'?c.ru:c.en)+'</span><span style="font-size:11px;font-weight:900;color:'+(isActive?c.color:'rgba(255,255,255,0.3)')+'">'+payout+'</span></div>';
   }).join('');
 }
 
@@ -3175,11 +3177,20 @@ function togglePokerInfo(){
 function openPokerModal(){
   haptic('medium');
   const gems = userData?.gems||0;
-  const miniBonus = _pokerState?.mini_bonus||0;
   openModal(userLang==='ru'?'Американский покер':'American Poker', `
     <div style="padding:2px 0;font-family:'Inter',sans-serif">
 
-      <!-- Stats: CREDIT left, BET right, i top-right -->
+      <!-- Paytable - hidden -->
+      <div id="pk-paytable" style="background:#0a0a14;border:1px solid rgba(240,180,50,0.3);border-radius:10px;padding:6px;margin-bottom:6px">
+        ${_pokerPaytableHTML('')}
+      </div>
+
+      <!-- Cards area FIRST -->
+      <div id="pk-cards" style="display:flex;justify-content:center;gap:5px;margin-bottom:6px;min-height:110px;align-items:flex-end">
+        ${[0,1,2,3,4].map(i=>'<div style="width:62px;height:90px;background:linear-gradient(145deg,#1a0a00,#0d0500);border:1px solid rgba(240,180,50,0.3);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:36px">🗽</div>').join('')}
+      </div>
+
+      <!-- Stats: CREDIT left, BET right -->
       <div style="display:flex;align-items:center;gap:0;margin-bottom:8px;background:#0a0a14;border:1px solid rgba(240,180,50,0.25);border-radius:10px;overflow:hidden">
         <div style="flex:1;padding:8px 12px">
           <div style="font-size:9px;color:rgba(240,180,50,0.5);font-weight:700;letter-spacing:1.5px;margin-bottom:2px">CREDIT</div>
@@ -3191,53 +3202,32 @@ function openPokerModal(){
             <button onclick="togglePokerInfo()" style="width:18px;height:18px;border-radius:50%;border:1px solid rgba(240,180,50,0.4);background:rgba(240,180,50,0.08);color:#f0b432;font-size:10px;font-weight:900;cursor:pointer;line-height:1;flex-shrink:0">i</button>
             <div style="font-size:9px;color:rgba(240,180,50,0.5);font-weight:700;letter-spacing:1.5px">BET</div>
           </div>
-          <div id="pk-bet-display" style="font-size:22px;font-weight:900;color:#f0b432;cursor:pointer" onclick="togglePkBetMenu()">${_pokerState?.bet||10}</div>
-          <!-- BET menu -->
-          <div id="pk-bet-menu" style="display:none;position:absolute;right:0;top:100%;background:#1a1a2e;border:1px solid rgba(240,180,50,0.3);border-radius:10px;padding:6px;z-index:100;display:none">
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;min-width:160px">
-              ${[1,2,3,5,10,20,50,100].map(v=>`<button onclick="selectPkBet(${v})" style="padding:6px 4px;border-radius:7px;border:1px solid rgba(240,180,50,0.25);background:rgba(240,180,50,0.08);color:#f0b432;font-size:12px;font-weight:700;cursor:pointer">${v}</button>`).join('')}
-            </div>
-          </div>
+          <div id="pk-bet-display" style="font-size:22px;font-weight:900;color:#f0b432;cursor:pointer" onclick="cyclePkBet()">${_pokerState?.bet||1}</div>
         </div>
       </div>
       <input type="hidden" id="pk-bet" value="10">
 
-      <!-- Paytable - hidden -->
-      <div id="pk-paytable" style="background:#0a0a14;border:1px solid rgba(240,180,50,0.2);border-radius:10px;padding:6px;margin-bottom:8px;display:none">
-        ${_pokerPaytableHTML('')}
-      </div>
-
-      <!-- Cards area -->
-      <div id="pk-cards" style="display:flex;justify-content:center;gap:5px;margin-bottom:8px;min-height:106px;align-items:flex-end">
-        ${[0,1,2,3,4].map(i=>`<div style="width:60px;height:86px;background:linear-gradient(145deg,#1a0a00,#0d0500);border:1px solid rgba(240,180,50,0.3);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:28px">🗽</div>`).join('')}
-      </div>
-
-      <!-- Combo bar -->
-      <div id="pk-combo-bar" style="margin-bottom:6px;min-height:0"></div>
-
-      <!-- Status -->
-      <div id="pk-status" style="text-align:center;min-height:20px;font-size:13px;font-weight:700;margin-bottom:8px"></div>
-
       <!-- ИГРАТЬ button -->
-      <button id="pk-deal-btn" class="btn btn-primary btn-wide" style="background:linear-gradient(135deg,#4aff8a,#00b359);border:none;color:#000;font-weight:900;font-size:16px" onclick="pokerAction()">
+      <button id="pk-deal-btn" class="btn btn-primary btn-wide" style="background:linear-gradient(135deg,#4aff8a,#00b359);border:none;color:#000;font-weight:900;font-size:16px;margin-bottom:8px" onclick="pokerAction();haptic('medium');">
         ИГРАТЬ
       </button>
 
       <!-- Double up area -->
-      <div id="pk-double-area" style="display:none;margin-top:10px">
-        <div style="text-align:center;font-size:12px;color:var(--text2);margin-bottom:6px">${userLang==='ru'?'Удвоить? RED или BLACK':'Double up? RED or BLACK'} · <span id="pk-double-amount" style="color:#f0b432;font-weight:700"></span> ${_gemSvg12}</div>
-        <div id="pk-double-card" style="text-align:center;margin-bottom:8px;min-height:80px;display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap"></div>
-        <div id="pk-ladder" style="margin-bottom:10px"></div>
+      <div id="pk-double-area" style="display:none;margin-top:6px">
+        <span id="pk-double-amount" style="display:none"></span>
+        <div id="pk-ladder" style="margin-bottom:8px"></div>
+
         <div style="display:flex;gap:8px">
-          <button onclick="pokerDouble('red')" style="flex:1;padding:10px;border-radius:10px;border:2px solid #ff6b6b66;background:#ff6b6b18;color:#ff6b6b;font-size:14px;font-weight:800;cursor:pointer">🔴 RED</button>
-          <button onclick="pokerDouble('black')" style="flex:1;padding:10px;border-radius:10px;border:2px solid #44444488;background:#22222288;color:#ccc;font-size:14px;font-weight:800;cursor:pointer">⚫ BLACK</button>
-          <button onclick="pokerTake();pokerDeal()" style="flex:1;padding:10px;border-radius:10px;border:2px solid rgba(74,255,138,0.4);background:rgba(74,255,138,0.1);color:#4aff8a;font-size:14px;font-weight:800;cursor:pointer">✅ ИГРАТЬ</button>
+          <button onclick="_stopPkBlink();pokerDouble('red');haptic();" style="flex:1;padding:10px;border-radius:10px;border:2px solid #ff6b6b66;background:#ff6b6b18;color:#ff6b6b;font-size:14px;font-weight:800;cursor:pointer">🔴 RED</button>
+          <button onclick="_stopPkBlink();pokerDouble('black');haptic();" style="flex:1;padding:10px;border-radius:10px;border:2px solid #44444488;background:#22222288;color:#ccc;font-size:14px;font-weight:800;cursor:pointer">⚫ BLACK</button>
         </div>
       </div>
     </div>
   `);
-  const prevBet=_pokerState?.bet||10;
-  if(!_pokerState) _pokerState={phase:'idle',hand:[],held:[],bet:prevBet,winnings:0,double_amount:0,mini_bonus:miniBonus};
+  const prevBet=_pokerState?.bet||1;
+  const savedBet=parseInt(localStorage.getItem('pk_last_bet')||'1');
+  if(!_pokerState) _pokerState={phase:'idle',hand:[],held:[],bet:savedBet,winnings:0,double_amount:0};
+  _addPokerCSS();
   window._pokerBusy=false;
   setTimeout(()=>{
     const bd=document.getElementById('pk-bet-display'); if(bd) bd.textContent=_pokerState.bet||prevBet;
@@ -3252,6 +3242,60 @@ function openPokerModal(){
     // Restore credit
     const crEl=document.getElementById('pk-credit'); if(crEl) crEl.textContent=userData?.gems||0;
   },50);
+}
+
+/* Ladder win animation */
+let _pkBlinkInterval=null;
+function _startPkBlink(){
+  if(_pkBlinkInterval) clearInterval(_pkBlinkInterval);
+  _pkBlinkInterval=setInterval(()=>{ try{haptic();}catch(e){} },700);
+}
+function _stopPkBlink(){
+  if(_pkBlinkInterval){clearInterval(_pkBlinkInterval);_pkBlinkInterval=null;}
+}
+function _showPokerMiss(){
+  const modal=document.getElementById('modal');
+  if(!modal) return;
+  const el=document.createElement('div');
+  el.textContent=userLang==='ru'?'Мимо!':'Miss!';
+  el.style.cssText='position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.5);font-size:48px;font-weight:900;color:#ff4444;text-shadow:0 0 20px rgba(255,68,68,0.8);pointer-events:none;z-index:9999;opacity:0;transition:all 0.15s ease;white-space:nowrap;';
+  modal.style.position='relative';
+  modal.appendChild(el);
+  requestAnimationFrame(()=>{
+    el.style.transform='translate(-50%,-60%) scale(1.2)';
+    el.style.opacity='1';
+    setTimeout(()=>{
+      el.style.transform='translate(-50%,-80%) scale(0.8)';
+      el.style.opacity='0';
+      setTimeout(()=>el.remove(), 300);
+    }, 600);
+  });
+  haptic('heavy');
+}
+
+function _addPokerCSS(){
+  if(document.getElementById('pk-css')) return;
+  const s=document.createElement('style');
+  s.id='pk-css';
+  s.textContent='@keyframes pkLadderWin{0%{filter:brightness(1)}25%{filter:brightness(2) hue-rotate(30deg)}50%{filter:brightness(1.5)}75%{filter:brightness(2) hue-rotate(-30deg)}100%{filter:brightness(1)}} .pk-step-active{animation:pkLadderWin 0.5s ease;} @keyframes pkCardPop{0%{transform:scale(0.5) translateY(-10px);opacity:0}100%{transform:scale(1) translateY(0);opacity:1}} @keyframes pkBlink{0%,100%{opacity:1;border-color:rgba(240,180,50,0.8)}50%{opacity:0.4;border-color:rgba(240,180,50,0.2)}}';
+  document.head.appendChild(s);
+}
+
+const _PK_BET_VALUES=[1,5,10,25,100];
+function cyclePkBet(){
+  if(_pokerState?.phase==='hold') return;
+  const cur=_pokerState?.bet||1;
+  const idx=_PK_BET_VALUES.indexOf(cur);
+  const next=_PK_BET_VALUES[(idx+1)%_PK_BET_VALUES.length];
+  const disp=document.getElementById('pk-bet-display');
+  const inp=document.getElementById('pk-bet');
+  if(disp) disp.textContent=next;
+  if(inp) inp.value=next;
+  if(_pokerState) _pokerState.bet=next;
+  try{localStorage.setItem('pk_last_bet',next);}catch(e){}
+  const pt=document.getElementById('pk-paytable');
+  if(pt) pt.innerHTML=_pokerPaytableHTML('');
+  haptic();
 }
 
 function togglePkBetMenu(){
@@ -3287,41 +3331,148 @@ function togglePokerHold(idx, el){
   if(cardsEl) cardsEl.innerHTML=_pokerState.hand.map((c,i)=>_pokerCardHTML(c,i,held,'hold')).join('');
 }
 
+const _LADDER_TABLE = {
+  3:[3,6,12,24,48,96,192,500],
+  5:[5,10,20,40,80,160,500],
+  8:[8,16,32,64,128,256,1000],
+  10:[10,20,40,80,160,320,1000],
+  15:[15,30,60,120,240,480,1000],
+  25:[25,50,100,200,400,1000],
+  30:[30,60,120,240,480,960,2000],
+  40:[40,80,160,320,640,1280,5000],
+  50:[50,100,200,400,800,1600,5000],
+  75:[75,150,300,600,1200,2400,5000],
+  80:[80,160,320,640,1280,3000],
+  100:[100,200,400,800,1600,4000],
+  125:[125,250,500,1000,2000,5000],
+  150:[150,300,600,1200,2400,5000],
+  200:[200,400,800,1600,3200,10000],
+  250:[250,500,1000,2000,4000,10000],
+  300:[300,600,1200,2400,4800,10000,20000],
+  375:[375,750,1500,3000,6000,12000,25000],
+  500:[500,1000,2000,4000,8000,16000,40000],
+  800:[800,1600,3200,6400,12800,25600,60000],
+  1000:[1000,2000,4000,8000,16000,32000,75000],
+  1250:[1250,2500,5000,10000,20000,40000],
+  1500:[1500,3000,6000,12000,24000,48000,100000],
+  2000:[2000,4000,8000,16000,40000],
+  2500:[2500,5000,10000,20000,50000],
+  5000:[5000,10000,20000,40000,80000,200000],
+  10000:[10000,20000,40000,100000],
+  12500:[12500,25000,50000,100000],
+  20000:[20000,40000,80000,160000,500000],
+  25000:[25000,50000,100000,200000],
+  50000:[50000,100000,200000,400000,800000,2000000],
+  100000:[100000,200000,400000,800000,2000000],
+};
+
 function _pokerLadderHTML(baseWin, currentStep){
-  // Pyramid: 7 steps, top = round(baseWin * 1000 / baseWin) but fixed at nice number
-  // Actually: top = if bet<=1: 1000, bet<=5: 5000, else 10000
-  // Steps: baseWin, x2, x4, x8, x16, x32, then TOP
-  const bet = _pokerState?.bet||10;
-  const top = 1000 * bet;
-  const steps=[baseWin, baseWin*2, baseWin*4, baseWin*8, baseWin*16, baseWin*32, top];
+  // Find closest ladder entry
+  const keys=Object.keys(_LADDER_TABLE).map(Number).sort((a,b)=>a-b);
+  const key=keys.find(k=>k>=baseWin)||keys[keys.length-1];
+  const steps=_LADDER_TABLE[key]||[baseWin,baseWin*2,baseWin*4,baseWin*8,baseWin*16,baseWin*32];
   const reversed=[...steps].reverse();
-  return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;width:100%">`+
+  const allBeaten = currentStep >= steps.length - 1;
+  return '<div id="pk-ladder-wrap" style="display:flex;flex-direction:column;align-items:center;gap:3px;width:100%;'+(allBeaten?'animation:pkLadderWin 0.6s ease':'')+'">' +
   reversed.map((v,i)=>{
     const isTop=i===0;
+    const beaten=currentStep>=(reversed.length-1-i);
     const isCurrent=(i===(reversed.length-1-currentStep));
     const w=Math.round(30+(i/reversed.length)*70);
-    return `<div class="${isCurrent&&!isTop?'pk-step-active':''}" style="width:${w}%;padding:4px 8px;border-radius:6px;border:1px solid rgba(240,180,50,${isTop?'1':isCurrent?'0.9':'0.2'});background:${isTop?'linear-gradient(135deg,#f0b432,#c07800)':isCurrent?'rgba(240,180,50,0.25)':'rgba(240,180,50,0.04)'};font-size:${isTop?'13':'11'}px;font-weight:${isTop||isCurrent?'900':'500'};color:${isTop?'#000':isCurrent?'#f0b432':'rgba(240,180,50,0.4)'};text-align:center">${isTop?'🏆 ':''}<b>${v}</b></div>`;
-  }).join('')+`</div>`;
+    const bg=isTop?'linear-gradient(135deg,#f0b432,#c07800)':beaten?'rgba(74,255,138,0.25)':isCurrent?'rgba(240,180,50,0.25)':'rgba(240,180,50,0.04)';
+    const borderColor=isTop?'1':beaten?'rgba(74,255,138,0.8)':isCurrent?'0.9':'0.2';
+    const color=isTop?'#000':beaten?'#4aff8a':isCurrent?'#f0b432':'rgba(240,180,50,0.4)';
+    return '<div style="width:'+w+'%;padding:4px 8px;border-radius:6px;border:1px solid '+(isTop||beaten?borderColor:'rgba(240,180,50,'+borderColor+')') +';background:'+bg+';font-size:'+(isTop?'13':'11')+'px;font-weight:'+(isTop||isCurrent||beaten?'900':'500')+';color:'+color+';text-align:center;transition:all 0.3s">'+(isTop?'🏆 ':beaten&&!isTop?'✅ ':'')+v+'</div>';
+  }).join('')+'</div>';
 }
 
 function _pokerAutoHold(hand){
   const RO={"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"8":8,"9":9,"10":10,"J":11,"Q":12,"K":13,"A":14,"Jo":15};
   const held=[];
   const jokerIdx=hand.findIndex(c=>c.r==='Jo');
-  if(jokerIdx>=0) held.push(jokerIdx);
+  const hasJoker=jokerIdx>=0;
+  if(hasJoker) held.push(jokerIdx);
   const nj=hand.map((c,i)=>({...c,i})).filter(c=>c.r!=='Jo');
   const rc={};
   nj.forEach(c=>{rc[c.r]=(rc[c.r]||0)+1;});
   const g={};
   Object.entries(rc).forEach(([r,cnt])=>{if(!g[cnt])g[cnt]=[];g[cnt].push(r);});
+
+  // 4 of a kind
   if(g[4]){nj.filter(c=>c.r===g[4][0]).forEach(c=>held.push(c.i));return held;}
+  // 3 of a kind
   if(g[3]){nj.filter(c=>c.r===g[3][0]).forEach(c=>held.push(c.i));return held;}
+  // Two pairs
   if(g[2]&&g[2].length>=2){g[2].slice(0,2).forEach(r=>nj.filter(c=>c.r===r).forEach(c=>held.push(c.i)));return held;}
+  // Any pair
   if(g[2]){nj.filter(c=>c.r===g[2][0]).forEach(c=>held.push(c.i));return held;}
+
   const sc={};nj.forEach(c=>{sc[c.s]=(sc[c.s]||0)+1;});
-  const fs=Object.entries(sc).find(([s,n])=>n>=4);
-  if(fs){nj.filter(c=>c.s===fs[0]).forEach(c=>held.push(c.i));return held;}
-  nj.filter(c=>['A','K','Q'].includes(c.r)).forEach(c=>held.push(c.i));
+  const vals=nj.map(c=>RO[c.r]).sort((a,b)=>a-b);
+  const uniq=[...new Set(vals)];
+
+  // Flush draw: 4 same suit
+  const fs4=Object.entries(sc).find(([s,n])=>n>=4);
+  if(fs4){nj.filter(c=>c.s===fs4[0]).forEach(c=>held.push(c.i));return held;}
+
+  // Straight draw
+  function bestStraightDraw(cards, joker){
+    const v=[...new Set(cards.map(c=>RO[c.r]))].sort((a,b)=>a-b);
+    const hasAce=v.includes(14);
+
+    // A-low straight check: A counts as 1
+    // A-low: A,2,3,4,5 -> vals [1,2,3,4,5]
+    // With joker: need 3 of {A,2,3,4,5} (joker fills one)
+    if(hasAce){
+      const aLowVals=[2,3,4,5]; // A=1 handled separately
+      const aLowCards=cards.filter(c=>c.r==='A'||aLowVals.includes(RO[c.r]));
+      if(!joker && aLowCards.length>=4) return aLowCards;
+      if(joker && aLowCards.length>=3) return aLowCards;
+    }
+
+    // Without joker: 4 cards span<=4
+    if(!joker){
+      for(let i=0;i<=v.length-4;i++){
+        const slice=v.slice(i,i+4);
+        if(slice[3]-slice[0]<=4){
+          const vset=new Set(slice);
+          return cards.filter(c=>vset.has(RO[c.r]));
+        }
+      }
+    }
+
+    // With joker: try 4-card window span<=5 (joker fills 1 gap)
+    if(joker){
+      // First find best 4-card window
+      for(let i=0;i<=v.length-4;i++){
+        const slice=v.slice(i,i+4);
+        if(slice[3]-slice[0]<=5){
+          const vset=new Set(slice);
+          return cards.filter(c=>vset.has(RO[c.r]));
+        }
+      }
+      // Then try 3-card consecutive window (joker adds 4th)
+      for(let i=0;i<=v.length-3;i++){
+        const slice=v.slice(i,i+3);
+        if(slice[2]-slice[0]<=3){
+          const vset=new Set(slice);
+          return cards.filter(c=>vset.has(RO[c.r]));
+        }
+      }
+    }
+
+    // Royal flush draw
+    const royalVals=new Set([10,11,12,13,14]);
+    const royalCards=cards.filter(c=>royalVals.has(RO[c.r]));
+    if(!joker && royalCards.length>=4) return royalCards;
+    if(joker && royalCards.length>=3) return royalCards;
+    return null;
+  }
+
+  const strDraw=bestStraightDraw(nj, hasJoker);
+  if(strDraw){strDraw.forEach(c=>held.push(c.i));return held;}
+
+  // With joker and no draw: hold joker only
   return held;
 }
 
@@ -3331,9 +3482,11 @@ function pokerAction(){
   if(phase==='hold'){
     pokerDraw();
   } else if(phase==='double'){
-    // ИГРАТЬ in double = take winnings + new deal
     pokerTake();
   } else {
+    // Hide double area on new deal
+    const dblArea=document.getElementById('pk-double-area');
+    if(dblArea) dblArea.style.display='none';
     pokerDealCards();
   }
 }
@@ -3349,7 +3502,7 @@ async function pokerDealCards(){
   try{
     const res = await api('/api/games/poker/deal','POST',{telegram_id:tgUser.id, bet});
     const autoHeld = _pokerAutoHold(res.hand);
-    _pokerState = {phase:'hold', hand:res.hand, held:autoHeld, bet, winnings:0, double_amount:0, doubleStep:0, mini_bonus:res.mini_bonus};
+    _pokerState = {phase:'hold', hand:res.hand, held:autoHeld, bet, winnings:0, double_amount:0, doubleStep:0};
 
     const cardsEl = document.getElementById('pk-cards');
     if(cardsEl) cardsEl.innerHTML = [0,1,2,3,4].map(i=>_pokerCardBack(i)).join('');
@@ -3359,8 +3512,9 @@ async function pokerDealCards(){
     // Reveal cards one by one
     const revealHand = [];
     for(let i=0;i<5;i++){
-      await new Promise(r=>setTimeout(r,150));
+      await new Promise(r=>setTimeout(r,80));
       revealHand.push(res.hand[i]);
+      haptic();
       if(cardsEl) cardsEl.innerHTML =
         revealHand.map((c,j)=>_pokerCardHTML(c,j,autoHeld,'hold')).join('') +
         [0,1,2,3,4].slice(revealHand.length).map(k=>_pokerCardBack(revealHand.length+k)).join('');
@@ -3406,7 +3560,7 @@ async function pokerDraw(){
     _pokerState.winnings=res.winnings;
     _pokerState.double_amount=res.winnings;
     _pokerState.doubleStep=0;
-    _pokerState.mini_bonus=res.mini_bonus;
+
     _pokerState.combo=res.combo;
 
     const cardsEl=document.getElementById('pk-cards');
@@ -3418,8 +3572,9 @@ async function pokerDraw(){
     // Reveal new cards one by one left to right
     for(let i=0;i<5;i++){
       if(!prevHeld.includes(i)){
-        await new Promise(r=>setTimeout(r,280));
+        await new Promise(r=>setTimeout(r,150));
         drawTemp[i]=res.hand[i];
+        haptic();
         if(cardsEl) cardsEl.innerHTML=drawTemp.map((c,j)=>c?_pokerCardHTML(c,j,prevHeld,'result'):_pokerCardBack(j)).join('');
         haptic();
       }
@@ -3427,15 +3582,7 @@ async function pokerDraw(){
 
     const combo=_POKER_COMBOS[res.combo]||_POKER_COMBOS['nothing'];
     document.getElementById('pk-paytable').innerHTML=_pokerPaytableHTML(res.combo);
-    // Show combo bar under cards
-    const comboBar=document.getElementById('pk-combo-bar');
-    if(comboBar){
-      if(res.combo!=='nothing'&&res.combo){
-        comboBar.innerHTML=`<div style="text-align:center;padding:6px 12px;background:${combo.color+'22'};border:1px solid ${combo.color+'66'};border-radius:8px;font-size:14px;font-weight:900;color:${combo.color}">${userLang==='ru'?combo.ru:combo.en}${res.winnings>0?' · +'+res.winnings+' '+_gemSvg12:''}</div>`;
-      } else {
-        comboBar.innerHTML='';
-      }
-    }
+
 
     const statusEl=document.getElementById('pk-status');
     const miniEl=document.getElementById('pk-mini');
@@ -3445,15 +3592,23 @@ async function pokerDraw(){
 
     if(res.winnings>0){
       haptic('heavy');
-      let statusText=`<span style="color:${combo.color};font-size:14px">🎉 ${userLang==='ru'?combo.ru:combo.en} · +${res.winnings} ${_gemSvg12}</span>`;
-      if(res.mini_bonus_win>0) statusText+=`<br><span style="color:#f0b432;font-size:12px">🎰 MINI BONUS +${res.mini_bonus_win} ${_gemSvg12}</span>`;
-      if(statusEl) statusEl.innerHTML=statusText;
+      if(statusEl) statusEl.innerHTML="";
 
       // Show double-up
       const dblArea=document.getElementById('pk-double-area');
       const dblAmt=document.getElementById('pk-double-amount');
       const ladder=document.getElementById('pk-ladder');
+      // Setup double slots: all backs, slot 0 blinks first
+      const pkSetup=document.getElementById('pk-cards');
+      if(pkSetup){
+        const backs=[0,1,2,3,4].map((i)=>i===0
+          ? '<div class="pk-dbl-next" style="width:62px;height:90px;background:linear-gradient(145deg,#1a0a00,#0d0500);border:2px solid rgba(240,180,50,0.8);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:36px;animation:pkBlink 0.7s ease infinite">🗽</div>'
+          : _pokerCardBack(i)
+        );
+        pkSetup.innerHTML=backs.join('');
+      }
       if(dblArea) dblArea.style.display='';
+      _startPkBlink();
       if(dblAmt) dblAmt.textContent=res.winnings;
       if(ladder) ladder.innerHTML=_pokerLadderHTML(res.winnings,0);
 
@@ -3462,7 +3617,7 @@ async function pokerDraw(){
       if(statusEl) statusEl.innerHTML=`<span style="color:#666;font-size:13px">${userLang==='ru'?'Нет комбинации':'No combination'}</span>`;
       if(dealBtn){dealBtn.textContent='ИГРАТЬ'; dealBtn.disabled=false;}
       // Flip cards back face down
-      await new Promise(r=>setTimeout(r,900));
+      await new Promise(r=>setTimeout(r,400));
       const cardsElBack=document.getElementById('pk-cards');
       if(cardsElBack) cardsElBack.innerHTML=[0,1,2,3,4].map(i=>_pokerCardBack(i)).join('');
       _pokerState.phase='idle';
@@ -3487,11 +3642,37 @@ async function pokerDouble(choice){
       amount,
       choice
     });
+    // Joker = auto win regardless of choice
+    if(res.card && res.card.r==='Jo') res.won=true;
 
     const dblCard=document.getElementById('pk-double-card');
     const isRed=['♥','♦'].includes(res.card.s);
     const cardColor=isRed?'#ff6b6b':'#e0e0e0';
-    if(dblCard) dblCard.innerHTML=(dblCard.innerHTML||'')+`<div style="display:inline-flex;width:48px;height:68px;background:linear-gradient(145deg,#0d0d1a,#151525);border:2px solid ${res.won?'#4aff8a':'#ff4444'};border-radius:8px;align-items:center;justify-content:center;flex-direction:column;gap:2px;box-shadow:0 0 12px ${res.won?'rgba(74,255,138,0.4)':'rgba(255,68,68,0.4)'}"><span style="font-size:12px;font-weight:900;color:${cardColor}">${res.card.r}</span><span style="font-size:16px;color:${cardColor}">${res.card.s}</span></div>`;
+    const dblBorderColor = isRed ? '#ff6b6b' : '#444';
+    const dblShadow = isRed ? 'rgba(255,107,107,0.5)' : 'rgba(0,0,0,0.5)';
+    const dblBg = isRed ? 'linear-gradient(145deg,#1a0505,#0d0000)' : 'linear-gradient(145deg,#0d0d1a,#151525)';
+    const newCardHTML = `<div style="display:inline-flex;width:52px;height:74px;background:${dblBg};border:2px solid ${dblBorderColor};border-radius:8px;align-items:center;justify-content:center;flex-direction:column;gap:2px;box-shadow:0 0 12px ${dblShadow};animation:pkCardPop 0.2s ease"><span style="font-size:15px;font-weight:900;color:${cardColor}">${res.card.r}</span><span style="font-size:20px;color:${cardColor}">${res.card.s}</span></div>`;
+    // Slot system: replace blinking slot with won card, make next slot blink
+    const pkCardsEl=document.getElementById('pk-cards');
+    if(pkCardsEl && res.won){
+      const slots=[...pkCardsEl.children];
+      // Find blinking slot and replace with won card
+      const blinkIdx=slots.findIndex(el=>el.classList.contains('pk-dbl-next'));
+      const targetIdx=blinkIdx>=0 ? blinkIdx : 0;
+      // Build new HTML
+      const newSlotHTMLs=slots.map((el,i)=>{
+        if(i===targetIdx) return newCardHTML; // show won card
+        return el.outerHTML;
+      });
+      // Make next slot blink
+      const nextIdx=targetIdx+1;
+      if(nextIdx<newSlotHTMLs.length){
+        newSlotHTMLs[nextIdx]='<div class="pk-dbl-next" style="width:62px;height:90px;background:linear-gradient(145deg,#1a0a00,#0d0500);border:2px solid rgba(240,180,50,0.8);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:36px;animation:pkBlink 0.7s ease infinite">🗽</div>';
+      }
+      pkCardsEl.innerHTML=newSlotHTMLs.join('');
+      if(nextIdx<slots.length) _startPkBlink();
+    }
+    if(dblCard) dblCard.innerHTML='';
 
     const statusEl=document.getElementById('pk-status');
     const creditEl=document.getElementById('pk-credit');
@@ -3500,26 +3681,67 @@ async function pokerDouble(choice){
 
     if(res.won){
       haptic('heavy');
+      haptic('heavy');
       _pokerState.doubleStep=(_pokerState.doubleStep||0)+1;
       _pokerState.double_amount=res.new_amount;
       // Check if reached top (step 6 = 64x = max)
       if(_pokerState.doubleStep>=6){
-        // Jackpot! confetti + auto-take
+        // Jackpot! stop blink, show win screen
+        _stopPkBlink();
         _banditJackpot('7');
-        if(statusEl) statusEl.innerHTML=`<span style="color:#f0b432;font-weight:900;font-size:15px">🏆 ВЕРШИНА! +${res.new_amount} ${_gemSvg12}</span>`;
-        if(dblAmt) dblAmt.textContent=res.new_amount;
-        if(ladder) ladder.innerHTML=_pokerLadderHTML(res.new_amount/_pokerState.doubleStep||res.new_amount, _pokerState.doubleStep);
-        setTimeout(()=>pokerTake(),1500);
+        haptic('heavy'); haptic('heavy'); haptic('heavy');
+        // Hide double area
+        const dblAreaJP=document.getElementById('pk-double-area');
+        if(dblAreaJP) dblAreaJP.style.display='none';
+        // Show jackpot overlay in modal
+        const modalBody=document.getElementById('modal-body');
+        if(modalBody){
+          const ladderSteps=_LADDER_TABLE[Object.keys(_LADDER_TABLE).map(Number).sort((a,b)=>a-b).find(k=>k>=(_pokerState.winnings||res.new_amount))||res.new_amount]||[];
+          const topPrize=ladderSteps[ladderSteps.length-1]||res.new_amount;
+          modalBody.innerHTML=`
+            <div style="text-align:center;padding:20px 10px">
+              <div style="font-size:64px;margin-bottom:8px">🏆</div>
+              <div style="font-size:22px;font-weight:900;color:#f0b432;margin-bottom:6px">${userLang==='ru'?'ВЕРШИНА!':'JACKPOT!'}</div>
+              <div style="font-size:15px;color:var(--text2);margin-bottom:16px">${userLang==='ru'?'Ты прошёл всю лестницу!':'You climbed the whole ladder!'}</div>
+              <div style="background:linear-gradient(135deg,#f0b432,#c07800);border-radius:16px;padding:16px;margin-bottom:20px">
+                <div style="font-size:13px;color:rgba(0,0,0,0.7);font-weight:700;margin-bottom:4px">${userLang==='ru'?'ВЫИГРЫШ':'PRIZE'}</div>
+                <div style="font-size:36px;font-weight:900;color:#000">${res.new_amount} ${_gemSvg16||''}</div>
+              </div>
+              <button class="btn btn-primary btn-wide" style="background:linear-gradient(135deg,#4aff8a,#00b359);border:none;color:#000;font-weight:900;font-size:16px" onclick="pokerTake();openPokerModal();">
+                🎉 ${userLang==='ru'?'Забрать!':'Collect!'}
+              </button>
+            </div>`;
+        }
+        _pokerState.phase='idle';
+        _pokerState.double_amount=res.new_amount;
         return;
       }
       if(statusEl) statusEl.innerHTML=`<span style="color:#4aff8a;font-weight:700">✅ ${userLang==='ru'?'Удвоено!':'Doubled!'} → ${res.new_amount} ${_gemSvg12}</span>`;
       if(dblAmt) dblAmt.textContent=res.new_amount;
       if(ladder) ladder.innerHTML=_pokerLadderHTML(_pokerState.winnings||res.new_amount/_pokerState.doubleStep, _pokerState.doubleStep);
     } else {
+      _showPokerMiss();
       _pokerState.double_amount=0;
       _pokerState.phase='idle';
-      if(statusEl) statusEl.innerHTML=`<span style="color:#ff4444;font-weight:700">❌ ${userLang==='ru'?'Проигрыш при удвоении':'Lost on double'}</span>`;
-      document.getElementById('pk-double-area').style.display='none';
+      if(statusEl) statusEl.innerHTML='';
+      _stopPkBlink();
+      // Show the losing card briefly, then reset to backs
+      const pkCardsRestore=document.getElementById('pk-cards');
+      if(pkCardsRestore && res.card){
+        const loseIsRed=['♥','♦'].includes(res.card.s);
+        const loseCol=loseIsRed?'#ff6b6b':'#e0e0e0';
+        const loseBg=loseIsRed?'linear-gradient(145deg,#1a0505,#0d0000)':'linear-gradient(145deg,#0d0d1a,#151525)';
+        const loseBorder=loseIsRed?'#ff6b6b':'#555';
+        const loseCardHTML='<div style="width:62px;height:90px;background:'+loseBg+';border:2px solid '+loseBorder+';border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:0 0 12px rgba(255,68,68,0.4)"><div style="font-size:22px;font-weight:900;color:'+loseCol+'">'+res.card.r+'</div><div style="font-size:28px;color:'+loseCol+'">'+res.card.s+'</div></div>';
+        const slots=[...pkCardsRestore.children];
+        const blinkIdx=slots.findIndex(el=>el.classList.contains('pk-dbl-next'));
+        const showIdx=blinkIdx>=0?blinkIdx:0;
+        const newSlots=slots.map((el,i)=>i===showIdx?loseCardHTML:el.outerHTML);
+        pkCardsRestore.innerHTML=newSlots.join('');
+        // Cards stay visible until player presses ИГРАТЬ
+      } else if(pkCardsRestore){
+        pkCardsRestore.innerHTML=[0,1,2,3,4].map(i=>_pokerCardBack(i)).join('');
+      }
       const dealBtn=document.getElementById('pk-deal-btn');
       if(dealBtn){dealBtn.textContent='ИГРАТЬ'; dealBtn.disabled=false;}
     }
@@ -3530,7 +3752,7 @@ async function pokerDouble(choice){
 }
 
 function pokerTake(){
-  haptic();
+  haptic('medium');
   const amount=_pokerState?.double_amount||0;
   const dblArea=document.getElementById('pk-double-area');
   if(dblArea) dblArea.style.display='none';

@@ -523,7 +523,7 @@ def _pay_referral_bonus(conn, user_id, amount):
     user = conn.execute("SELECT referred_by FROM users WHERE id=?", (user_id,)).fetchone()
     if not user or not user["referred_by"]:
         return
-    bonus = max(1, int(amount * 0.10))
+    bonus = max(1, int(amount * 0.20))
     conn.execute("UPDATE users SET gems = COALESCE(gems,0) + ? WHERE id=?",
                  (bonus, user["referred_by"]))
     conn.execute("""
@@ -582,7 +582,7 @@ def buy_card_gems(data: dict):
     conn = get_db()
     user = require_user(conn, telegram_id)
     gems = user["gems"] if "gems" in user.keys() else 0
-    cost = qty * 100
+    cost = qty * 50
     if gems < cost:
         conn.close()
         raise HTTPException(400, f"Недостаточно гемов. Нужно: {cost}, есть: {gems}")
