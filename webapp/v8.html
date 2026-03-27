@@ -3253,6 +3253,26 @@ function _startPkBlink(){
 function _stopPkBlink(){
   if(_pkBlinkInterval){clearInterval(_pkBlinkInterval);_pkBlinkInterval=null;}
 }
+function _showPokerMiss(){
+  const modal=document.getElementById('modal');
+  if(!modal) return;
+  const el=document.createElement('div');
+  el.textContent=userLang==='ru'?'Мимо!':'Miss!';
+  el.style.cssText='position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.5);font-size:48px;font-weight:900;color:#ff4444;text-shadow:0 0 20px rgba(255,68,68,0.8);pointer-events:none;z-index:9999;opacity:0;transition:all 0.15s ease;white-space:nowrap;';
+  modal.style.position='relative';
+  modal.appendChild(el);
+  requestAnimationFrame(()=>{
+    el.style.transform='translate(-50%,-60%) scale(1.2)';
+    el.style.opacity='1';
+    setTimeout(()=>{
+      el.style.transform='translate(-50%,-80%) scale(0.8)';
+      el.style.opacity='0';
+      setTimeout(()=>el.remove(), 300);
+    }, 600);
+  });
+  haptic('heavy');
+}
+
 function _addPokerCSS(){
   if(document.getElementById('pk-css')) return;
   const s=document.createElement('style');
@@ -3482,7 +3502,7 @@ async function pokerDealCards(){
   try{
     const res = await api('/api/games/poker/deal','POST',{telegram_id:tgUser.id, bet});
     const autoHeld = _pokerAutoHold(res.hand);
-    _pokerState = {phase:'hold', hand:res.hand, held:autoHeld, bet, winnings:0, double_amount:0, doubleStep:0, mini_bonus:res.mini_bonus};
+    _pokerState = {phase:'hold', hand:res.hand, held:autoHeld, bet, winnings:0, double_amount:0, doubleStep:0};
 
     const cardsEl = document.getElementById('pk-cards');
     if(cardsEl) cardsEl.innerHTML = [0,1,2,3,4].map(i=>_pokerCardBack(i)).join('');
@@ -3540,7 +3560,7 @@ async function pokerDraw(){
     _pokerState.winnings=res.winnings;
     _pokerState.double_amount=res.winnings;
     _pokerState.doubleStep=0;
-    _pokerState.mini_bonus=res.mini_bonus;
+
     _pokerState.combo=res.combo;
 
     const cardsEl=document.getElementById('pk-cards');
@@ -3666,19 +3686,41 @@ async function pokerDouble(choice){
       _pokerState.double_amount=res.new_amount;
       // Check if reached top (step 6 = 64x = max)
       if(_pokerState.doubleStep>=6){
-        // Jackpot! confetti + auto-take
+        // Jackpot! stop blink, show win screen
+        _stopPkBlink();
         _banditJackpot('7');
-        if(statusEl) statusEl.innerHTML=`<span style="color:#f0b432;font-weight:900;font-size:15px">🏆 ВЕРШИНА! +${res.new_amount} ${_gemSvg12}</span>`;
-        if(dblAmt) dblAmt.textContent=res.new_amount;
-        if(ladder) ladder.innerHTML=_pokerLadderHTML(res.new_amount/_pokerState.doubleStep||res.new_amount, _pokerState.doubleStep);
-        setTimeout(()=>pokerTake(),1500);
+        haptic('heavy'); haptic('heavy'); haptic('heavy');
+        // Hide double area
+        const dblAreaJP=document.getElementById('pk-double-area');
+        if(dblAreaJP) dblAreaJP.style.display='none';
+        // Show jackpot overlay in modal
+        const modalBody=document.getElementById('modal-body');
+        if(modalBody){
+          const ladderSteps=_LADDER_TABLE[Object.keys(_LADDER_TABLE).map(Number).sort((a,b)=>a-b).find(k=>k>=(_pokerState.winnings||res.new_amount))||res.new_amount]||[];
+          const topPrize=ladderSteps[ladderSteps.length-1]||res.new_amount;
+          modalBody.innerHTML=`
+            <div style="text-align:center;padding:20px 10px">
+              <div style="font-size:64px;margin-bottom:8px">🏆</div>
+              <div style="font-size:22px;font-weight:900;color:#f0b432;margin-bottom:6px">${userLang==='ru'?'ВЕРШИНА!':'JACKPOT!'}</div>
+              <div style="font-size:15px;color:var(--text2);margin-bottom:16px">${userLang==='ru'?'Ты прошёл всю лестницу!':'You climbed the whole ladder!'}</div>
+              <div style="background:linear-gradient(135deg,#f0b432,#c07800);border-radius:16px;padding:16px;margin-bottom:20px">
+                <div style="font-size:13px;color:rgba(0,0,0,0.7);font-weight:700;margin-bottom:4px">${userLang==='ru'?'ВЫИГРЫШ':'PRIZE'}</div>
+                <div style="font-size:36px;font-weight:900;color:#000">${res.new_amount} ${_gemSvg16||''}</div>
+              </div>
+              <button class="btn btn-primary btn-wide" style="background:linear-gradient(135deg,#4aff8a,#00b359);border:none;color:#000;font-weight:900;font-size:16px" onclick="pokerTake();openPokerModal();">
+                🎉 ${userLang==='ru'?'Забрать!':'Collect!'}
+              </button>
+            </div>`;
+        }
+        _pokerState.phase='idle';
+        _pokerState.double_amount=res.new_amount;
         return;
       }
       if(statusEl) statusEl.innerHTML=`<span style="color:#4aff8a;font-weight:700">✅ ${userLang==='ru'?'Удвоено!':'Doubled!'} → ${res.new_amount} ${_gemSvg12}</span>`;
       if(dblAmt) dblAmt.textContent=res.new_amount;
       if(ladder) ladder.innerHTML=_pokerLadderHTML(_pokerState.winnings||res.new_amount/_pokerState.doubleStep, _pokerState.doubleStep);
     } else {
-      haptic('heavy');
+      _showPokerMiss();
       _pokerState.double_amount=0;
       _pokerState.phase='idle';
       if(statusEl) statusEl.innerHTML='';
@@ -3710,7 +3752,6 @@ async function pokerDouble(choice){
 }
 
 function pokerTake(){
-  haptic('medium');
   haptic('medium');
   const amount=_pokerState?.double_amount||0;
   const dblArea=document.getElementById('pk-double-area');
