@@ -156,6 +156,13 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;heigh
   <div class="content" id="trade-content"><div class="loading-page"><div class="spinner"></div></div></div>
 </div>
 
+<div id="page-stars" class="page">
+  <div class="page-header">
+    <span class="page-title" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.18);border-radius:20px;padding:7px 20px;font-size:17px;font-weight:800">⭐ Звёзды</span>
+  </div>
+  <div class="content" id="stars-content"><div class="loading-page"><div class="spinner"></div></div></div>
+</div>
+
 <div id="page-games" class="page">
   <div class="page-header">
     <span class="page-title" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.18);border-radius:20px;padding:7px 20px;font-size:17px;font-weight:800">🎮 Игры</span>
@@ -181,6 +188,10 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;heigh
   <button class="tab-btn" data-page="sell" onclick="switchTab('sell')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
     <span>Рынок</span>
+  </button>
+  <button class="tab-btn" data-page="stars" onclick="switchTab('stars')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    <span>Звёзды</span>
   </button>
   <button class="tab-btn" data-page="games" onclick="switchTab('games')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c-2 0-5 3-5 8v1.5L5 15h2v2h10v-2h2l-2-3.5V10c0-5-3-8-5-8z"/><circle cx="12" cy="9" r="1.8" fill="currentColor" stroke="none"/><path d="M9 17c0 1.66 1.34 3 3 3s3-1.34 3-3"/></svg>
@@ -302,6 +313,7 @@ function switchTab(tab) {
   document.querySelector(`[data-page="${tab}"]`)?.classList.add('active');
   if(tab==='buy') loadBuy();
   if(tab==='sell') loadTrade();
+  if(tab==='stars') loadStars();
   if(tab==='games') loadGamesTab();
   if(tab==='profile') { profileView='cards'; loadProfile(); }
 }
@@ -2567,7 +2579,7 @@ function renderTaskItem(type, ud){
   const tasks = ud?.tasks_completed || 0;
   const today = new Date().toISOString().slice(0,10);
   const dailyDone = ud?.daily_reward_date === today;
-  const spinDone = ud?.spin_date === today;
+  const spinDone = false; // лимит убран
   let html = '';
   if(type==='daily'){
     const done = dailyDone;
@@ -2790,7 +2802,7 @@ async function playRedBlack(){
 function openSpinModal(){
   haptic();
   const symbols = ['💎','⭐','🎰','🃏','🌟','💫','✨','🔮'];
-  openModal(userLang==='ru'?'🎰 Однорукий бандит':'🎰 Slot Machine', `
+  openModal(userLang==='ru'?'🎰 Слот':'🎰 Slot', `
     <div style="text-align:center;padding:8px 0">
       <div style="display:flex;justify-content:center;gap:10px;margin-bottom:18px">
         ${[0,1,2].map(i=>`
@@ -2805,23 +2817,6 @@ function openSpinModal(){
         ${userLang==='ru'?'🎰 Крутить!':'🎰 Spin!'}
       </button>
 
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:10px 12px;text-align:left">
-        <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">${userLang==='ru'?'Таблица выплат':'Payouts'}</div>
-        <div style="display:flex;flex-direction:column;gap:5px">
-          ${[
-            {syms:'7️⃣ 7️⃣ 7️⃣', mult:'', color:'#f0c040', bg:'rgba(240,192,64,0.12)'},
-            {syms:'BAR BAR BAR', mult:'', color:'#ff9f43', bg:'rgba(255,159,67,0.12)'},
-            {syms:'🍒 🍒 🍒', mult:'', color:'#ff6b6b', bg:'rgba(255,107,107,0.12)'},
-            {syms:'🍇 🍇 🍇', mult:'',  color:'#a78bfa', bg:'rgba(167,139,250,0.12)'},
-            {syms:'🍋 🍋 🍋', mult:'',  color:'#ffd32a', bg:'rgba(255,211,42,0.12)'},
-            {syms:'7️⃣ 7️⃣ + любой', mult:'', color:'#4aff8a', bg:'rgba(74,255,138,0.08)'},
-          ].map(p=>`
-            <div style="display:flex;align-items:center;justify-content:space-between;background:${p.bg};border:1px solid ${p.color+'22'};border-radius:8px;padding:5px 10px">
-              <span style="font-size:12px;color:var(--text1)">${p.syms}</span>
-              <span style="font-size:13px;font-weight:800;color:${p.color}">${p.mult}</span>
-            </div>`).join('')}
-        </div>
-      </div>
     </div>
   `);
 }
@@ -2830,7 +2825,7 @@ async function doSpin(){
   haptic('medium');
   const btn = document.getElementById('spin-btn');
   if(btn) btn.disabled = true;
-  const spinSymbols = ['7️⃣','BAR','🍒','🍇','🍋','💎'];
+  const spinSymbols = ['7️⃣','🍉','🍒','🍇','🍋','🍒'];
   const reels = [0,1,2].map(i=>document.getElementById(`slot-reel-${i}`));
 
   let ticks = 0;
@@ -2856,7 +2851,7 @@ async function doSpin(){
       if(prize > 0){
         resultEl.innerHTML = `
           <div style="display:inline-flex;flex-direction:column;align-items:center;background:${combo.color+'18'};border:1px solid ${combo.color+'44'};border-radius:12px;padding:8px 20px;gap:2px">
-            <div style="font-size:13px;color:${combo.color};font-weight:700">${combo.label} ${combo.mult}</div>
+            <div style="font-size:13px;color:${combo.color};font-weight:700">${combo.label}</div>
             <div style="font-size:22px;font-weight:900;color:${prize>=50?'#f0c040':prize>=15?'var(--success)':'#a78bfa'}">+${prize} 💎</div>
           </div>`;
       } else {
@@ -4038,6 +4033,178 @@ let _crashState = null;
 let _crashAnimFrame = null;
 let _crashPoints = [];
 
+// ═══════════════════════════════════════════════
+//  MEMSTROY STARS TAB
+// ═══════════════════════════════════════════════
+async function loadStars() {
+  const el = document.getElementById('stars-content');
+  if(!el) return;
+  el.innerHTML = '<div class="loading-page"><div class="spinner"></div></div>';
+  const tid = tg?.initDataUnsafe?.user?.id;
+  if(!tid) { el.innerHTML = '<div style="padding:32px;text-align:center;color:#888">Нет данных пользователя</div>'; return; }
+
+  try {
+    const res = await fetch(`/api/mstars?telegram_id=${tid}`);
+    const d = await res.json();
+    renderStarsTab(el, d, tid);
+  } catch(e) {
+    el.innerHTML = '<div style="padding:32px;text-align:center;color:#ff4a4a">Ошибка загрузки</div>';
+  }
+}
+
+function renderStarsTab(el, d, tid) {
+  const bal = d.balance || 0;
+  const canWithdraw = bal >= 100;
+  const hasPending = !!d.pending_withdraw;
+
+  // Build log HTML
+  let logHtml = '';
+  if(d.log && d.log.length) {
+    logHtml = d.log.map(r => {
+      const sign = r.amount > 0 ? '+' : '';
+      const col = r.amount > 0 ? '#4aff8a' : '#ff4a4a';
+      const dt = r.date ? r.date.split('T')[0] : '';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #1a1a1a">
+        <div>
+          <div style="font-size:13px;color:#fff">${r.reason}</div>
+          <div style="font-size:11px;color:#555;margin-top:2px">${dt}</div>
+        </div>
+        <div style="font-size:15px;font-weight:800;color:${col}">${sign}${r.amount} ⭐</div>
+      </div>`;
+    }).join('');
+  } else {
+    logHtml = '<div style="text-align:center;color:#555;padding:20px 0">История пуста</div>';
+  }
+
+  // Withdraw button
+  let wdHtml = '';
+  if(hasPending) {
+    wdHtml = `<div style="background:#1a1a1a;border:1px solid #333;border-radius:14px;padding:14px;text-align:center;color:#f0c040;font-size:13px">
+      ⏳ Заявка на вывод ${d.pending_withdraw.amount} ⭐ отправлена.<br>
+      <span style="color:#555;font-size:11px">Ожидай перевода Telegram Stars</span>
+    </div>`;
+  } else if(canWithdraw) {
+    wdHtml = `<button onclick="mstarsWithdraw(${tid})" style="width:100%;padding:14px;background:linear-gradient(135deg,#f0c040,#ff9500);border:none;border-radius:14px;color:#000;font-size:15px;font-weight:800;cursor:pointer;letter-spacing:0.3px">
+      💸 Вывести ${bal} ⭐ в Telegram Stars
+    </button>`;
+  } else {
+    const need = 100 - bal;
+    wdHtml = `<div style="background:#1a1a1a;border:1px solid #333;border-radius:14px;padding:14px;text-align:center">
+      <div style="color:#555;font-size:13px">Минимум для вывода: <span style="color:#f0c040;font-weight:800">100 ⭐</span></div>
+      <div style="color:#888;font-size:12px;margin-top:4px">Ещё нужно: <span style="color:#fff;font-weight:700">${need} ⭐</span></div>
+      <div style="background:#111;border-radius:8px;height:8px;margin-top:10px;overflow:hidden">
+        <div style="background:linear-gradient(90deg,#f0c040,#ff9500);height:100%;width:${Math.min(bal,100)}%;border-radius:8px;transition:width 0.5s"></div>
+      </div>
+    </div>`;
+  }
+
+  el.innerHTML = `
+    <!-- Balance card -->
+    <div style="background:linear-gradient(135deg,#1a1500,#2a2000);border:1px solid rgba(240,192,64,0.3);border-radius:20px;padding:24px;text-align:center;margin-bottom:16px">
+      <div style="font-size:13px;color:#888;margin-bottom:6px;letter-spacing:1px;text-transform:uppercase">Баланс Memstroy Stars</div>
+      <div style="font-size:52px;font-weight:900;color:#f0c040;line-height:1">⭐ ${bal}</div>
+      <div style="font-size:11px;color:#555;margin-top:8px">1 Memstroy Star = 1 Telegram Star при выводе</div>
+    </div>
+
+    <!-- How to earn -->
+    <div style="background:#111;border:1px solid #222;border-radius:16px;padding:16px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:12px">⚡ Как заработать звёзды</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:36px;height:36px;background:#1a1a00;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎉</div>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#f0c040">+15 ⭐ за вступление</div>
+            <div style="font-size:11px;color:#555">Подпишись на бот, чат и комьюнити</div>
+          </div>
+          <button onclick="mstarsCheckJoin(${tid})" style="margin-left:auto;padding:6px 12px;background:#f0c040;border:none;border-radius:10px;color:#000;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap">Получить</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:36px;height:36px;background:#001a0a;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">📅</div>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#4aff8a">+15 ⭐ каждую неделю</div>
+            <div style="font-size:11px;color:#555">Оставайся в чате и комьюнити</div>
+          </div>
+          <button onclick="mstarsWeeklyCheck(${tid})" style="margin-left:auto;padding:6px 12px;background:#4aff8a;border:none;border-radius:10px;color:#000;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap">Забрать</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:36px;height:36px;background:#00101a;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">👥</div>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#38bdf8">+15 ⭐ за приглашение</div>
+            <div style="font-size:11px;color:#555">Приглашённый должен вступить везде</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Withdraw -->
+    <div style="margin-bottom:16px">${wdHtml}</div>
+
+    <!-- History -->
+    <div style="background:#111;border:1px solid #222;border-radius:16px;padding:16px">
+      <div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:8px">📋 История</div>
+      ${logHtml}
+    </div>
+  `;
+}
+
+async function mstarsCheckJoin(tid) {
+  haptic('medium');
+  try {
+    const res = await fetch('/api/mstars/check_join', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({telegram_id: tid})
+    });
+    const d = await res.json();
+    if(d.already_given) { toast('Бонус уже получен ✓', 'ok'); return; }
+    if(d.ok) {
+      toast(`+15 ⭐ получено! Баланс: ${d.balance}`, 'ok');
+      haptic('heavy');
+      setTimeout(() => loadStars(), 800);
+    } else {
+      const missing = (d.not_joined || []).join(', ');
+      toast(`Нужно вступить: ${missing}`, 'err');
+    }
+  } catch(e) { toast('Ошибка', 'err'); }
+}
+
+async function mstarsWeeklyCheck(tid) {
+  haptic('medium');
+  try {
+    const res = await fetch('/api/mstars/weekly_check', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({telegram_id: tid})
+    });
+    const d = await res.json();
+    if(d.ok) {
+      toast(`+15 ⭐ еженедельная награда!`, 'ok');
+      haptic('heavy');
+      setTimeout(() => loadStars(), 800);
+    } else if(d.reason === 'too_early') {
+      toast(`Следующая награда через ${d.days_left} дн.`, 'err');
+    } else if(d.reason === 'not_member') {
+      toast('Ты не в чате или комьюнити', 'err');
+    }
+  } catch(e) { toast('Ошибка', 'err'); }
+}
+
+async function mstarsWithdraw(tid) {
+  haptic('medium');
+  if(!confirm('Подать заявку на вывод всех звёзд в Telegram Stars?')) return;
+  try {
+    const res = await fetch('/api/mstars/withdraw', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({telegram_id: tid})
+    });
+    const d = await res.json();
+    if(d.ok) {
+      toast(d.message || 'Заявка отправлена!', 'ok');
+      setTimeout(() => loadStars(), 1000);
+    } else {
+      toast(d.detail || 'Ошибка', 'err');
+    }
+  } catch(e) { toast('Ошибка', 'err'); }
+}
+
 function loadGamesTab() {
   if(!userData) return;
   const gv = document.getElementById('games-gems-val');
@@ -4136,14 +4303,16 @@ function loadGamesTab() {
 }
 
 const _BANDIT_COMBO_MAP = {
-  '7':      { syms:['7️⃣','7️⃣','7️⃣'], color:'#ff2020',  label:'7️⃣ 7️⃣ 7️⃣'  },
-  '777':    { syms:['7️⃣','7️⃣','7️⃣'], color:'#ff2020',  label:'7️⃣ 7️⃣ 7️⃣'  },
-  'bar':    { syms:['BAR','BAR','BAR'], color:'#bbb',     label:'BAR BAR BAR' },
-  'grape':  { syms:['🍇','🍇','🍇'],   color:'#a78bfa',  label:'🍇 🍇 🍇'    },
-  'bell':   { syms:['🔔','🔔','🔔'],   color:'#ffd32a',  label:'🔔 🔔 🔔'    },
-  'lemon':  { syms:['🍋','🍋','🍋'],   color:'#88cc44',  label:'🍋 🍋 🍋'    },
-  'cherry': { syms:['🍒','🍒','🍒'],   color:'#ff6b6b',  label:'🍒 🍒 🍒'    },
-  'miss':   { syms:['🍒','🍋','🍇'],   color:'var(--text3)', label:''        },
+  '7':          { syms:['7️⃣','7️⃣','7️⃣'], color:'#ff2020',  label:'7️⃣ 7️⃣ 7️⃣'  },
+  '777':        { syms:['7️⃣','7️⃣','7️⃣'], color:'#ff2020',  label:'7️⃣ 7️⃣ 7️⃣'  },
+  'watermelon': { syms:['🍉','🍉','🍉'],   color:'#4aff8a',  label:'🍉 🍉 🍉'    },
+  'grape':      { syms:['🍇','🍇','🍇'],   color:'#a78bfa',  label:'🍇 🍇 🍇'    },
+  'lemon':      { syms:['🍋','🍋','🍋'],   color:'#ffd32a',  label:'🍋 🍋 🍋'    },
+  'cherry':     { syms:['🍒','🍒','🍒'],   color:'#ff6b6b',  label:'🍒 🍒 🍒'    },
+  'star':       { syms:['🍒','🍒','🍒'],   color:'#ff6b6b',  label:'🍒 🍒 🍒'    },
+  'bar':        { syms:['BAR','BAR','BAR'], color:'#bbb',     label:'BAR BAR BAR' },
+  'bell':       { syms:['🔔','🔔','🔔'],   color:'#ffd32a',  label:'🔔 🔔 🔔'    },
+  'miss':       { syms:['🍒','🍋','🍇'],   color:'var(--text3)', label:''        },
 };
 
 const _BANDIT_SYMBOLS = {
@@ -4213,7 +4382,7 @@ function openBanditModal(){
           <b style="color:#a78bfa;font-size:16px;font-weight:900" id="bandit-balance">${gems}</b>
         </div>
         <div style="display:flex;gap:4px;flex:1;justify-content:flex-end;flex-wrap:wrap">
-          ${[1,5,10,25,50,100].map(v=>`<button onclick="setBanditBet(${v},this)" data-bbet="${v}" style="background:rgba(167,139,250,0.08);border:1.5px solid rgba(167,139,250,0.3);border-radius:50px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;color:#a78bfa;min-width:34px">${v}</button>`).join('')}
+          ${[1,5,10,25,100].map(v=>`<button onclick="setBanditBet(${v},this)" data-bbet="${v}" style="background:rgba(167,139,250,0.08);border:1.5px solid rgba(167,139,250,0.3);border-radius:50px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;color:#a78bfa;min-width:34px">${v}</button>`).join('')}
           <input type="number" id="bandit-bet" value="10" style="display:none">
         </div>
       </div>

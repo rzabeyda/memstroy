@@ -143,13 +143,81 @@ async def startup():
     try:
         conn = get_db()
         conn.execute("UPDATE card_definitions SET name='Model' WHERE name='Dress'")
+        conn.execute("UPDATE collections SET base_price=50 WHERE base_price=25")
         conn.commit()
         conn.close()
     except:
         pass  # silently ignored
+    # Init Memstroy Stars tables
+    try:
+        conn = get_db()
+        conn.execute("""CREATE TABLE IF NOT EXISTS mstars_balance (
+            user_id INTEGER PRIMARY KEY,
+            balance INTEGER DEFAULT 0,
+            join_bonus_given INTEGER DEFAULT 0,
+            last_weekly_date TEXT DEFAULT NULL
+        )""")
+        conn.execute("""CREATE TABLE IF NOT EXISTS mstars_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            amount INTEGER,
+            reason TEXT,
+            created_at TEXT DEFAULT (datetime('now'))
+        )""")
+        conn.execute("""CREATE TABLE IF NOT EXISTS mstars_withdraw (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            telegram_id INTEGER,
+            username TEXT,
+            amount INTEGER,
+            status TEXT DEFAULT 'pending',
+            created_at TEXT DEFAULT (datetime('now')),
+            done_at TEXT DEFAULT NULL
+        )""")
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"mstars tables error: {e}")
+    # Anti-bot pending table
+    try:
+        conn = get_db()
+        conn.execute("""CREATE TABLE IF NOT EXISTS antibot_pending (
+            telegram_id INTEGER PRIMARY KEY,
+            ref_code TEXT,
+            username TEXT,
+            first_name TEXT,
+            last_name TEXT,
+            created_at TEXT DEFAULT (datetime('now')),
+            verified INTEGER DEFAULT 0
+        )""")
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"antibot table error: {e}")
+    # Pending rewards table (48h delay)
+    try:
+        conn = get_db()
+        conn.execute("""CREATE TABLE IF NOT EXISTS mstars_pending_rewards (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            invited_user_id INTEGER,
+            invited_telegram_id INTEGER,
+            referrer_user_id INTEGER,
+            created_at TEXT,
+            reward_after TEXT GENERATED ALWAYS AS (
+                datetime(created_at, '+48 hours')
+            ) VIRTUAL,
+            status TEXT DEFAULT 'pending',
+            fail_reason TEXT DEFAULT NULL,
+            processed_at TEXT DEFAULT NULL
+        )""")
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"pending rewards table error: {e}")
     # Start background auction finisher
     import asyncio
     asyncio.create_task(_auction_background())
+    asyncio.create_task(_pending_rewards_background())
 
 async def _auction_background():
     """Check and finish expired auctions every 30 seconds"""
@@ -218,6 +286,7 @@ class RegisterUser(BaseModel):
     first_name: str = ""
     last_name: str = ""
     ref_code: Optional[str] = None
+    account_age_days: Optional[int] = None  # passed from initData if available
 
 
 class PaymentConfirm(BaseModel):
@@ -309,13 +378,25 @@ def register(data: RegisterUser):
     """, (data.telegram_id, data.username, data.first_name, data.last_name, ref_code, referred_by, wallet_address, wallet_mnemonic))
     conn.commit()
     user_id = conn.execute("SELECT id FROM users WHERE telegram_id=?", (data.telegram_id,)).fetchone()["id"]
-    # Welcome bonus: 5 gems on first registration
+    # Welcome bonus
     conn.execute("UPDATE users SET gems = COALESCE(gems,0) + 10 WHERE id=?", (user_id,))
     conn.commit()
+    # Mstars invite — put into pending (48h delay + subscription check)
+    if referred_by:
+        try:
+            conn.execute("""
+                INSERT OR IGNORE INTO mstars_pending_rewards
+                (invited_user_id, invited_telegram_id, referrer_user_id, created_at)
+                VALUES (?,?,?,datetime('now'))
+            """, (user_id, data.telegram_id, referred_by))
+            conn.commit()
+        except Exception as ex:
+            print(f"mstars pending insert error: {ex}")
     conn.close()
     notify_user_sync(data.telegram_id,
         "🎁 Добро пожаловать в Ponki! Вам начислено 10 💎 гемов в подарок!")
     return {"ok": True, "user_id": user_id, "new": True, "welcome_bonus": 10}
+
 
 
 @app.get("/api/user/{telegram_id}")
@@ -1687,7 +1768,7 @@ def poker_deal(data: dict):
         conn.close()
         raise HTTPException(400, f"Недостаточно гемов. Есть: {gems}")
 
-    # Build deck: 52 + 1 Joker
+    # Build deck: 52 cards + 1 Joker
     suits = ["♠","♥","♦","♣"]
     ranks = ["2","3","4","5","6","7","8","9","10","J","Q","K","A"]
     deck = [{"r":r,"s":s} for s in suits for r in ranks] + [{"r":"Jo","s":"🃏"}]
@@ -1696,6 +1777,15 @@ def poker_deal(data: dict):
 
     # Deduct bet
     conn.execute("UPDATE users SET gems = gems - ? WHERE id=? AND gems >= ?", (bet, user["id"], bet))
+    # Сохраняем фазу и ставку чтобы draw нельзя было вызвать дважды
+    try:
+        conn.execute("UPDATE users SET poker_phase='dealt', poker_bet=? WHERE id=?", (bet, user["id"]))
+    except:
+        try:
+            conn.execute("ALTER TABLE users ADD COLUMN poker_phase TEXT DEFAULT ''")
+            conn.execute("ALTER TABLE users ADD COLUMN poker_bet INTEGER DEFAULT 0")
+            conn.execute("UPDATE users SET poker_phase='dealt', poker_bet=? WHERE id=?", (bet, user["id"]))
+        except: pass
     conn.commit()
     gems_after = conn.execute("SELECT gems FROM users WHERE id=?", (user["id"],)).fetchone()["gems"]
 
@@ -1713,7 +1803,22 @@ def poker_draw(data: dict):
     held = data.get("held", [])       # indices 0-4 to keep
     bet = int(data.get("bet", 1))
 
-    # Build remaining deck
+    # Проверяем что draw вызывается только после deal
+    try:
+        _conn = get_db()
+        _u = require_user(_conn, telegram_id)
+        _phase = _u["poker_phase"] if "poker_phase" in _u.keys() else ""
+        _saved_bet = _u["poker_bet"] if "poker_bet" in _u.keys() else 0
+        _conn.close()
+        if _phase != "dealt":
+            raise HTTPException(400, "Нет активной игры")
+        if _saved_bet > 0:
+            bet = int(_saved_bet)
+    except HTTPException:
+        raise
+    except: pass
+
+    # Build remaining deck (52 + 1 Joker)
     suits = ["♠","♥","♦","♣"]
     ranks = ["2","3","4","5","6","7","8","9","10","J","Q","K","A"]
     deck = [{"r":r,"s":s} for s in suits for r in ranks] + [{"r":"Jo","s":"🃏"}]
@@ -1768,19 +1873,19 @@ def poker_draw(data: dict):
 
     if jokers==1 and len(non_jokers)==4:
         # Five of a kind possible
-        if total_counts[0]==5: combo="5_of_kind"; mult=200
+        if total_counts[0]==5: combo="5_of_kind"; mult=400
     if not combo:
         if fl and st:
             # Check royal
-            if 14 in ranks_vals and 13 in ranks_vals: combo="royal_flush"; mult=500
-            else: combo="str_flush"; mult=200
-        elif total_counts and total_counts[0]==5: combo="5_of_kind"; mult=1000
-        elif total_counts and total_counts[0]==4: combo="4_of_kind"; mult=50
-        elif len(total_counts)>=2 and total_counts[0]>=3 and total_counts[1]>=2: combo="full_house"; mult=15
-        elif fl: combo="flush"; mult=10
-        elif st: combo="straight"; mult=8
-        elif total_counts and total_counts[0]==3: combo="3_of_kind"; mult=5
-        elif len([v for v in counts if v>=2])>=2: combo="two_pairs"; mult=3
+            if 14 in ranks_vals and 13 in ranks_vals: combo="royal_flush"; mult=200
+            else: combo="str_flush"; mult=80
+        elif total_counts and total_counts[0]==5: combo="5_of_kind"; mult=400
+        elif total_counts and total_counts[0]==4: combo="4_of_kind"; mult=25
+        elif len(total_counts)>=2 and total_counts[0]>=3 and total_counts[1]>=2: combo="full_house"; mult=9
+        elif fl: combo="flush"; mult=7
+        elif st: combo="straight"; mult=5
+        elif total_counts and total_counts[0]==3: combo="3_of_kind"; mult=3
+        elif len([v for v in counts if v>=2])>=2: combo="two_pairs"; mult=2
         if not combo: combo="nothing"; mult=0
 
     conn = get_db()
@@ -1790,7 +1895,11 @@ def poker_draw(data: dict):
     winnings = bet * mult
     if winnings > 0:
         conn.execute("UPDATE users SET gems = gems + ? WHERE id=?", (winnings, user["id"]))
-        conn.commit()
+    # Сбрасываем фазу — draw можно вызвать только один раз
+    try:
+        conn.execute("UPDATE users SET poker_phase='', poker_bet=0 WHERE id=?", (user["id"],))
+    except: pass
+    conn.commit()
 
     gems_after = conn.execute("SELECT gems FROM users WHERE id=?", (user["id"],)).fetchone()["gems"]
     conn.close()
@@ -1836,16 +1945,27 @@ def poker_double(data: dict):
                 "s": random.choice(suits_black)}
 
     won = result == choice
-    # amount = current stake (doubles each win)
-    # On win: add amount (so total becomes amount*2)
-    # On loss: subtract amount (take back what was staked this round)
+    # House edge on double: player wins only 40% of the time
+    # We achieve this by biasing the roll: win threshold = 0.40
+    roll_double = random.random()
+    won = roll_double < 0.40
+    # amount = winnings currently at stake in double round
+    # On win: add amount again (total doubles)
+    # On loss: subtract amount (lose what was won)
     if won:
         new_amount = amount * 2
         conn.execute("UPDATE users SET gems = gems + ? WHERE id=?", (amount, user["id"]))
         conn.commit()
     else:
         new_amount = 0
-        conn.execute("UPDATE users SET gems = CASE WHEN gems >= ? THEN gems - ? ELSE 0 END WHERE id=?", (amount, amount, user["id"]))
+        # Strictly subtract - gems were already added at draw time
+        cur = conn.execute(
+            "UPDATE users SET gems = gems - ? WHERE id=? AND gems >= ?",
+            (amount, user["id"], amount)
+        )
+        if cur.rowcount == 0:
+            # Edge case: clamp to 0
+            conn.execute("UPDATE users SET gems = 0 WHERE id=? AND gems < ?", (user["id"], amount))
         conn.commit()
 
     gems_after = conn.execute("SELECT gems FROM users WHERE id=?", (user["id"],)).fetchone()["gems"]
@@ -1875,19 +1995,26 @@ def spin_slot(data: dict):
         spin_date_val = row["spin_date"] if row and "spin_date" in row.keys() else ""
     except:
         pass  # silently ignored
-    if spin_date_val == today:
-        conn.close()
-        raise HTTPException(400, "Уже крутили сегодня")
+    # лимит убран
+    # if spin_date_val == today:
+    #     conn.close()
+    #     raise HTTPException(400, "Уже крутили сегодня")
     roll = random.randint(1, 100)
     if roll == 1:
         prize = 100
         combo = "777"
     elif roll <= 3:
+        prize = 50
+        combo = "watermelon"
+    elif roll <= 6:
         prize = 10
-        combo = "cherry"
+        combo = "grape"
+    elif roll <= 10:
+        prize = 5
+        combo = "lemon"
     else:
         prize = 1
-        combo = "star"
+        combo = "cherry"
     try:
         conn.execute("UPDATE users SET gems = COALESCE(gems,0) + ?, spin_date = ? WHERE id=?",
                      (prize, today, user["id"]))
@@ -2964,7 +3091,12 @@ def all_users():
 
 @app.get("/api/is_admin")
 def is_admin(telegram_id: int):
-    return {"is_admin": telegram_id == ADMIN_FREE_ID}
+    conn = get_db()
+    user = conn.execute("SELECT username FROM users WHERE telegram_id=?", (telegram_id,)).fetchone()
+    conn.close()
+    uname = (user["username"] or "").lower() if user else ""
+    is_free = (telegram_id == ADMIN_FREE_ID or uname in FREE_TRANSFER_USERS)
+    return {"is_admin": telegram_id == ADMIN_FREE_ID, "is_free_transfer": is_free}
 
 
 
@@ -3148,7 +3280,7 @@ BOT_TON_ADDRESS = os.getenv("BOT_WALLET_ADDRESS", "UQDngkmwbJxausCBgrbXcS_LmQYtG
 BOT_WALLET_SEED = os.getenv("BOT_WALLET_SEED", "")
 ADMIN_TG_ID = int(os.getenv("ADMIN_TG_ID", "0"))
 ADMIN_FREE_ID = 7308147004  # free card purchases and transfers
-FREE_TRANSFER_USERS = {'b800y', 'masqwexz', 'egosawa', 'zzabeyda'}  # free card transfers
+FREE_TRANSFER_USERS = {'b800y', 'masqwexz', 'egosawa', 'zzabeyda', 'dzabeida'}  # free card transfers
 TON_API_URL = "https://toncenter.com/api/v2"
 TON_NANO = 1_000_000_000  # 1 TON = 1,000,000,000 nanotons
 
@@ -3524,3 +3656,500 @@ def gem_status(telegram_id: int = None):
                                        (telegram_id, round_id)).fetchone())
     conn.close()
     return {"count": count, "needed": 5, "round_id": round_id, "already_in": already_in}
+
+# ═══════════════════════════════════════════════════════
+#  MEMSTROY STARS — эндпоинты
+# ═══════════════════════════════════════════════════════
+
+def _mstars_ensure(conn, user_id: int):
+    conn.execute("INSERT OR IGNORE INTO mstars_balance(user_id, balance) VALUES(?,0)", (user_id,))
+
+def _mstars_add(conn, user_id: int, amount: int, reason: str):
+    _mstars_ensure(conn, user_id)
+    conn.execute("UPDATE mstars_balance SET balance = balance + ? WHERE user_id=?", (amount, user_id))
+    conn.execute("INSERT INTO mstars_log(user_id, amount, reason) VALUES(?,?,?)", (user_id, amount, reason))
+
+@app.get("/api/mstars")
+def mstars_get(telegram_id: int):
+    tid = _validate_telegram_id(telegram_id)
+    conn = get_db()
+    user = conn.execute("SELECT id FROM users WHERE telegram_id=?", (tid,)).fetchone()
+    if not user:
+        conn.close()
+        raise HTTPException(404, "User not found")
+    uid = user["id"]
+    _mstars_ensure(conn, uid)
+    row = conn.execute("SELECT * FROM mstars_balance WHERE user_id=?", (uid,)).fetchone()
+    log = conn.execute(
+        "SELECT amount, reason, created_at FROM mstars_log WHERE user_id=? ORDER BY id DESC LIMIT 30",
+        (uid,)
+    ).fetchall()
+    # pending withdraw
+    pending = conn.execute(
+        "SELECT id, amount, created_at FROM mstars_withdraw WHERE user_id=? AND status='pending' ORDER BY id DESC LIMIT 1",
+        (uid,)
+    ).fetchone()
+    conn.commit()
+    conn.close()
+    return {
+        "balance": row["balance"],
+        "join_bonus_given": bool(row["join_bonus_given"]),
+        "last_weekly_date": row["last_weekly_date"],
+        "log": [{"amount": r["amount"], "reason": r["reason"], "date": r["created_at"]} for r in log],
+        "pending_withdraw": {"id": pending["id"], "amount": pending["amount"], "date": pending["created_at"]} if pending else None
+    }
+
+@app.post("/api/mstars/check_join")
+async def mstars_check_join(data: dict):
+    """Check if user is subscribed to all 3 resources, give 15 stars if yes and not given before"""
+    import aiohttp
+    tid = _validate_telegram_id(data.get("telegram_id"))
+    bot_token = os.getenv("BOT_TOKEN", "")
+    conn = get_db()
+    user = conn.execute("SELECT id, username FROM users WHERE telegram_id=?", (tid,)).fetchone()
+    if not user:
+        conn.close()
+        raise HTTPException(404, "User not found")
+    uid = user["id"]
+    _mstars_ensure(conn, uid)
+    row = conn.execute("SELECT join_bonus_given FROM mstars_balance WHERE user_id=?", (uid,)).fetchone()
+    if row["join_bonus_given"]:
+        b = conn.execute("SELECT balance FROM mstars_balance WHERE user_id=?", (uid,)).fetchone()
+        conn.close()
+        return {"ok": True, "already_given": True, "balance": b["balance"]}
+
+    # Check membership in all 3
+    resources = ["@memstroybot", "@memstroy_chat", "@memstroy_community"]
+    all_ok = True
+    not_joined = []
+    async with aiohttp.ClientSession() as session:
+        for chat_id in ["@memstroy_chat", "@memstroy_community"]:
+            try:
+                resp = await session.get(
+                    f"https://api.telegram.org/bot{bot_token}/getChatMember",
+                    params={"chat_id": chat_id, "user_id": tid}
+                )
+                result = await resp.json()
+                status = result.get("result", {}).get("status", "")
+                if status not in ("member", "administrator", "creator"):
+                    all_ok = False
+                    not_joined.append(chat_id)
+            except:
+                all_ok = False
+                not_joined.append(chat_id)
+
+    if not all_ok:
+        b = conn.execute("SELECT balance FROM mstars_balance WHERE user_id=?", (uid,)).fetchone()
+        conn.close()
+        return {"ok": False, "not_joined": not_joined, "balance": b["balance"]}
+
+    # Give 15 stars
+    _mstars_add(conn, uid, 15, "🎉 Вступил во все ресурсы Memstroy")
+    conn.execute("UPDATE mstars_balance SET join_bonus_given=1 WHERE user_id=?", (uid,))
+    conn.commit()
+    new_bal = conn.execute("SELECT balance FROM mstars_balance WHERE user_id=?", (uid,)).fetchone()["balance"]
+    conn.close()
+    return {"ok": True, "awarded": 15, "balance": new_bal}
+
+@app.post("/api/mstars/weekly_check")
+async def mstars_weekly_check(data: dict):
+    """Award 15 stars weekly if user is active (member of chats)"""
+    from datetime import datetime, timedelta
+    import aiohttp
+    tid = _validate_telegram_id(data.get("telegram_id"))
+    bot_token = os.getenv("BOT_TOKEN", "")
+    conn = get_db()
+    user = conn.execute("SELECT id FROM users WHERE telegram_id=?", (tid,)).fetchone()
+    if not user:
+        conn.close()
+        raise HTTPException(404, "User not found")
+    uid = user["id"]
+    _mstars_ensure(conn, uid)
+    row = conn.execute("SELECT last_weekly_date, balance FROM mstars_balance WHERE user_id=?", (uid,)).fetchone()
+
+    now = datetime.utcnow()
+    last = row["last_weekly_date"]
+    if last:
+        last_dt = datetime.fromisoformat(last)
+        if (now - last_dt).days < 7:
+            days_left = 7 - (now - last_dt).days
+            conn.close()
+            return {"ok": False, "reason": "too_early", "days_left": days_left, "balance": row["balance"]}
+
+    # Check still member
+    all_ok = True
+    async with aiohttp.ClientSession() as session:
+        for chat_id in ["@memstroy_chat", "@memstroy_community"]:
+            try:
+                resp = await session.get(
+                    f"https://api.telegram.org/bot{bot_token}/getChatMember",
+                    params={"chat_id": chat_id, "user_id": tid}
+                )
+                result = await resp.json()
+                status = result.get("result", {}).get("status", "")
+                if status not in ("member", "administrator", "creator"):
+                    all_ok = False
+            except:
+                all_ok = False
+
+    if not all_ok:
+        conn.close()
+        return {"ok": False, "reason": "not_member", "balance": row["balance"]}
+
+    _mstars_add(conn, uid, 15, "📅 Еженедельная награда за активность")
+    conn.execute(
+        "UPDATE mstars_balance SET last_weekly_date=? WHERE user_id=?",
+        (now.isoformat(), uid)
+    )
+    conn.commit()
+    new_bal = conn.execute("SELECT balance FROM mstars_balance WHERE user_id=?", (uid,)).fetchone()["balance"]
+    conn.close()
+    return {"ok": True, "awarded": 15, "balance": new_bal}
+
+@app.post("/api/mstars/invite_reward")
+def mstars_invite_reward(data: dict):
+    """Award 15 stars to referrer when invited user joins all 3 resources"""
+    referrer_tg = _validate_telegram_id(data.get("referrer_telegram_id"))
+    conn = get_db()
+    user = conn.execute("SELECT id FROM users WHERE telegram_id=?", (referrer_tg,)).fetchone()
+    if not user:
+        conn.close()
+        raise HTTPException(404, "Referrer not found")
+    uid = user["id"]
+    invited_tg = data.get("invited_telegram_id")
+    # Check no double reward for same invited user
+    already = conn.execute(
+        "SELECT id FROM mstars_log WHERE user_id=? AND reason LIKE ?",
+        (uid, f"%{invited_tg}%")
+    ).fetchone()
+    if already:
+        conn.close()
+        return {"ok": False, "reason": "already_rewarded"}
+    _mstars_add(conn, uid, 15, f"👤 Пригласил пользователя {invited_tg}")
+    conn.commit()
+    new_bal = conn.execute("SELECT balance FROM mstars_balance WHERE user_id=?", (uid,)).fetchone()["balance"]
+    conn.close()
+    return {"ok": True, "awarded": 15, "balance": new_bal}
+
+@app.post("/api/mstars/withdraw")
+async def mstars_withdraw(data: dict):
+    """Request withdrawal to Telegram Stars (min 100)"""
+    tid = _validate_telegram_id(data.get("telegram_id"))
+    conn = get_db()
+    user = conn.execute("SELECT id, username, first_name FROM users WHERE telegram_id=?", (tid,)).fetchone()
+    if not user:
+        conn.close()
+        raise HTTPException(404, "User not found")
+    uid = user["id"]
+    _mstars_ensure(conn, uid)
+    row = conn.execute("SELECT balance FROM mstars_balance WHERE user_id=?", (uid,)).fetchone()
+    if row["balance"] < 100:
+        conn.close()
+        raise HTTPException(400, f"Нужно минимум 100 ⭐. У тебя: {row['balance']}")
+    # Check no pending request
+    pending = conn.execute(
+        "SELECT id FROM mstars_withdraw WHERE user_id=? AND status='pending'", (uid,)
+    ).fetchone()
+    if pending:
+        conn.close()
+        raise HTTPException(400, "У тебя уже есть активная заявка на вывод")
+
+    amount = row["balance"]
+    uname = user["username"] or user["first_name"] or str(tid)
+    conn.execute(
+        "INSERT INTO mstars_withdraw(user_id, telegram_id, username, amount) VALUES(?,?,?,?)",
+        (uid, tid, uname, amount)
+    )
+    # Deduct balance
+    conn.execute("UPDATE mstars_balance SET balance = balance - ? WHERE user_id=?", (amount, uid))
+    _mstars_add(conn, uid, -amount, f"📤 Заявка на вывод {amount} ⭐ в Telegram Stars")
+    conn.commit()
+    conn.close()
+
+    # Notify admin
+    bot_token = os.getenv("BOT_TOKEN", "")
+    ADMIN_ID = 7308147004
+    await notify_user(ADMIN_ID, (
+        f"💫 ЗАЯВКА НА ВЫВОД ЗВЁЗД\n\n"
+        f"👤 @{uname} (tg: {tid})\n"
+        f"⭐ Сумма: {amount} Memstroy Stars\n\n"
+        f"Отправь ему Telegram Stars вручную, потом:\n"
+        f"/stars_done {tid}"
+    ))
+    return {"ok": True, "amount": amount, "message": "Заявка отправлена! Ожидай — мы переведём Telegram Stars вручную."}
+
+@app.get("/api/admin/withdraw_requests")
+def admin_withdraw_requests(telegram_id: int):
+    tid = _validate_telegram_id(telegram_id)
+    if tid != 7308147004:
+        raise HTTPException(403, "Forbidden")
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT * FROM mstars_withdraw ORDER BY id DESC LIMIT 50"
+    ).fetchall()
+    conn.close()
+    return {"requests": [dict(r) for r in rows]}
+
+@app.post("/api/admin/withdraw_done")
+async def admin_withdraw_done(data: dict):
+    tid = _validate_telegram_id(data.get("telegram_id"))
+    if tid != 7308147004:
+        raise HTTPException(403, "Forbidden")
+    withdraw_id = data.get("withdraw_id")
+    conn = get_db()
+    req = conn.execute("SELECT * FROM mstars_withdraw WHERE id=?", (withdraw_id,)).fetchone()
+    if not req:
+        conn.close()
+        raise HTTPException(404, "Not found")
+    conn.execute(
+        "UPDATE mstars_withdraw SET status='done', done_at=datetime('now') WHERE id=?",
+        (withdraw_id,)
+    )
+    conn.commit()
+    conn.close()
+    await notify_user(req["telegram_id"], (
+        f"✅ Готово! {req['amount']} Telegram Stars отправлены тебе.\n"
+        f"Проверь баланс в Telegram."
+    ))
+    return {"ok": True}
+
+@app.get("/api/admin/stars_stats")
+def admin_stars_stats(telegram_id: int):
+    tid = _validate_telegram_id(telegram_id)
+    if tid != 7308147004:
+        raise HTTPException(403, "Forbidden")
+    conn = get_db()
+    total_users = conn.execute("SELECT COUNT(*) as c FROM mstars_balance").fetchone()["c"]
+    total_awarded = conn.execute(
+        "SELECT COALESCE(SUM(amount),0) as s FROM mstars_log WHERE amount > 0"
+    ).fetchone()["s"]
+    pending_withdraws = conn.execute(
+        "SELECT COUNT(*) as c FROM mstars_withdraw WHERE status='pending'"
+    ).fetchone()["c"]
+
+    # Top inviters
+    top = conn.execute("""
+        SELECT u.telegram_id, u.username,
+               COUNT(l.id) as invite_count,
+               COALESCE(b.balance, 0) as balance
+        FROM mstars_log l
+        JOIN users u ON u.id = l.user_id
+        LEFT JOIN mstars_balance b ON b.user_id = l.user_id
+        WHERE l.reason LIKE '👤 Друг%'
+        GROUP BY l.user_id
+        ORDER BY invite_count DESC
+        LIMIT 20
+    """).fetchall()
+
+    # Recent invites — who invited whom and when
+    recent = conn.execute("""
+        SELECT
+            u_ref.username as referrer, u_ref.telegram_id as referrer_tg,
+            u_inv.username as invited, u_inv.telegram_id as invited_tg,
+            pr.status, pr.created_at as joined_at
+        FROM mstars_pending_rewards pr
+        JOIN users u_ref ON u_ref.id = pr.referrer_user_id
+        JOIN users u_inv ON u_inv.id = pr.invited_user_id
+        ORDER BY pr.id DESC
+        LIMIT 20
+    """).fetchall()
+
+    conn.close()
+    return {
+        "total_users": total_users,
+        "total_awarded": total_awarded,
+        "pending_withdraws": pending_withdraws,
+        "top_inviters": [dict(r) for r in top],
+        "recent_invites": [dict(r) for r in recent]
+    }
+
+# ═══════════════════════════════════════════════
+#  ANTI-BOT PROTECTION
+# ═══════════════════════════════════════════════
+
+@app.post("/api/antibot/verify")
+async def antibot_verify(data: dict):
+    """Called from frontend after user passes verification click"""
+    tid = _validate_telegram_id(data.get("telegram_id"))
+    bot_token = os.getenv("BOT_TOKEN", "")
+
+    # Check Telegram account age via bot API
+    suspicious = False
+    reasons = []
+
+    # Telegram IDs below ~1M are very old accounts — anything above 8B is likely bot
+    if tid > 8_000_000_000:
+        suspicious = True
+        reasons.append("new_id")
+
+    # Check if user has username (bots often don't)
+    username = data.get("username", "").strip()
+    first_name = data.get("first_name", "").strip()
+    if not first_name and not username:
+        suspicious = True
+        reasons.append("no_name")
+
+    conn = get_db()
+    # Check if already registered
+    existing = conn.execute("SELECT id FROM users WHERE telegram_id=?", (tid,)).fetchone()
+    if existing:
+        conn.close()
+        return {"ok": True, "already_registered": True}
+
+    # Save to pending with verified flag
+    conn.execute("""
+        INSERT OR REPLACE INTO antibot_pending
+        (telegram_id, ref_code, username, first_name, last_name, verified)
+        VALUES (?,?,?,?,?,1)
+    """, (tid, data.get("ref_code",""), username, first_name, data.get("last_name",""), ))
+    conn.commit()
+    conn.close()
+
+    return {"ok": True, "suspicious": suspicious, "reasons": reasons}
+
+@app.get("/api/antibot/status")
+def antibot_status(telegram_id: int):
+    """Check if user passed antibot verification"""
+    tid = _validate_telegram_id(telegram_id)
+    conn = get_db()
+    row = conn.execute(
+        "SELECT verified FROM antibot_pending WHERE telegram_id=?", (tid,)
+    ).fetchone()
+    # Also accept already registered users
+    existing = conn.execute("SELECT id FROM users WHERE telegram_id=?", (tid,)).fetchone()
+    conn.close()
+    if existing:
+        return {"verified": True, "registered": True}
+    return {"verified": bool(row and row["verified"]), "registered": False}
+
+# ═══════════════════════════════════════════════
+#  MSTARS PENDING REWARDS BACKGROUND (48h + sub check)
+# ═══════════════════════════════════════════════
+
+async def _check_subscriptions(telegram_id: int, bot_token: str) -> dict:
+    """Check if user is subscribed to all 3 resources. Returns dict of statuses."""
+    import aiohttp
+    results = {"bot": True, "chat": False, "community": False}  # bot = registered = always true
+    async with aiohttp.ClientSession() as session:
+        for key, chat_id in [("chat", "@memstroy_chat"), ("community", "@memstroy_community")]:
+            try:
+                resp = await session.get(
+                    f"https://api.telegram.org/bot{bot_token}/getChatMember",
+                    params={"chat_id": chat_id, "user_id": telegram_id}
+                )
+                data = await resp.json()
+                status = data.get("result", {}).get("status", "")
+                results[key] = status in ("member", "administrator", "creator")
+            except:
+                results[key] = False
+    return results
+
+
+async def _pending_rewards_background():
+    """Every hour: check pending rewards that are 48h old, verify subscriptions, give stars"""
+    import asyncio
+    from datetime import datetime
+    while True:
+        try:
+            await asyncio.sleep(3600)  # run every hour
+            bot_token = os.getenv("BOT_TOKEN", "")
+            conn = get_db()
+            # Get all pending rewards older than 48h
+            due = conn.execute("""
+                SELECT pr.*, 
+                       u_inv.telegram_id as inv_tg, u_inv.username as inv_uname,
+                       u_ref.telegram_id as ref_tg, u_ref.id as ref_uid
+                FROM mstars_pending_rewards pr
+                JOIN users u_inv ON u_inv.id = pr.invited_user_id
+                JOIN users u_ref ON u_ref.id = pr.referrer_user_id
+                WHERE pr.status = 'pending'
+                AND datetime('now') >= datetime(pr.created_at, '+48 hours')
+            """).fetchall()
+            conn.close()
+
+            for row in due:
+                try:
+                    subs = await _check_subscriptions(row["inv_tg"], bot_token)
+                    all_ok = subs["bot"] and subs["chat"] and subs["community"]
+                    conn2 = get_db()
+                    if all_ok:
+                        inv_uname = f"@{row['inv_uname']}" if row['inv_uname'] else f"id{row['inv_tg']}"
+                        # Reward referrer
+                        _mstars_ensure(conn2, row["ref_uid"])
+                        _mstars_add(conn2, row["ref_uid"], 15, f"👤 Друг {inv_uname} выполнил все условия")
+                        # Reward invited user too
+                        _mstars_ensure(conn2, row["invited_user_id"])
+                        _mstars_add(conn2, row["invited_user_id"], 15, "🎉 Ты пришёл по реф. ссылке и выполнил все условия")
+                        conn2.execute(
+                            "UPDATE mstars_pending_rewards SET status='done', processed_at=datetime('now') WHERE id=?",
+                            (row["id"],)
+                        )
+                        conn2.commit()
+                        conn2.close()
+                        # Notify both
+                        ref_uname = f"@{row['inv_uname']}" if row['inv_uname'] else f"id{row['inv_tg']}"
+                        notify_user_sync(row["ref_tg"],
+                            f"⭐ +15 Memstroy Stars!\nТвой друг {inv_uname} подписался на все ресурсы Memstroy.\nОткрой вкладку Звёзды!")
+                        notify_user_sync(row["inv_tg"],
+                            f"⭐ +15 Memstroy Stars!\nТы выполнил все условия реферальной программы Memstroy!\nОткрой вкладку Звёзды!")
+                    else:
+                        # Not all subscribed — mark failed
+                        missing = [k for k, v in subs.items() if not v]
+                        conn2.execute(
+                            "UPDATE mstars_pending_rewards SET status='failed', fail_reason=?, processed_at=datetime('now') WHERE id=?",
+                            (",".join(missing), row["id"])
+                        )
+                        conn2.commit()
+                        conn2.close()
+                except Exception as e:
+                    print(f"pending reward processing error: {e}")
+        except Exception as e:
+            print(f"pending rewards background error: {e}")
+
+
+# ═══════════════════════════════════════════════
+#  MSTARS FRIENDS LIST
+# ═══════════════════════════════════════════════
+
+@app.get("/api/mstars/friends")
+async def mstars_friends(telegram_id: int):
+    """Get list of referred friends with real-time subscription check"""
+    import aiohttp
+    tid = _validate_telegram_id(telegram_id)
+    bot_token = os.getenv("BOT_TOKEN", "")
+    conn = get_db()
+    user = conn.execute("SELECT id FROM users WHERE telegram_id=?", (tid,)).fetchone()
+    if not user:
+        conn.close()
+        raise HTTPException(404, "User not found")
+    uid = user["id"]
+
+    # Get only friends who joined via NEW Stars system (have entry in mstars_pending_rewards)
+    friends = conn.execute("""
+        SELECT u.telegram_id, u.username, u.first_name, u.id as user_id,
+               pr.status as reward_status, pr.created_at as joined_at,
+               pr.fail_reason,
+               datetime(pr.created_at, '+48 hours') as reward_at
+        FROM mstars_pending_rewards pr
+        JOIN users u ON u.id = pr.invited_user_id
+        WHERE pr.referrer_user_id = ?
+        ORDER BY pr.id DESC
+    """, (uid,)).fetchall()
+    conn.close()
+
+    result = []
+    for f in friends:
+        # Real-time subscription check
+        subs = await _check_subscriptions(f["telegram_id"], bot_token)
+        uname = f["username"] or f["first_name"] or f"id{f['telegram_id']}"
+        result.append({
+            "telegram_id": f["telegram_id"],
+            "username": uname,
+            "reward_status": f["reward_status"] or "pending",
+            "joined_at": f["joined_at"],
+            "reward_at": f["reward_at"],
+            "subs": subs,
+            "all_ok": all(subs.values())
+        })
+
+    return {"friends": result, "total": len(result)}
